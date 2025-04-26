@@ -10,7 +10,7 @@ import React, {
 import { v4 as uuidv4 } from 'uuid';
 
 // Define types for points and shapes
-interface Point {
+export interface Point {
   x: number;
   y: number;
 }

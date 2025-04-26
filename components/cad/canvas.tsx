@@ -8,7 +8,7 @@ import React, {
   WheelEvent,
 } from 'react';
 import { Entity, useCADContext } from '@/hooks/CADContext';
-import { drawGrid } from '@/lib/draw-grid';
+import { redraw } from '@/draw/redraw';
 
 // Define point interface for local use
 interface Point {
@@ -17,7 +17,7 @@ interface Point {
 }
 
 // Interface for drawing state
-interface DrawingState {
+export interface DrawingState {
   isDrawing: boolean;
   startPoint: Point | null;
   points: Point[];
@@ -58,7 +58,15 @@ export default function Canvas() {
       const { width, height } = canvas.getBoundingClientRect();
       canvas.width = width;
       canvas.height = height;
-      redraw();
+
+      redraw({
+        canvasRef,
+        viewState,
+        drawingState,
+        entities,
+        selectedEntities,
+        worldToScreen,
+      });
     };
 
     // Set up event listeners
@@ -72,303 +80,15 @@ export default function Canvas() {
 
   // Redraw when entities or viewState change
   useEffect(() => {
-    redraw();
-  }, [entities, viewState, selectedEntities, drawingState]);
-
-  const redraw = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const { width, height } = canvas;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, width, height);
-
-    // Draw grid if enabled
-    if (viewState.grid.enabled) {
-      drawGrid(viewState, ctx, width, height);
-    }
-
-    // Draw origin
-    drawOrigin(ctx);
-
-    // Draw all entities
-    drawEntities(ctx);
-
-    // Draw selection highlights
-    drawSelectionHighlights(ctx);
-
-    // Draw temporary elements based on current tool and drawing state
-    if (drawingState.isDrawing && drawingState.temporaryEntity) {
-      drawTemporaryEntity(ctx, drawingState.temporaryEntity);
-    }
-  };
-
-  const drawOrigin = (ctx: CanvasRenderingContext2D) => {
-    const { panOffset } = viewState;
-
-    // Calculate origin position
-    const originX = panOffset.x;
-    const originY = panOffset.y;
-
-    // Draw origin crosshair
-    ctx.strokeStyle = 'rgba(255, 0, 0, 0.8)';
-    ctx.lineWidth = 1;
-
-    // Horizontal line
-    ctx.beginPath();
-    ctx.moveTo(originX - 10, originY);
-    ctx.lineTo(originX + 10, originY);
-    ctx.stroke();
-
-    // Vertical line
-    ctx.beginPath();
-    ctx.moveTo(originX, originY - 10);
-    ctx.lineTo(originX, originY + 10);
-    ctx.stroke();
-  };
-
-  const drawEntities = (ctx: CanvasRenderingContext2D) => {
-    // Draw each entity based on its type and properties
-    entities.forEach((entity: any) => {
-      const strokeColor = entity.properties?.strokeColor || '#000';
-      const strokeWidth = entity.properties?.strokeWidth || 1;
-      const fillColor = entity.properties?.fillColor;
-
-      ctx.strokeStyle = strokeColor;
-      ctx.lineWidth = strokeWidth;
-
-      if (fillColor) {
-        ctx.fillStyle = fillColor;
-      }
-
-      switch (entity.type) {
-        case 'line':
-          drawLine(ctx, entity);
-          break;
-        case 'circle':
-          drawCircle(ctx, entity);
-          break;
-        case 'rectangle':
-          drawRectangle(ctx, entity);
-          break;
-        case 'polyline':
-          drawPolyline(ctx, entity);
-          break;
-        case 'text':
-          drawText(ctx, entity);
-          break;
-        default:
-          console.warn(`Unknown entity type: ${entity.type}`);
-      }
+    redraw({
+      canvasRef,
+      viewState,
+      drawingState,
+      entities,
+      selectedEntities,
+      worldToScreen,
     });
-  };
-
-  const drawSelectionHighlights = (ctx: CanvasRenderingContext2D) => {
-    if (!selectedEntities.length) return;
-
-    selectedEntities.forEach((id) => {
-      const entity = entities.find((e) => e.id === id);
-      if (!entity) return;
-
-      // Draw selection highlight
-      ctx.strokeStyle = '#1E90FF';
-      ctx.lineWidth = 2;
-
-      switch (entity.type) {
-        case 'line': {
-          const startPoint = worldToScreen(entity.start);
-          const endPoint = worldToScreen(entity.end);
-
-          ctx.beginPath();
-          ctx.moveTo(startPoint.x, startPoint.y);
-          ctx.lineTo(endPoint.x, endPoint.y);
-          ctx.stroke();
-
-          // Draw handles
-          drawPointHandle(ctx, startPoint);
-          drawPointHandle(ctx, endPoint);
-          break;
-        }
-        case 'circle': {
-          const centerPoint = worldToScreen(entity.center);
-          const radius = entity.radius * viewState.zoom;
-
-          ctx.beginPath();
-          ctx.arc(centerPoint.x, centerPoint.y, radius, 0, Math.PI * 2);
-          ctx.stroke();
-
-          // Draw handles
-          drawPointHandle(ctx, centerPoint);
-          drawPointHandle(ctx, {
-            x: centerPoint.x + radius,
-            y: centerPoint.y,
-          });
-          break;
-        }
-        case 'rectangle': {
-          const topLeft = worldToScreen(entity.topLeft);
-          const width = entity.width * viewState.zoom;
-          const height = entity.height * viewState.zoom;
-
-          ctx.beginPath();
-          ctx.rect(topLeft.x, topLeft.y, width, height);
-          ctx.stroke();
-
-          // Draw handles
-          drawPointHandle(ctx, topLeft);
-          drawPointHandle(ctx, { x: topLeft.x + width, y: topLeft.y });
-          drawPointHandle(ctx, { x: topLeft.x, y: topLeft.y + height });
-          drawPointHandle(ctx, { x: topLeft.x + width, y: topLeft.y + height });
-          break;
-        }
-        case 'polyline': {
-          if (!entity.points || entity.points.length < 2) return;
-
-          const transformedPoints = entity.points.map(worldToScreen);
-
-          ctx.beginPath();
-          ctx.moveTo(transformedPoints[0].x, transformedPoints[0].y);
-
-          for (let i = 1; i < transformedPoints.length; i++) {
-            ctx.lineTo(transformedPoints[i].x, transformedPoints[i].y);
-          }
-
-          ctx.stroke();
-
-          // Draw handles at each point
-          transformedPoints.forEach((point) => {
-            drawPointHandle(ctx, point);
-          });
-          break;
-        }
-        case 'text': {
-          const position = worldToScreen(entity.position);
-
-          // Draw a box around the text
-          const textWidth = ctx.measureText(entity.content).width;
-          const textHeight = entity.fontSize * viewState.zoom;
-
-          ctx.beginPath();
-          ctx.rect(
-            position.x - 2,
-            position.y - 2,
-            textWidth + 4,
-            textHeight + 4
-          );
-          ctx.stroke();
-
-          // Draw handle at text position
-          drawPointHandle(ctx, position);
-          break;
-        }
-      }
-    });
-  };
-
-  const drawPointHandle = (ctx: CanvasRenderingContext2D, point: Point) => {
-    ctx.fillStyle = '#1E90FF';
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
-    ctx.stroke();
-  };
-
-  const drawLine = (ctx: CanvasRenderingContext2D, entity: any) => {
-    const startPoint = worldToScreen(entity.start);
-    const endPoint = worldToScreen(entity.end);
-
-    ctx.beginPath();
-    ctx.moveTo(startPoint.x, startPoint.y);
-    ctx.lineTo(endPoint.x, endPoint.y);
-    ctx.stroke();
-  };
-
-  const drawCircle = (ctx: CanvasRenderingContext2D, entity: any) => {
-    const centerPoint = worldToScreen(entity.center);
-    const radius = entity.radius * viewState.zoom;
-
-    ctx.beginPath();
-    ctx.arc(centerPoint.x, centerPoint.y, radius, 0, Math.PI * 2);
-    if (entity.properties?.fillColor) {
-      ctx.fill();
-    }
-    ctx.stroke();
-  };
-
-  const drawRectangle = (ctx: CanvasRenderingContext2D, entity: any) => {
-    const topLeft = worldToScreen(entity.topLeft);
-    const width = entity.width * viewState.zoom;
-    const height = entity.height * viewState.zoom;
-
-    ctx.beginPath();
-    ctx.rect(topLeft.x, topLeft.y, width, height);
-    if (entity.properties?.fillColor) {
-      ctx.fill();
-    }
-    ctx.stroke();
-  };
-
-  const drawPolyline = (ctx: CanvasRenderingContext2D, entity: any) => {
-    if (!entity.points || entity.points.length < 2) return;
-
-    const transformedPoints = entity.points.map(worldToScreen);
-
-    ctx.beginPath();
-    ctx.moveTo(transformedPoints[0].x, transformedPoints[0].y);
-
-    for (let i = 1; i < transformedPoints.length; i++) {
-      ctx.lineTo(transformedPoints[i].x, transformedPoints[i].y);
-    }
-
-    ctx.stroke();
-  };
-
-  const drawText = (ctx: CanvasRenderingContext2D, entity: any) => {
-    const position = worldToScreen(entity.position);
-
-    ctx.font = `${entity.fontSize * viewState.zoom}px ${
-      entity.fontFamily || 'Arial'
-    }`;
-    ctx.fillStyle = entity.properties?.strokeColor || '#000';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-
-    ctx.fillText(entity.content, position.x, position.y);
-  };
-
-  const drawTemporaryEntity = (ctx: CanvasRenderingContext2D, entity: any) => {
-    ctx.strokeStyle = entity.properties?.strokeColor || '#3498db';
-    ctx.lineWidth = entity.properties?.strokeWidth || 2;
-    ctx.setLineDash([5, 5]);
-
-    switch (entity.type) {
-      case 'line':
-        drawLine(ctx, entity);
-        break;
-      case 'circle':
-        drawCircle(ctx, entity);
-        break;
-      case 'rectangle':
-        drawRectangle(ctx, entity);
-        break;
-      case 'polyline':
-        drawPolyline(ctx, entity);
-        break;
-      default:
-        break;
-    }
-
-    ctx.setLineDash([]);
-  };
+  }, [viewState, drawingState, entities, selectedEntities]);
 
   // Get cursor position in world coordinates
   const getCursorPosition = (e: MouseEvent): Point => {

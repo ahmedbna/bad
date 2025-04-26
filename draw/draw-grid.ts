@@ -1,11 +1,13 @@
 import { ViewState } from '@/hooks/CADContext';
 
-export const drawGrid = (
-  viewState: ViewState,
-  ctx: CanvasRenderingContext2D,
-  width: number,
-  height: number
-) => {
+type GridProps = {
+  viewState: ViewState;
+  ctx: CanvasRenderingContext2D;
+  width: number;
+  height: number;
+};
+
+export const drawGrid = ({ viewState, ctx, width, height }: GridProps) => {
   const { zoom, panOffset, grid } = viewState;
 
   // Calculate visible grid area
