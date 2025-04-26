@@ -9,6 +9,8 @@ import React, {
 } from 'react';
 import { Entity, useCADContext } from '@/hooks/CADContext';
 import { redraw } from '@/draw/redraw';
+import { getCursorPosition } from '@/mouse/get-cursor-position';
+import { handleMouseDown } from '@/mouse/handle-mouse-down';
 
 // Define point interface for local use
 interface Point {
@@ -90,67 +92,6 @@ export default function Canvas() {
     });
   }, [viewState, drawingState, entities, selectedEntities]);
 
-  // Get cursor position in world coordinates
-  const getCursorPosition = (e: MouseEvent): Point => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-
-    const rect = canvas.getBoundingClientRect();
-    const screenPoint = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
-
-    let worldPoint = screenToWorld(screenPoint);
-
-    // Apply grid snapping if enabled
-    if (viewState.grid.snap) {
-      worldPoint = snapToGrid(worldPoint);
-    }
-
-    return worldPoint;
-  };
-
-  // Handle mouse events for drawing tools
-  const handleMouseDown = (e: MouseEvent<HTMLCanvasElement>) => {
-    // Middle mouse button (or Ctrl+Left click) for panning
-    if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
-      setIsPanning(true);
-      setLastPanPoint({ x: e.clientX, y: e.clientY });
-      e.preventDefault();
-      return;
-    }
-
-    // Left click for drawing or selection
-    if (e.button === 0) {
-      const cursorPos = getCursorPosition(e);
-
-      // Handle different tools
-      switch (currentTool) {
-        case 'pointer':
-          handleSelectionStart(cursorPos, e);
-          break;
-        case 'line':
-          handleLineStart(cursorPos);
-          break;
-        case 'circle':
-          handleCircleStart(cursorPos);
-          break;
-        case 'rectangle':
-          handleRectangleStart(cursorPos);
-          break;
-        case 'polyline':
-          handlePolylinePoint(cursorPos);
-          break;
-        case 'text':
-          handleTextPlacement(cursorPos);
-          break;
-        default:
-          break;
-      }
-    }
-  };
-
   const handleMouseMove = (e: MouseEvent<HTMLCanvasElement>) => {
     // Handle panning
     if (isPanning) {
@@ -171,7 +112,13 @@ export default function Canvas() {
 
     // Handle drawing tools
     if (drawingState.isDrawing) {
-      const cursorPos = getCursorPosition(e);
+      const cursorPos = getCursorPosition({
+        event: e,
+        canvasRef,
+        viewState,
+        screenToWorld,
+        snapToGrid,
+      });
 
       switch (currentTool) {
         case 'line':
@@ -192,7 +139,7 @@ export default function Canvas() {
     }
   };
 
-  const handleMouseUp = (e: MouseEvent<HTMLCanvasElement>) => {
+  const handleMouseUp = (event: MouseEvent<HTMLCanvasElement>) => {
     // End panning
     if (isPanning) {
       setIsPanning(false);
@@ -200,8 +147,14 @@ export default function Canvas() {
     }
 
     // Handle drawing completion
-    if (drawingState.isDrawing && e.button === 0) {
-      const cursorPos = getCursorPosition(e);
+    if (drawingState.isDrawing && event.button === 0) {
+      const cursorPos = getCursorPosition({
+        event,
+        canvasRef,
+        viewState,
+        screenToWorld,
+        snapToGrid,
+      });
 
       switch (currentTool) {
         case 'line':
@@ -260,42 +213,6 @@ export default function Canvas() {
     }));
   };
 
-  // Selection tool handlers
-  const handleSelectionStart = (point: Point, event: MouseEvent) => {
-    // Check if clicking on an entity
-    let clickedEntityIndex = -1;
-
-    // Loop through entities in reverse order (top-most first)
-    for (let i = entities.length - 1; i >= 0; i--) {
-      if (isPointOnEntity(point, entities[i])) {
-        clickedEntityIndex = i;
-        break;
-      }
-    }
-
-    if (clickedEntityIndex >= 0) {
-      const entity = entities[clickedEntityIndex];
-
-      // If shift is not held, clear previous selection
-      if (!event.shiftKey) {
-        setSelectedEntities([entity.id]);
-      } else {
-        // Toggle selection if already selected
-        if (selectedEntities.includes(entity.id)) {
-          setSelectedEntities(
-            selectedEntities.filter((id) => id !== entity.id)
-          );
-        } else {
-          setSelectedEntities([...selectedEntities, entity.id]);
-        }
-      }
-    } else {
-      // Clicked on empty space, clear selection if shift is not held
-      if (!event.shiftKey) {
-        setSelectedEntities([]);
-      }
-    }
-  };
   const isPointOnEntity = (point: Point, entity: any): boolean => {
     const tolerance = 5 / viewState.zoom; // 5px in world coordinates
 
@@ -394,24 +311,6 @@ export default function Canvas() {
     );
   };
 
-  // Line tool handlers
-  const handleLineStart = (startPoint: Point) => {
-    setDrawingState({
-      isDrawing: true,
-      startPoint,
-      points: [],
-      temporaryEntity: {
-        type: 'line',
-        start: startPoint,
-        end: startPoint,
-        properties: {
-          strokeColor: '#3498db',
-          strokeWidth: 2,
-        },
-      },
-    });
-  };
-
   const updateTemporaryLine = (currentPoint: Point) => {
     if (!drawingState.startPoint) return;
 
@@ -449,24 +348,6 @@ export default function Canvas() {
       startPoint: null,
       points: [],
       temporaryEntity: null,
-    });
-  };
-
-  // Circle tool handlers
-  const handleCircleStart = (centerPoint: Point) => {
-    setDrawingState({
-      isDrawing: true,
-      startPoint: centerPoint,
-      points: [],
-      temporaryEntity: {
-        type: 'circle',
-        center: centerPoint,
-        radius: 0,
-        properties: {
-          strokeColor: '#3498db',
-          strokeWidth: 2,
-        },
-      },
     });
   };
 
@@ -517,25 +398,6 @@ export default function Canvas() {
     });
   };
 
-  // Rectangle tool handlers
-  const handleRectangleStart = (startPoint: Point) => {
-    setDrawingState({
-      isDrawing: true,
-      startPoint,
-      points: [],
-      temporaryEntity: {
-        type: 'rectangle',
-        topLeft: startPoint,
-        width: 0,
-        height: 0,
-        properties: {
-          strokeColor: '#3498db',
-          strokeWidth: 2,
-        },
-      },
-    });
-  };
-
   const updateTemporaryRectangle = (currentPoint: Point) => {
     if (!drawingState.startPoint) return;
 
@@ -581,36 +443,6 @@ export default function Canvas() {
     });
   };
 
-  // Polyline tool handlers
-  const handlePolylinePoint = (point: Point) => {
-    if (!drawingState.isDrawing) {
-      // Start a new polyline
-      setDrawingState({
-        isDrawing: true,
-        startPoint: point,
-        points: [point],
-        temporaryEntity: {
-          type: 'polyline',
-          points: [point],
-          properties: {
-            strokeColor: '#3498db',
-            strokeWidth: 2,
-          },
-        },
-      });
-    } else {
-      // Add point to existing polyline
-      setDrawingState((prev) => ({
-        ...prev,
-        points: [...prev.points, point],
-        temporaryEntity: {
-          ...prev.temporaryEntity,
-          points: [...prev.points, point],
-        },
-      }));
-    }
-  };
-
   const updateTemporaryPolyline = (currentPoint: Point) => {
     if (!drawingState.isDrawing || drawingState.points.length === 0) return;
 
@@ -646,26 +478,6 @@ export default function Canvas() {
       points: [],
       temporaryEntity: null,
     });
-  };
-
-  // Text tool handler
-  // Text tool handler
-  const handleTextPlacement = (point: Point) => {
-    // Simple implementation - prompt for text content
-    const content = prompt('Enter text:', '');
-
-    if (content !== null && content.trim() !== '') {
-      addEntity({
-        type: 'text',
-        position: point,
-        content: content,
-        fontSize: 16,
-        fontFamily: 'Arial', // @ts-ignore
-        properties: {
-          strokeColor: '#000000',
-        },
-      });
-    }
   };
 
   // Set cursor based on current tool
@@ -718,7 +530,25 @@ export default function Canvas() {
       ref={canvasRef}
       className='w-full h-full'
       style={{ cursor: getCursorStyle() }}
-      onMouseDown={handleMouseDown}
+      onMouseDown={(event) =>
+        handleMouseDown({
+          event,
+          canvasRef,
+          viewState,
+          currentTool,
+          screenToWorld,
+          snapToGrid,
+          setIsPanning,
+          setLastPanPoint,
+          entities,
+          drawingState,
+          isPointOnEntity,
+          setSelectedEntities,
+          selectedEntities,
+          setDrawingState,
+          addEntity,
+        })
+      }
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onDoubleClick={handleDoubleClick}
