@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
-import { redraw } from '@/draw/redraw';
+import { redraw } from '@/components/draw/redraw';
 import { useCADContext } from '@/hooks/CADContext';
 import { handleMouseDown } from '@/components/mouse-down/handle-mouse-down';
 import { handleMouseUp } from '@/components/mouse-up/handle-mouse-up';
