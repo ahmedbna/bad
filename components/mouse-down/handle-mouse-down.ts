@@ -17,7 +17,6 @@ type MouseDownProps = {
   entities: any[];
   drawingState: DrawingState;
   selectedEntities: string[];
-  isPointOnEntity: (point: Point, entity: any) => boolean;
   addEntity: (entity: Omit<Entity, 'id'>) => void;
   setSelectedEntities: (entities: any[]) => void;
   setDrawingState: (drawingState: DrawingState) => void;
@@ -39,7 +38,6 @@ export const handleMouseDown = ({
   setLastPanPoint,
   entities,
   drawingState,
-  isPointOnEntity,
   setSelectedEntities,
   selectedEntities,
   setDrawingState,
@@ -69,8 +67,8 @@ export const handleMouseDown = ({
         handleSelectionStart({
           event,
           point: cursorPos,
+          viewState,
           entities,
-          isPointOnEntity,
           setSelectedEntities,
           selectedEntities,
         });

@@ -1,11 +1,12 @@
 import { MouseEvent } from 'react';
-import { Point } from '@/hooks/CADContext';
+import { Point, ViewState } from '@/hooks/CADContext';
+import { isPointOnEntity } from './is-point-on-entity';
 
 type SelectionStartProps = {
   event: MouseEvent<HTMLCanvasElement>;
   point: Point;
+  viewState: ViewState;
   entities: any[]; // Replace with the actual type of your entities
-  isPointOnEntity: (point: Point, entity: any) => boolean; // Replace with the actual type of your entities
   setSelectedEntities: (ids: string[]) => void; // Function to set selected entities
   selectedEntities: string[]; // Array of currently selected entity IDs
 };
@@ -15,7 +16,7 @@ export const handleSelectionStart = ({
   event,
   point,
   entities,
-  isPointOnEntity,
+  viewState,
   setSelectedEntities,
   selectedEntities,
 }: SelectionStartProps) => {
@@ -24,7 +25,7 @@ export const handleSelectionStart = ({
 
   // Loop through entities in reverse order (top-most first)
   for (let i = entities.length - 1; i >= 0; i--) {
-    if (isPointOnEntity(point, entities[i])) {
+    if (isPointOnEntity({ point, entity: entities[i], viewState })) {
       clickedEntityIndex = i;
       break;
     }
