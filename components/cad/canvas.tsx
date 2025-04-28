@@ -9,6 +9,7 @@ import { handleMouseMove } from '@/components/mouse-move/handle-mouse-move';
 import { getCursorStyle } from '@/components/cursor/get-cursor-style';
 import { finishPolyline } from '@/components/cursor/finish-polyline';
 import { handleWheel } from '@/components/cursor/handle-wheel';
+import { useCanvasResize } from '@/hooks/useCanvasResize';
 
 // Define point interface for local use
 interface Point {
@@ -49,15 +50,26 @@ export default function Canvas() {
     snapToGrid,
   } = useCADContext();
 
+  // Use the resize hook to handle DPI scaling
+  const dpr = useCanvasResize(canvasRef);
+
   // Initialize the canvas on component mount
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     const resizeCanvas = () => {
-      const { width, height } = canvas.getBoundingClientRect();
-      canvas.width = width;
-      canvas.height = height;
+      // Clear canvas with device pixel ratio in mind
+      const displayWidth = canvas.width / dpr;
+      const displayHeight = canvas.height / dpr;
+
+      ctx.clearRect(0, 0, displayWidth, displayHeight);
+      // const { width, height } = canvas.getBoundingClientRect();
+      // canvas.width = width;
+      // canvas.height = height;
 
       redraw({
         canvasRef,
