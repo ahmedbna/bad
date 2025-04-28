@@ -12,6 +12,7 @@ import { redraw } from '@/draw/redraw';
 import { getCursorPosition } from '@/components/cursor/get-cursor-position';
 import { handleMouseDown } from '@/components/mouse-down/handle-mouse-down';
 import { handleMouseUp } from '@/components/mouse-up/handle-mouse-up';
+import { handleMouseMove } from '../mouse-move/handle-mouse-move';
 
 // Define point interface for local use
 interface Point {
@@ -92,53 +93,6 @@ export default function Canvas() {
       worldToScreen,
     });
   }, [viewState, drawingState, entities, selectedEntities]);
-
-  const handleMouseMove = (e: MouseEvent<HTMLCanvasElement>) => {
-    // Handle panning
-    if (isPanning) {
-      const dx = e.clientX - lastPanPoint.x;
-      const dy = e.clientY - lastPanPoint.y;
-
-      setViewState((prev) => ({
-        ...prev,
-        panOffset: {
-          x: prev.panOffset.x + dx,
-          y: prev.panOffset.y + dy,
-        },
-      }));
-
-      setLastPanPoint({ x: e.clientX, y: e.clientY });
-      return;
-    }
-
-    // Handle drawing tools
-    if (drawingState.isDrawing) {
-      const cursorPos = getCursorPosition({
-        event: e,
-        canvasRef,
-        viewState,
-        screenToWorld,
-        snapToGrid,
-      });
-
-      switch (currentTool) {
-        case 'line':
-          updateTemporaryLine(cursorPos);
-          break;
-        case 'circle':
-          updateTemporaryCircle(cursorPos);
-          break;
-        case 'rectangle':
-          updateTemporaryRectangle(cursorPos);
-          break;
-        case 'polyline':
-          updateTemporaryPolyline(cursorPos);
-          break;
-        default:
-          break;
-      }
-    }
-  };
 
   const handleDoubleClick = (e: MouseEvent<HTMLCanvasElement>) => {
     if (currentTool === 'polyline' && drawingState.isDrawing) {
@@ -278,66 +232,6 @@ export default function Canvas() {
     );
   };
 
-  const updateTemporaryLine = (currentPoint: Point) => {
-    if (!drawingState.startPoint) return;
-
-    setDrawingState((prev) => ({
-      ...prev,
-      temporaryEntity: {
-        ...prev.temporaryEntity,
-        end: currentPoint,
-      },
-    }));
-  };
-
-  const updateTemporaryCircle = (currentPoint: Point) => {
-    if (!drawingState.startPoint) return;
-
-    const radius = Math.sqrt(
-      Math.pow(currentPoint.x - drawingState.startPoint.x, 2) +
-        Math.pow(currentPoint.y - drawingState.startPoint.y, 2)
-    );
-
-    setDrawingState((prev) => ({
-      ...prev,
-      temporaryEntity: {
-        ...prev.temporaryEntity,
-        radius,
-      },
-    }));
-  };
-
-  const updateTemporaryRectangle = (currentPoint: Point) => {
-    if (!drawingState.startPoint) return;
-
-    const width = currentPoint.x - drawingState.startPoint.x;
-    const height = currentPoint.y - drawingState.startPoint.y;
-
-    setDrawingState((prev) => ({
-      ...prev,
-      temporaryEntity: {
-        ...prev.temporaryEntity,
-        width,
-        height,
-      },
-    }));
-  };
-
-  const updateTemporaryPolyline = (currentPoint: Point) => {
-    if (!drawingState.isDrawing || drawingState.points.length === 0) return;
-
-    // Update temporary preview line to current mouse position
-    const updatedPoints = [...drawingState.points, currentPoint];
-
-    setDrawingState((prev) => ({
-      ...prev,
-      temporaryEntity: {
-        ...prev.temporaryEntity,
-        points: updatedPoints,
-      },
-    }));
-  };
-
   const finishPolyline = () => {
     // Only create polyline if it has at least 2 points
     if (drawingState.points.length >= 2) {
@@ -429,7 +323,22 @@ export default function Canvas() {
           addEntity,
         })
       }
-      onMouseMove={handleMouseMove}
+      onMouseMove={(event) =>
+        handleMouseMove({
+          event,
+          isPanning,
+          currentTool,
+          lastPanPoint,
+          drawingState,
+          canvasRef,
+          viewState,
+          screenToWorld,
+          snapToGrid,
+          setDrawingState,
+          setLastPanPoint,
+          setViewState,
+        })
+      }
       onMouseUp={(event) =>
         handleMouseUp({
           event,
