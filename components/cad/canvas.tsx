@@ -9,8 +9,9 @@ import React, {
 } from 'react';
 import { Entity, useCADContext } from '@/hooks/CADContext';
 import { redraw } from '@/draw/redraw';
-import { getCursorPosition } from '@/mouse/get-cursor-position';
-import { handleMouseDown } from '@/mouse/handle-mouse-down';
+import { getCursorPosition } from '@/components/cursor/get-cursor-position';
+import { handleMouseDown } from '@/components/mouse-down/handle-mouse-down';
+import { handleMouseUp } from '@/components/mouse-up/handle-mouse-up';
 
 // Define point interface for local use
 interface Point {
@@ -133,40 +134,6 @@ export default function Canvas() {
         case 'polyline':
           updateTemporaryPolyline(cursorPos);
           break;
-        default:
-          break;
-      }
-    }
-  };
-
-  const handleMouseUp = (event: MouseEvent<HTMLCanvasElement>) => {
-    // End panning
-    if (isPanning) {
-      setIsPanning(false);
-      return;
-    }
-
-    // Handle drawing completion
-    if (drawingState.isDrawing && event.button === 0) {
-      const cursorPos = getCursorPosition({
-        event,
-        canvasRef,
-        viewState,
-        screenToWorld,
-        snapToGrid,
-      });
-
-      switch (currentTool) {
-        case 'line':
-          finishLine(cursorPos);
-          break;
-        case 'circle':
-          finishCircle(cursorPos);
-          break;
-        case 'rectangle':
-          finishRectangle(cursorPos);
-          break;
-        // Note: Polylines are handled differently - they finish on double-click
         default:
           break;
       }
@@ -323,34 +290,6 @@ export default function Canvas() {
     }));
   };
 
-  const finishLine = (endPoint: Point) => {
-    if (!drawingState.startPoint) return;
-
-    // Only create line if start and end are different
-    if (
-      drawingState.startPoint.x !== endPoint.x ||
-      drawingState.startPoint.y !== endPoint.y
-    ) {
-      addEntity({
-        type: 'line', // @ts-ignore
-        start: drawingState.startPoint,
-        end: endPoint,
-        properties: {
-          strokeColor: '#000000',
-          strokeWidth: 1,
-        },
-      });
-    }
-
-    // Reset drawing state
-    setDrawingState({
-      isDrawing: false,
-      startPoint: null,
-      points: [],
-      temporaryEntity: null,
-    });
-  };
-
   const updateTemporaryCircle = (currentPoint: Point) => {
     if (!drawingState.startPoint) return;
 
@@ -368,36 +307,6 @@ export default function Canvas() {
     }));
   };
 
-  const finishCircle = (endPoint: Point) => {
-    if (!drawingState.startPoint) return;
-
-    const radius = Math.sqrt(
-      Math.pow(endPoint.x - drawingState.startPoint.x, 2) +
-        Math.pow(endPoint.y - drawingState.startPoint.y, 2)
-    );
-
-    // Only create circle if radius is not zero
-    if (radius > 0) {
-      addEntity({
-        type: 'circle', // @ts-ignore
-        center: drawingState.startPoint,
-        radius,
-        properties: {
-          strokeColor: '#000000',
-          strokeWidth: 1,
-        },
-      });
-    }
-
-    // Reset drawing state
-    setDrawingState({
-      isDrawing: false,
-      startPoint: null,
-      points: [],
-      temporaryEntity: null,
-    });
-  };
-
   const updateTemporaryRectangle = (currentPoint: Point) => {
     if (!drawingState.startPoint) return;
 
@@ -412,35 +321,6 @@ export default function Canvas() {
         height,
       },
     }));
-  };
-
-  const finishRectangle = (endPoint: Point) => {
-    if (!drawingState.startPoint) return;
-
-    const width = endPoint.x - drawingState.startPoint.x;
-    const height = endPoint.y - drawingState.startPoint.y;
-
-    // Only create rectangle if width and height are not zero
-    if (width !== 0 && height !== 0) {
-      addEntity({
-        type: 'rectangle', // @ts-ignore
-        topLeft: drawingState.startPoint,
-        width,
-        height,
-        properties: {
-          strokeColor: '#000000',
-          strokeWidth: 1,
-        },
-      });
-    }
-
-    // Reset drawing state
-    setDrawingState({
-      isDrawing: false,
-      startPoint: null,
-      points: [],
-      temporaryEntity: null,
-    });
   };
 
   const updateTemporaryPolyline = (currentPoint: Point) => {
@@ -550,7 +430,21 @@ export default function Canvas() {
         })
       }
       onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
+      onMouseUp={(event) =>
+        handleMouseUp({
+          event,
+          isPanning,
+          canvasRef,
+          viewState,
+          currentTool,
+          drawingState,
+          setIsPanning,
+          addEntity,
+          setDrawingState,
+          screenToWorld,
+          snapToGrid,
+        })
+      }
       onDoubleClick={handleDoubleClick}
       onWheel={handleWheel}
       onContextMenu={(e) => e.preventDefault()} // Prevent context menu on right-click

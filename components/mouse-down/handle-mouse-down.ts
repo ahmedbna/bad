@@ -1,5 +1,5 @@
 import { MouseEvent } from 'react';
-import { getCursorPosition } from './get-cursor-position';
+import { getCursorPosition } from '../cursor/get-cursor-position';
 import { Entity, Point, ViewState } from '@/hooks/CADContext';
 import { handleSelectionStart } from './handle-selection-start';
 import { handleLineStart } from './handle-line-start';
