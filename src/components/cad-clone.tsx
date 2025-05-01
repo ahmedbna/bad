@@ -23,21 +23,15 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Plus, Circle, Square, Minus, Slash, Hand } from 'lucide-react';
 import { ModeToggle } from './ui/mode-toggle';
-
-// Types for our application
-type Point = { x: number; y: number };
-type DrawingTool = 'line' | 'rectangle' | 'circle' | 'polyline' | 'select';
-type Shape = {
-  id: string;
-  type: DrawingTool;
-  points: Point[];
-  properties?: {
-    radius?: number;
-    width?: number;
-    height?: number;
-    length?: number;
-  };
-};
+import { drawGrid, initializeCanvas } from './draw/draw-grid';
+import { Point } from '@/types/point';
+import { Shape } from '@/types/shape';
+import { DrawingTool } from '@/types/drawing-tool';
+import { drawShape } from './draw/draw-shape';
+import { worldToScreen } from '@/utils/worldToScreen';
+import { useCanvasResize } from '@/hooks/useCanvasResize';
+import { drawCrosshair } from './draw/draw-crosshair';
+import { screenToWorld } from '@/utils/screenToWorld';
 
 export const AutoCADClone = () => {
   // State
@@ -59,9 +53,13 @@ export const AutoCADClone = () => {
   const [dragStart, setDragStart] = useState<Point>({ x: 0, y: 0 });
   const [selectedShape, setSelectedShape] = useState<string | null>(null);
   const [gridSize, setGridSize] = useState(20);
+  const [majorGridInterval, setMajorGridInterval] = useState(10);
   const [snapToGrid, setSnapToGrid] = useState(true);
 
+  // Reference to track mouse position
+  const [mousePosition, setMousePosition] = useState<Point | null>(null);
   // Refs
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -93,6 +91,10 @@ export const AutoCADClone = () => {
     drawCanvas();
   }, [shapes, tempShape, scale, offset, selectedShape, gridSize, snapToGrid]);
 
+  useEffect(() => {
+    initializeCanvas(canvasRef, setOffset);
+  }, [canvasRef]);
+
   // // Use the resize hook to handle DPI scaling
   // const dpr = useCanvasResize(canvasRef);
 
@@ -114,14 +116,7 @@ export const AutoCADClone = () => {
   //     // canvas.width = width;
   //     // canvas.height = height;
 
-  //     redraw({
-  //       canvasRef,
-  //       viewState,
-  //       drawingState,
-  //       entities,
-  //       selectedEntities,
-  //       worldToScreen,
-  //     });
+  //     drawCanvas();
   //   };
 
   //   // Set up event listeners
@@ -132,22 +127,6 @@ export const AutoCADClone = () => {
   //     window.removeEventListener('resize', resizeCanvas);
   //   };
   // }, []);
-
-  // Convert screen coordinates to world coordinates
-  const screenToWorld = (point: Point): Point => {
-    return {
-      x: (point.x - offset.x) / scale,
-      y: (point.y - offset.y) / scale,
-    };
-  };
-
-  // Convert world coordinates to screen coordinates
-  const worldToScreen = (point: Point): Point => {
-    return {
-      x: point.x * scale + offset.x,
-      y: point.y * scale + offset.y,
-    };
-  };
 
   // Snap point to grid if enabled
   const snapPointToGrid = (point: Point): Point => {
@@ -170,168 +149,38 @@ export const AutoCADClone = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Draw grid
-    drawGrid(ctx);
+    drawGrid({
+      canvasRef,
+      ctx,
+      scale,
+      offset,
+      gridSize,
+      majorGridInterval,
+    });
 
     // Draw all shapes
     shapes.forEach((shape) => {
       const isSelected = shape.id === selectedShape;
-      drawShape(ctx, shape, isSelected);
+      drawShape({ ctx, scale, offset, shape, isSelected, isTemporary: false });
     });
 
     // Draw temporary shape while drawing
     if (tempShape) {
-      drawShape(ctx, tempShape, false, true);
+      drawShape({
+        ctx,
+        scale,
+        offset,
+        shape: tempShape,
+        isSelected: false,
+        isTemporary: true,
+      });
     }
 
     // Draw crosshair at cursor
     // if (selectedTool !== 'select') {
-    //   drawCrosshair(ctx);
+    //   drawCrosshair({ ctx, scale, offset, mousePosition, selectedTool });
     // }
   };
-
-  // Draw grid
-  const drawGrid = (ctx: CanvasRenderingContext2D) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 0.5;
-
-    // Calculate grid lines based on scale and offset
-    const scaledGridSize = gridSize * scale;
-    const startX = offset.x % scaledGridSize;
-    const startY = offset.y % scaledGridSize;
-
-    // Draw vertical grid lines
-    for (let x = startX; x < canvas.width; x += scaledGridSize) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvas.height);
-      ctx.stroke();
-    }
-
-    // Draw horizontal grid lines
-    for (let y = startY; y < canvas.height; y += scaledGridSize) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvas.width, y);
-      ctx.stroke();
-    }
-
-    // Draw axes
-    ctx.strokeStyle = '#999';
-    ctx.lineWidth = 1;
-
-    // X-axis
-    const yAxisPos = offset.y;
-    ctx.beginPath();
-    ctx.moveTo(0, yAxisPos);
-    ctx.lineTo(canvas.width, yAxisPos);
-    ctx.stroke();
-
-    // Y-axis
-    const xAxisPos = offset.x;
-    ctx.beginPath();
-    ctx.moveTo(xAxisPos, 0);
-    ctx.lineTo(xAxisPos, canvas.height);
-    ctx.stroke();
-  };
-
-  // Draw shape
-  const drawShape = (
-    ctx: CanvasRenderingContext2D,
-    shape: Shape,
-    isSelected: boolean,
-    isTemp = false
-  ) => {
-    ctx.strokeStyle = isSelected ? '#2563eb' : isTemp ? '#9ca3af' : '#000';
-    ctx.lineWidth = isSelected ? 2 : 1;
-
-    switch (shape.type) {
-      case 'line':
-        if (shape.points.length >= 2) {
-          const start = worldToScreen(shape.points[0]);
-          const end = worldToScreen(shape.points[1]);
-
-          ctx.beginPath();
-          ctx.moveTo(start.x, start.y);
-          ctx.lineTo(end.x, end.y);
-          ctx.stroke();
-        }
-        break;
-
-      case 'rectangle':
-        if (shape.points.length >= 2) {
-          const start = worldToScreen(shape.points[0]);
-          const end = worldToScreen(shape.points[1]);
-
-          const width = end.x - start.x;
-          const height = end.y - start.y;
-
-          ctx.beginPath();
-          ctx.rect(start.x, start.y, width, height);
-          ctx.stroke();
-        }
-        break;
-
-      case 'circle':
-        if (shape.points.length >= 1 && shape.properties?.radius) {
-          const center = worldToScreen(shape.points[0]);
-          const radius = shape.properties.radius * scale;
-
-          ctx.beginPath();
-          ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
-          ctx.stroke();
-        }
-        break;
-
-      case 'polyline':
-        if (shape.points.length >= 2) {
-          const points = shape.points.map(worldToScreen);
-
-          ctx.beginPath();
-          ctx.moveTo(points[0].x, points[0].y);
-
-          for (let i = 1; i < points.length; i++) {
-            ctx.lineTo(points[i].x, points[i].y);
-          }
-
-          ctx.stroke();
-        }
-        break;
-
-      default:
-        break;
-    }
-  };
-
-  // Draw crosshair at cursor
-  const drawCrosshair = (ctx: CanvasRenderingContext2D) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    // Get cursor position from last mouse move
-    const cursorX = mousePosition?.x || 0;
-    const cursorY = mousePosition?.y || 0;
-
-    ctx.strokeStyle = '#666';
-    ctx.lineWidth = 0.5;
-
-    // Horizontal line
-    ctx.beginPath();
-    ctx.moveTo(0, cursorY);
-    ctx.lineTo(canvas.width, cursorY);
-    ctx.stroke();
-
-    // Vertical line
-    ctx.beginPath();
-    ctx.moveTo(cursorX, 0);
-    ctx.lineTo(cursorX, canvas.height);
-    ctx.stroke();
-  };
-
-  // Reference to track mouse position
-  const [mousePosition, setMousePosition] = useState<Point | null>(null);
 
   // Handle mouse move
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -356,7 +205,11 @@ export const AutoCADClone = () => {
 
     // Update temporary shape if drawing
     if (tempShape && drawingPoints.length > 0) {
-      const worldPoint = screenToWorld({ x: mouseX, y: mouseY });
+      const worldPoint = screenToWorld({
+        point: { x: mouseX, y: mouseY },
+        scale,
+        offset,
+      });
       const snappedPoint = snapPointToGrid(worldPoint);
 
       switch (selectedTool) {
@@ -422,7 +275,11 @@ export const AutoCADClone = () => {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    const worldPoint = screenToWorld({ x: mouseX, y: mouseY });
+    const worldPoint = screenToWorld({
+      point: { x: mouseX, y: mouseY },
+      scale,
+      offset,
+    });
     const snappedPoint = snapPointToGrid(worldPoint);
 
     if (drawingPoints.length === 0) {
@@ -510,7 +367,11 @@ export const AutoCADClone = () => {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    const worldPoint = screenToWorld({ x: mouseX, y: mouseY });
+    const worldPoint = screenToWorld({
+      point: { x: mouseX, y: mouseY },
+      scale,
+      offset,
+    });
 
     // Find clicked shape
     for (let i = shapes.length - 1; i >= 0; i--) {
@@ -657,13 +518,17 @@ export const AutoCADClone = () => {
     const mouseY = e.clientY - rect.top;
 
     // Calculate world point under cursor before zoom
-    const worldPoint = screenToWorld({ x: mouseX, y: mouseY });
+    const worldPoint = screenToWorld({
+      point: { x: mouseX, y: mouseY },
+      scale,
+      offset,
+    });
 
     // Apply zoom
     setScale((prev) => prev * zoomFactor);
 
     // Calculate screen point after zoom
-    const newScreenPoint = worldToScreen(worldPoint);
+    const newScreenPoint = worldToScreen({ point: worldPoint, scale, offset });
 
     // Adjust offset to keep world point under cursor
     setOffset((prev) => ({
@@ -977,7 +842,11 @@ export const AutoCADClone = () => {
               const mouseX = e.clientX - rect.left;
               const mouseY = e.clientY - rect.top;
 
-              const worldPoint = screenToWorld({ x: mouseX, y: mouseY });
+              const worldPoint = screenToWorld({
+                point: { x: mouseX, y: mouseY },
+                scale,
+                offset,
+              });
               const snappedPoint = snapPointToGrid(worldPoint);
 
               if (selectedTool === 'polyline') {
@@ -1243,7 +1112,7 @@ export const AutoCADClone = () => {
                 <div>
                   <span className='font-medium'>Cursor:</span>{' '}
                   {mousePosition
-                    ? `(${screenToWorld(mousePosition).x.toFixed(2)}, ${screenToWorld(mousePosition).y.toFixed(2)})`
+                    ? `(${screenToWorld({ point: mousePosition, scale, offset }).x.toFixed(2)}, ${screenToWorld({ point: mousePosition, scale, offset }).y.toFixed(2)})`
                     : 'N/A'}
                 </div>
                 <div>
