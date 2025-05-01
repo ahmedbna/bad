@@ -1,6 +1,6 @@
 import { Point } from '@/types/point';
 import { Shape } from '@/types/shape';
-import { worldToScreen } from '@/utils/worldToScreen';
+import { worldToCanvas } from '@/utils/worldToCanvas';
 
 type Props = {
   ctx: CanvasRenderingContext2D;
@@ -26,8 +26,8 @@ export const drawShape = ({
   switch (shape.type) {
     case 'line':
       if (shape.points.length >= 2) {
-        const start = worldToScreen({ point: shape.points[0], scale, offset });
-        const end = worldToScreen({ point: shape.points[1], scale, offset });
+        const start = worldToCanvas({ point: shape.points[0], scale, offset });
+        const end = worldToCanvas({ point: shape.points[1], scale, offset });
 
         ctx.beginPath();
         ctx.moveTo(start.x, start.y);
@@ -38,8 +38,8 @@ export const drawShape = ({
 
     case 'rectangle':
       if (shape.points.length >= 2) {
-        const start = worldToScreen({ point: shape.points[0], scale, offset });
-        const end = worldToScreen({ point: shape.points[1], scale, offset });
+        const start = worldToCanvas({ point: shape.points[0], scale, offset });
+        const end = worldToCanvas({ point: shape.points[1], scale, offset });
 
         const width = end.x - start.x;
         const height = end.y - start.y;
@@ -52,7 +52,7 @@ export const drawShape = ({
 
     case 'circle':
       if (shape.points.length >= 1 && shape.properties?.radius) {
-        const center = worldToScreen({ point: shape.points[0], scale, offset });
+        const center = worldToCanvas({ point: shape.points[0], scale, offset });
         const radius = shape.properties.radius * scale;
 
         ctx.beginPath();
@@ -64,7 +64,7 @@ export const drawShape = ({
     case 'polyline':
       if (shape.points.length >= 2) {
         const points = shape.points.map((point) =>
-          worldToScreen({ point, scale, offset })
+          worldToCanvas({ point, scale, offset })
         );
 
         ctx.beginPath();

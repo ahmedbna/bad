@@ -28,10 +28,8 @@ import { Point } from '@/types/point';
 import { Shape } from '@/types/shape';
 import { DrawingTool } from '@/types/drawing-tool';
 import { drawShape } from './draw/draw-shape';
-import { worldToScreen } from '@/utils/worldToScreen';
-import { useCanvasResize } from '@/hooks/useCanvasResize';
-import { drawCrosshair } from './draw/draw-crosshair';
-import { screenToWorld } from '@/utils/screenToWorld';
+import { worldToCanvas } from '@/utils/worldToCanvas';
+import { canvasToWorld } from '@/utils/canvasToWorld';
 
 export const AutoCADClone = () => {
   // State
@@ -205,7 +203,7 @@ export const AutoCADClone = () => {
 
     // Update temporary shape if drawing
     if (tempShape && drawingPoints.length > 0) {
-      const worldPoint = screenToWorld({
+      const worldPoint = canvasToWorld({
         point: { x: mouseX, y: mouseY },
         scale,
         offset,
@@ -275,7 +273,7 @@ export const AutoCADClone = () => {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    const worldPoint = screenToWorld({
+    const worldPoint = canvasToWorld({
       point: { x: mouseX, y: mouseY },
       scale,
       offset,
@@ -367,7 +365,7 @@ export const AutoCADClone = () => {
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    const worldPoint = screenToWorld({
+    const worldPoint = canvasToWorld({
       point: { x: mouseX, y: mouseY },
       scale,
       offset,
@@ -518,7 +516,7 @@ export const AutoCADClone = () => {
     const mouseY = e.clientY - rect.top;
 
     // Calculate world point under cursor before zoom
-    const worldPoint = screenToWorld({
+    const worldPoint = canvasToWorld({
       point: { x: mouseX, y: mouseY },
       scale,
       offset,
@@ -528,7 +526,7 @@ export const AutoCADClone = () => {
     setScale((prev) => prev * zoomFactor);
 
     // Calculate screen point after zoom
-    const newScreenPoint = worldToScreen({ point: worldPoint, scale, offset });
+    const newScreenPoint = worldToCanvas({ point: worldPoint, scale, offset });
 
     // Adjust offset to keep world point under cursor
     setOffset((prev) => ({
@@ -842,7 +840,7 @@ export const AutoCADClone = () => {
               const mouseX = e.clientX - rect.left;
               const mouseY = e.clientY - rect.top;
 
-              const worldPoint = screenToWorld({
+              const worldPoint = canvasToWorld({
                 point: { x: mouseX, y: mouseY },
                 scale,
                 offset,
@@ -1112,7 +1110,7 @@ export const AutoCADClone = () => {
                 <div>
                   <span className='font-medium'>Cursor:</span>{' '}
                   {mousePosition
-                    ? `(${screenToWorld({ point: mousePosition, scale, offset }).x.toFixed(2)}, ${screenToWorld({ point: mousePosition, scale, offset }).y.toFixed(2)})`
+                    ? `(${canvasToWorld({ point: mousePosition, scale, offset }).x.toFixed(2)}, ${canvasToWorld({ point: mousePosition, scale, offset }).y.toFixed(2)})`
                     : 'N/A'}
                 </div>
                 <div>
