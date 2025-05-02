@@ -510,25 +510,34 @@ export const AutoCADClone = () => {
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
 
-    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+    // Smoother zoom factor
+    const zoomIntensity = 0.05;
+    const direction = e.deltaY > 0 ? -1 : 1;
+    const zoomFactor = 1 + direction * zoomIntensity;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Calculate world point under cursor before zoom
-    const worldPoint = canvasToWorld({
+    // Get world position under cursor before zoom
+    const worldPointBeforeZoom = canvasToWorld({
       point: { x: mouseX, y: mouseY },
       scale,
       offset,
     });
 
-    // Apply zoom
-    setScale((prev) => prev * zoomFactor);
+    // New scale
+    const newScale = scale * zoomFactor;
+    setScale(newScale);
 
-    // Calculate screen point after zoom
-    const newScreenPoint = worldToCanvas({ point: worldPoint, scale, offset });
+    // Get screen position of same world point after zoom
+    const newScreenPoint = worldToCanvas({
+      point: worldPointBeforeZoom,
+      scale: newScale,
+      offset,
+    });
 
-    // Adjust offset to keep world point under cursor
+    // Adjust offset so zoom centers around the cursor
     setOffset((prev) => ({
       x: prev.x + (mouseX - newScreenPoint.x),
       y: prev.y + (mouseY - newScreenPoint.y),
