@@ -57,7 +57,7 @@ export const AutoCADClone = () => {
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Point>({ x: 0, y: 0 });
-  const [selectedShape, setSelectedShape] = useState<string | null>(null);
+  const [selectedShapes, setSelectedShapes] = useState<string[]>([]);
   const [gridSize, setGridSize] = useState(20);
   const [majorGridInterval, setMajorGridInterval] = useState(10);
   const [snapToGrid, setSnapToGrid] = useState(true);
@@ -95,7 +95,7 @@ export const AutoCADClone = () => {
   // Redraw canvas when shapes, temp shape, or view parameters change
   useEffect(() => {
     drawCanvas();
-  }, [shapes, tempShape, scale, offset, selectedShape, gridSize, snapToGrid]);
+  }, [shapes, tempShape, scale, offset, selectedShapes, gridSize, snapToGrid]);
 
   useEffect(() => {
     initializeCanvas(canvasRef, setOffset);
@@ -166,7 +166,7 @@ export const AutoCADClone = () => {
 
     // Draw all shapes
     shapes.forEach((shape) => {
-      const isSelected = shape.id === selectedShape;
+      const isSelected = selectedShapes.includes(shape.id);
       drawShape({ ctx, scale, offset, shape, isSelected, isTemporary: false });
     });
 
@@ -186,161 +186,6 @@ export const AutoCADClone = () => {
     // if (selectedTool !== 'select') {
     //   drawCrosshair({ ctx, scale, offset, mousePosition, selectedTool });
     // }
-  };
-
-  // Handle mouse move
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    setMousePosition({ x: mouseX, y: mouseY });
-
-    // Handle panning
-    if (isDragging) {
-      const dx = mouseX - dragStart.x;
-      const dy = mouseY - dragStart.y;
-
-      setOffset((prev) => ({
-        x: prev.x + dx,
-        y: prev.y + dy,
-      }));
-
-      setDragStart({ x: mouseX, y: mouseY });
-    }
-
-    // Update temporary shape if drawing
-    if (tempShape && drawingPoints.length > 0) {
-      const worldPoint = canvasToWorld({
-        point: { x: mouseX, y: mouseY },
-        scale,
-        offset,
-      });
-      const snappedPoint = snapPointToGrid(worldPoint);
-
-      switch (selectedTool) {
-        case 'line':
-          setTempShape({
-            ...tempShape,
-            points: [drawingPoints[0], snappedPoint],
-          });
-          break;
-
-        case 'rectangle':
-          setTempShape({
-            ...tempShape,
-            points: [drawingPoints[0], snappedPoint],
-          });
-          break;
-
-        case 'circle':
-          const center = drawingPoints[0];
-          const dx = snappedPoint.x - center.x;
-          const dy = snappedPoint.y - center.y;
-          const radius = Math.sqrt(dx * dx + dy * dy);
-
-          setTempShape({
-            ...tempShape,
-            properties: { radius },
-          });
-          break;
-
-        case 'polyline':
-          if (drawingPoints.length > 0) {
-            const newPoints = [...drawingPoints];
-            if (newPoints.length > 1) {
-              // Replace the last preview point
-              newPoints[newPoints.length - 1] = snappedPoint;
-            } else {
-              // Add a preview point
-              newPoints.push(snappedPoint);
-            }
-
-            setTempShape({
-              ...tempShape,
-              points: newPoints,
-            });
-          }
-          break;
-
-        default:
-          break;
-      }
-    }
-  };
-
-  // Handle canvas click
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (selectedTool === 'select') {
-      // Handle selection
-      handleSelection(e);
-      return;
-    }
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const worldPoint = canvasToWorld({
-      point: { x: mouseX, y: mouseY },
-      scale,
-      offset,
-    });
-    const snappedPoint = snapPointToGrid(worldPoint);
-
-    if (drawingPoints.length === 0) {
-      // First point
-      setDrawingPoints([snappedPoint]);
-
-      // Create temporary shape
-      const newTempShape: Shape = {
-        id: `temp-${Date.now()}`,
-        type: selectedTool,
-        points: [snappedPoint],
-        properties: {},
-      };
-
-      setTempShape(newTempShape);
-    } else {
-      // Complete the shape based on the tool
-      switch (selectedTool) {
-        case 'line':
-        case 'rectangle':
-          completeShape([drawingPoints[0], snappedPoint]);
-          break;
-
-        case 'circle':
-          const center = drawingPoints[0];
-          const dx = snappedPoint.x - center.x;
-          const dy = snappedPoint.y - center.y;
-          const radius = Math.sqrt(dx * dx + dy * dy);
-
-          completeShape([center], { radius });
-          break;
-
-        case 'polyline':
-          // Add point to polyline
-          const updatedPoints = [...drawingPoints, snappedPoint];
-          setDrawingPoints(updatedPoints);
-
-          if (e.detail === 2) {
-            // Double click
-            completeShape(updatedPoints);
-          } else {
-            // Update temp shape with new point
-            if (tempShape) {
-              setTempShape({
-                ...tempShape,
-                points: updatedPoints,
-              });
-            }
-          }
-          break;
-
-        default:
-          break;
-      }
-    }
   };
 
   // Complete shape and add to shapes list
@@ -384,13 +229,13 @@ export const AutoCADClone = () => {
       const shape = shapes[i];
 
       if (isPointInShape(worldPoint, shape)) {
-        setSelectedShape(shape.id);
+        setSelectedShapes((pre) => [...pre, shape.id]);
         return;
       }
     }
 
     // If no shape found, clear selection
-    setSelectedShape(null);
+    setSelectedShapes([]);
   };
 
   // Check if point is in shape
@@ -512,44 +357,6 @@ export const AutoCADClone = () => {
     const dx = p2.x - p1.x;
     const dy = p2.y - p1.y;
     return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  // Handle mouse wheel for zooming
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-
-    // Smoother zoom factor
-    const zoomIntensity = 0.05;
-    const direction = e.deltaY > 0 ? -1 : 1;
-    const zoomFactor = 1 + direction * zoomIntensity;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    // Get world position under cursor before zoom
-    const worldPointBeforeZoom = canvasToWorld({
-      point: { x: mouseX, y: mouseY },
-      scale,
-      offset,
-    });
-
-    // New scale
-    const newScale = scale * zoomFactor;
-    setScale(newScale);
-
-    // Get screen position of same world point after zoom
-    const newScreenPoint = worldToCanvas({
-      point: worldPointBeforeZoom,
-      scale: newScale,
-      offset,
-    });
-
-    // Adjust offset so zoom centers around the cursor
-    setOffset((prev) => ({
-      x: prev.x + (mouseX - newScreenPoint.x),
-      y: prev.y + (mouseY - newScreenPoint.y),
-    }));
   };
 
   // Handle coordinate input
@@ -692,15 +499,241 @@ export const AutoCADClone = () => {
     });
   };
 
-  // Delete selected shape
+  // Delete selected shapes
   const handleDeleteShape = () => {
-    if (!selectedShape) return;
+    if (!selectedShapes.length) return;
 
-    setShapes((prev) => prev.filter((shape) => shape.id !== selectedShape));
-    setSelectedShape(null);
+    setShapes((prev) =>
+      prev.filter((shape) => !selectedShapes.includes(shape.id))
+    );
+    setSelectedShapes([]);
   };
 
-  console.log('shapes:', shapes);
+  // Handle canvas click
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (selectedTool === 'select') {
+      // Handle selection
+      handleSelection(e);
+      return;
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const worldPoint = canvasToWorld({
+      point: { x: mouseX, y: mouseY },
+      scale,
+      offset,
+    });
+    const snappedPoint = snapPointToGrid(worldPoint);
+
+    if (drawingPoints.length === 0) {
+      // First point
+      setDrawingPoints([snappedPoint]);
+
+      // Create temporary shape
+      const newTempShape: Shape = {
+        id: `temp-${Date.now()}`,
+        type: selectedTool,
+        points: [snappedPoint],
+        properties: {},
+      };
+
+      setTempShape(newTempShape);
+    } else {
+      // Complete the shape based on the tool
+      switch (selectedTool) {
+        case 'line':
+        case 'rectangle':
+          completeShape([drawingPoints[0], snappedPoint]);
+          break;
+
+        case 'circle':
+          const center = drawingPoints[0];
+          const dx = snappedPoint.x - center.x;
+          const dy = snappedPoint.y - center.y;
+          const radius = Math.sqrt(dx * dx + dy * dy);
+
+          completeShape([center], { radius });
+          break;
+
+        case 'polyline':
+          // Add point to polyline
+          const updatedPoints = [...drawingPoints, snappedPoint];
+          setDrawingPoints(updatedPoints);
+
+          if (e.detail === 2) {
+            // Double click
+            completeShape(updatedPoints);
+          } else {
+            // Update temp shape with new point
+            if (tempShape) {
+              setTempShape({
+                ...tempShape,
+                points: updatedPoints,
+              });
+            }
+          }
+          break;
+
+        default:
+          break;
+      }
+    }
+  };
+
+  // Handle mouse move
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    setMousePosition({ x: mouseX, y: mouseY });
+
+    // Handle panning
+    if (isDragging) {
+      const dx = mouseX - dragStart.x;
+      const dy = mouseY - dragStart.y;
+
+      setOffset((prev) => ({
+        x: prev.x + dx,
+        y: prev.y + dy,
+      }));
+
+      setDragStart({ x: mouseX, y: mouseY });
+    }
+
+    // Update temporary shape if drawing
+    if (tempShape && drawingPoints.length > 0) {
+      const worldPoint = canvasToWorld({
+        point: { x: mouseX, y: mouseY },
+        scale,
+        offset,
+      });
+      const snappedPoint = snapPointToGrid(worldPoint);
+
+      switch (selectedTool) {
+        case 'line':
+          setTempShape({
+            ...tempShape,
+            points: [drawingPoints[0], snappedPoint],
+          });
+          break;
+
+        case 'rectangle':
+          setTempShape({
+            ...tempShape,
+            points: [drawingPoints[0], snappedPoint],
+          });
+          break;
+
+        case 'circle':
+          const center = drawingPoints[0];
+          const dx = snappedPoint.x - center.x;
+          const dy = snappedPoint.y - center.y;
+          const radius = Math.sqrt(dx * dx + dy * dy);
+
+          setTempShape({
+            ...tempShape,
+            properties: { radius },
+          });
+          break;
+
+        case 'polyline':
+          if (drawingPoints.length > 0) {
+            const newPoints = [...drawingPoints];
+            if (newPoints.length > 1) {
+              // Replace the last preview point
+              newPoints[newPoints.length - 1] = snappedPoint;
+            } else {
+              // Add a preview point
+              newPoints.push(snappedPoint);
+            }
+
+            setTempShape({
+              ...tempShape,
+              points: newPoints,
+            });
+          }
+          break;
+
+        default:
+          break;
+      }
+    }
+  };
+
+  // Handle mouse down
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (selectedTool === 'pan' && e.button === 0) {
+      setIsDragging(true);
+      setDragStart({
+        x: e.clientX - e.currentTarget.getBoundingClientRect().left,
+        y: e.clientY - e.currentTarget.getBoundingClientRect().top,
+      });
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const worldPoint = canvasToWorld({
+      point: { x: mouseX, y: mouseY },
+      scale,
+      offset,
+    });
+    const snappedPoint = snapPointToGrid(worldPoint);
+
+    if (selectedTool === 'polyline') {
+      const newPoints = [...drawingPoints, snappedPoint];
+      setDrawingPoints(newPoints);
+
+      setTempShape({
+        id: 'temp-polyline',
+        type: 'polyline',
+        points: newPoints,
+      });
+    }
+  };
+
+  // Handle mouse wheel for zooming
+  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+
+    // Smoother zoom factor
+    const zoomIntensity = 0.05;
+    const direction = e.deltaY > 0 ? -1 : 1;
+    const zoomFactor = 1 + direction * zoomIntensity;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Get world position under cursor before zoom
+    const worldPointBeforeZoom = canvasToWorld({
+      point: { x: mouseX, y: mouseY },
+      scale,
+      offset,
+    });
+
+    // New scale
+    const newScale = scale * zoomFactor;
+    setScale(newScale);
+
+    // Get screen position of same world point after zoom
+    const newScreenPoint = worldToCanvas({
+      point: worldPointBeforeZoom,
+      scale: newScale,
+      offset,
+    });
+
+    // Adjust offset so zoom centers around the cursor
+    setOffset((prev) => ({
+      x: prev.x + (mouseX - newScreenPoint.x),
+      y: prev.y + (mouseY - newScreenPoint.y),
+    }));
+  };
 
   return (
     <div className='flex flex-col h-screen'>
@@ -730,7 +763,7 @@ export const AutoCADClone = () => {
             size='sm'
             onClick={() => {
               setSelectedTool('line');
-              setSelectedShape(null);
+              setSelectedShapes([]);
             }}
             title='Line'
           >
@@ -741,7 +774,7 @@ export const AutoCADClone = () => {
             size='sm'
             onClick={() => {
               setSelectedTool('rectangle');
-              setSelectedShape(null);
+              setSelectedShapes([]);
             }}
             title='Rectangle'
           >
@@ -752,7 +785,7 @@ export const AutoCADClone = () => {
             size='sm'
             onClick={() => {
               setSelectedTool('circle');
-              setSelectedShape(null);
+              setSelectedShapes([]);
             }}
             title='Circle'
           >
@@ -763,7 +796,7 @@ export const AutoCADClone = () => {
             size='sm'
             onClick={() => {
               setSelectedTool('polyline');
-              setSelectedShape(null);
+              setSelectedShapes([]);
             }}
             title='Polyline'
           >
@@ -833,14 +866,14 @@ export const AutoCADClone = () => {
           </Button>
         </div>
 
-        {selectedShape && (
+        {selectedShapes.length > 0 ? (
           <>
             <Separator orientation='vertical' className='h-8' />
             <Button variant='destructive' size='sm' onClick={handleDeleteShape}>
               Delete Selected
             </Button>
           </>
-        )}
+        ) : null}
       </div>
 
       {/* Main content */}
@@ -849,43 +882,13 @@ export const AutoCADClone = () => {
         <div className='flex-1 relative overflow-hidden' ref={containerRef}>
           <canvas
             ref={canvasRef}
-            className='absolute top-0 left-0 cursor-crosshair bg-muted'
-            onMouseMove={handleMouseMove}
+            onWheel={handleWheel}
             onClick={handleCanvasClick}
-            onMouseDown={(e) => {
-              if (selectedTool === 'pan' && e.button === 0) {
-                setIsDragging(true);
-                setDragStart({
-                  x: e.clientX - e.currentTarget.getBoundingClientRect().left,
-                  y: e.clientY - e.currentTarget.getBoundingClientRect().top,
-                });
-              }
-
-              const rect = e.currentTarget.getBoundingClientRect();
-              const mouseX = e.clientX - rect.left;
-              const mouseY = e.clientY - rect.top;
-
-              const worldPoint = canvasToWorld({
-                point: { x: mouseX, y: mouseY },
-                scale,
-                offset,
-              });
-              const snappedPoint = snapPointToGrid(worldPoint);
-
-              if (selectedTool === 'polyline') {
-                const newPoints = [...drawingPoints, snappedPoint];
-                setDrawingPoints(newPoints);
-
-                setTempShape({
-                  id: 'temp-polyline',
-                  type: 'polyline',
-                  points: newPoints,
-                });
-              }
-            }}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
             onMouseUp={() => setIsDragging(false)}
             onMouseLeave={() => setIsDragging(false)}
-            onWheel={handleWheel}
+            className='absolute top-0 left-0 cursor-crosshair bg-muted'
           />
         </div>
 
@@ -1077,7 +1080,7 @@ export const AutoCADClone = () => {
           )}
 
           {/* Selected shape properties */}
-          {selectedTool === 'select' && selectedShape && (
+          {/* {selectedTool === 'select' && selectedShape && (
             <Card className='mb-4'>
               <CardHeader className='py-2'>
                 <CardTitle className='text-sm'>Selected Shape</CardTitle>
@@ -1119,11 +1122,11 @@ export const AutoCADClone = () => {
                 )}
               </CardContent>
             </Card>
-          )}
+          )} */}
 
           {/* Status and information */}
           <Card>
-            <CardHeader className='py-2'>
+            <CardHeader>
               <CardTitle className='text-sm'>Status</CardTitle>
             </CardHeader>
             <CardContent>
