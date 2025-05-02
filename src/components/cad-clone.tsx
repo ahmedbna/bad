@@ -12,6 +12,15 @@ import { handleSelection } from './selection/handleSelection';
 import { SidePanel } from './sidebar/side-panel';
 import { Toolbar } from './toolbar/toolbar';
 import { useCanvasResize } from '@/hooks/useCanvasResize';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -25,6 +34,11 @@ export const AutoCADClone = () => {
     height: '',
     radius: '',
     diameter: '',
+    radiusX: '',
+    radiusY: '',
+    startAngle: '',
+    endAngle: '',
+    sides: '6',
   });
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
@@ -34,6 +48,10 @@ export const AutoCADClone = () => {
   const [gridSize, setGridSize] = useState(20);
   const [majorGridInterval, setMajorGridInterval] = useState(10);
   const [snapToGrid, setSnapToGrid] = useState(true);
+
+  // State for polygon dialog
+  const [showPolygonDialog, setShowPolygonDialog] = useState(false);
+  const [polygonSides, setPolygonSides] = useState(6);
 
   // Reference to track mouse position
   const [mousePosition, setMousePosition] = useState<Point | null>(null);
@@ -79,6 +97,15 @@ export const AutoCADClone = () => {
       window.removeEventListener('resize', resizeCanvas);
     };
   }, [dpr]);
+
+  // Show polygon dialog when polygon tool is selected
+  useEffect(() => {
+    if (selectedTool === 'polygon') {
+      setShowPolygonDialog(true);
+    } else {
+      setShowPolygonDialog(false);
+    }
+  }, [selectedTool]);
 
   // Redraw canvas when shapes, temp shape, or view parameters change
   useEffect(() => {
@@ -141,6 +168,18 @@ export const AutoCADClone = () => {
     }
   };
 
+  // Calculate distance between two points
+  const distanceBetweenPoints = (p1: Point, p2: Point): number => {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // Calculate angle between two points (in radians)
+  const angleBetweenPoints = (center: Point, p: Point): number => {
+    return Math.atan2(p.y - center.y, p.x - center.x);
+  };
+
   // Complete shape and add to shapes list
   const completeShape = (points: Point[], properties = {}) => {
     if (points.length < 1) return;
@@ -162,6 +201,11 @@ export const AutoCADClone = () => {
       height: '',
       radius: '',
       diameter: '',
+      radiusX: '',
+      radiusY: '',
+      startAngle: '',
+      endAngle: '',
+      sides: '6',
     });
   };
 
@@ -176,6 +220,11 @@ export const AutoCADClone = () => {
       height: '',
       radius: '',
       diameter: '',
+      radiusX: '',
+      radiusY: '',
+      startAngle: '',
+      endAngle: '',
+      sides: '6',
     });
   };
 

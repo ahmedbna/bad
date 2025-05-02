@@ -16,6 +16,10 @@ import {
   Slash,
   Hand,
   LucideBoxSelect,
+  Spline,
+  Hexagon,
+  PenTool,
+  Egg,
 } from 'lucide-react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { DrawingTool } from '@/types/drawing-tool';
@@ -50,7 +54,7 @@ export const Toolbar = ({
   handleDeleteShape,
 }: Props) => {
   return (
-    <div className='p-2 border-b flex items-center space-x-4'>
+    <div className='p-2 border-b flex items-center space-x-4 overflow-x-auto'>
       <div className='flex space-x-2'>
         <ModeToggle />
 
@@ -70,6 +74,11 @@ export const Toolbar = ({
         >
           <Hand size={16} />
         </Button>
+      </div>
+
+      <Separator orientation='vertical' className='h-8' />
+
+      <div className='flex space-x-2'>
         <Button
           variant={selectedTool === 'line' ? 'default' : 'outline'}
           size='sm'
@@ -80,6 +89,17 @@ export const Toolbar = ({
           title='Line'
         >
           <Minus size={16} />
+        </Button>
+        <Button
+          variant={selectedTool === 'polyline' ? 'default' : 'outline'}
+          size='sm'
+          onClick={() => {
+            setSelectedTool('polyline');
+            setSelectedShapes([]);
+          }}
+          title='Polyline'
+        >
+          <Slash size={16} />
         </Button>
         <Button
           variant={selectedTool === 'rectangle' ? 'default' : 'outline'}
@@ -104,15 +124,48 @@ export const Toolbar = ({
           <Circle size={16} />
         </Button>
         <Button
-          variant={selectedTool === 'polyline' ? 'default' : 'outline'}
+          variant={selectedTool === 'arc' ? 'default' : 'outline'}
           size='sm'
           onClick={() => {
-            setSelectedTool('polyline');
+            setSelectedTool('arc');
             setSelectedShapes([]);
           }}
-          title='Polyline'
+          title='Arc'
         >
-          <Slash size={16} />
+          <Spline size={16} />
+        </Button>
+        <Button
+          variant={selectedTool === 'ellipse' ? 'default' : 'outline'}
+          size='sm'
+          onClick={() => {
+            setSelectedTool('ellipse');
+            setSelectedShapes([]);
+          }}
+          title='Ellipse'
+        >
+          <Egg size={16} />
+        </Button>
+        <Button
+          variant={selectedTool === 'polygon' ? 'default' : 'outline'}
+          size='sm'
+          onClick={() => {
+            setSelectedTool('polygon');
+            setSelectedShapes([]);
+          }}
+          title='Polygon'
+        >
+          <Hexagon size={16} />
+        </Button>
+        <Button
+          variant={selectedTool === 'spline' ? 'default' : 'outline'}
+          size='sm'
+          onClick={() => {
+            setSelectedTool('spline');
+            setSelectedShapes([]);
+          }}
+          title='Spline'
+        >
+          <PenTool size={16} />
         </Button>
       </div>
 

@@ -3,5 +3,9 @@ export type DrawingTool =
   | 'rectangle'
   | 'circle'
   | 'polyline'
+  | 'arc'
+  | 'ellipse'
+  | 'polygon'
+  | 'spline'
   | 'select'
   | 'pan';
