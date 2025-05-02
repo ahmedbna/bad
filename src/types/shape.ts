@@ -22,5 +22,8 @@ export type Shape = {
     degree?: number;
     knots?: number[];
     weights?: number[];
+
+    rotation?: number;
+    tension?: number;
   };
 };

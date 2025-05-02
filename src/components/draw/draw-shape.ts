@@ -78,6 +78,13 @@ export const drawShape = ({
   ctx.strokeStyle = isSelected ? '#2563eb' : isTemporary ? '#9ca3af' : '#000';
   ctx.lineWidth = isSelected ? 2 : 1;
 
+  // Add a fill color with transparency for temporary shapes to improve visual feedback
+  if (isTemporary) {
+    ctx.fillStyle = 'rgba(156, 163, 175, 0.1)';
+  } else {
+    ctx.fillStyle = isSelected ? 'rgba(37, 99, 235, 0.1)' : 'rgba(0, 0, 0, 0)';
+  }
+
   switch (shape.type) {
     case 'line':
       if (shape.points.length >= 2) {
@@ -88,6 +95,11 @@ export const drawShape = ({
         ctx.moveTo(start.x, start.y);
         ctx.lineTo(end.x, end.y);
         ctx.stroke();
+
+        // Draw control points when selected
+        if (isSelected) {
+          drawControlPoints(ctx, [start, end]);
+        }
       }
       break;
 
@@ -101,7 +113,19 @@ export const drawShape = ({
 
         ctx.beginPath();
         ctx.rect(start.x, start.y, width, height);
+        ctx.fill();
         ctx.stroke();
+
+        // Draw control points when selected
+        if (isSelected) {
+          const controlPoints = [
+            start,
+            { x: start.x + width, y: start.y },
+            end,
+            { x: start.x, y: start.y + height },
+          ];
+          drawControlPoints(ctx, controlPoints);
+        }
       }
       break;
 
@@ -112,20 +136,75 @@ export const drawShape = ({
 
         ctx.beginPath();
         ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
+
+        // Draw control points when selected
+        if (isSelected) {
+          // Draw center point
+          drawControlPoint(ctx, center);
+
+          // Draw radius control point
+          const radiusPoint = {
+            x: center.x + radius,
+            y: center.y,
+          };
+          drawControlPoint(ctx, radiusPoint);
+
+          // Draw a line connecting center to radius point
+          ctx.beginPath();
+          ctx.moveTo(center.x, center.y);
+          ctx.lineTo(radiusPoint.x, radiusPoint.y);
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
       break;
 
     case 'arc':
-      if (shape.points.length >= 1 && shape.properties?.radius) {
+      if (shape.points.length >= 1) {
         const center = worldToCanvas({ point: shape.points[0], scale, offset });
-        const radius = shape.properties.radius * scale;
-        const startAngle = shape.properties.startAngle || 0;
-        const endAngle = shape.properties.endAngle || Math.PI * 2;
+        const radius = (shape.properties?.radius || 0) * scale;
+        const startAngle = shape.properties?.startAngle || 0;
+        const endAngle = shape.properties?.endAngle || Math.PI * 2;
 
         ctx.beginPath();
         ctx.arc(center.x, center.y, radius, startAngle, endAngle);
         ctx.stroke();
+
+        // Draw control points when selected
+        if (isSelected) {
+          // Draw center point
+          drawControlPoint(ctx, center);
+
+          // Draw start and end points of the arc
+          const startPoint = {
+            x: center.x + radius * Math.cos(startAngle),
+            y: center.y + radius * Math.sin(startAngle),
+          };
+
+          const endPoint = {
+            x: center.x + radius * Math.cos(endAngle),
+            y: center.y + radius * Math.sin(endAngle),
+          };
+
+          drawControlPoint(ctx, startPoint);
+          drawControlPoint(ctx, endPoint);
+
+          // Draw radial lines
+          ctx.beginPath();
+          ctx.moveTo(center.x, center.y);
+          ctx.lineTo(startPoint.x, startPoint.y);
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(center.x, center.y);
+          ctx.lineTo(endPoint.x, endPoint.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
       break;
 
@@ -138,7 +217,7 @@ export const drawShape = ({
         const center = worldToCanvas({ point: shape.points[0], scale, offset });
         const radiusX = shape.properties.radiusX * scale;
         const radiusY = shape.properties.radiusY * scale;
-        const rotation = 0; // Could be added to properties if needed
+        const rotation = shape.properties.rotation || 0;
         const startAngle = shape.properties.startAngle || 0;
         const endAngle = shape.properties.isFullEllipse
           ? Math.PI * 2
@@ -154,7 +233,53 @@ export const drawShape = ({
           startAngle,
           endAngle
         );
+        ctx.fill();
         ctx.stroke();
+
+        // Draw control points when selected
+        if (isSelected) {
+          // Draw center point
+          drawControlPoint(ctx, center);
+
+          // Draw x-radius and y-radius control points
+          const radiusXPoint = {
+            x: center.x + radiusX * Math.cos(rotation),
+            y: center.y + radiusX * Math.sin(rotation),
+          };
+
+          const radiusYPoint = {
+            x: center.x + radiusY * Math.cos(rotation + Math.PI / 2),
+            y: center.y + radiusY * Math.sin(rotation + Math.PI / 2),
+          };
+
+          drawControlPoint(ctx, radiusXPoint);
+          drawControlPoint(ctx, radiusYPoint);
+
+          // Draw axis lines
+          ctx.beginPath();
+          ctx.moveTo(
+            center.x - radiusX * Math.cos(rotation),
+            center.y - radiusX * Math.sin(rotation)
+          );
+          ctx.lineTo(
+            center.x + radiusX * Math.cos(rotation),
+            center.y + radiusX * Math.sin(rotation)
+          );
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(
+            center.x - radiusY * Math.cos(rotation + Math.PI / 2),
+            center.y - radiusY * Math.sin(rotation + Math.PI / 2)
+          );
+          ctx.lineTo(
+            center.x + radiusY * Math.cos(rotation + Math.PI / 2),
+            center.y + radiusY * Math.sin(rotation + Math.PI / 2)
+          );
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
       break;
 
@@ -181,7 +306,25 @@ export const drawShape = ({
         }
 
         ctx.closePath();
+        ctx.fill();
         ctx.stroke();
+
+        // Draw control points when selected
+        if (isSelected) {
+          // Draw center point
+          drawControlPoint(ctx, center);
+
+          // Draw all vertices
+          drawControlPoints(ctx, points);
+
+          // Draw a radius line
+          ctx.beginPath();
+          ctx.moveTo(center.x, center.y);
+          ctx.lineTo(points[0].x, points[0].y);
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
       break;
 
@@ -200,9 +343,15 @@ export const drawShape = ({
 
         if (shape.properties?.isClosed) {
           ctx.closePath();
+          ctx.fill();
         }
 
         ctx.stroke();
+
+        // Draw control points when selected
+        if (isSelected) {
+          drawControlPoints(ctx, points);
+        }
       }
       break;
 
@@ -213,12 +362,59 @@ export const drawShape = ({
         );
 
         ctx.beginPath();
-        drawSpline(ctx, points);
+        drawSpline(ctx, points, shape.properties?.tension || 0.5);
+
+        if (shape.properties?.isClosed) {
+          // Connect back to start for closed splines
+          const lastPoint = points[points.length - 1];
+          const firstPoint = points[0];
+
+          // Calculate control points for closing segment
+          const tensionFactor = (shape.properties?.tension || 0.5) / 6;
+          const secondLastPoint = points[points.length - 2];
+          const secondPoint = points[1];
+
+          const cp1x =
+            lastPoint.x + (firstPoint.x - secondLastPoint.x) * tensionFactor;
+          const cp1y =
+            lastPoint.y + (firstPoint.y - secondLastPoint.y) * tensionFactor;
+          const cp2x =
+            firstPoint.x - (secondPoint.x - lastPoint.x) * tensionFactor;
+          const cp2y =
+            firstPoint.y - (secondPoint.y - lastPoint.y) * tensionFactor;
+
+          ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, firstPoint.x, firstPoint.y);
+          ctx.fill();
+        }
+
         ctx.stroke();
+
+        // Draw control points when selected
+        if (isSelected) {
+          drawControlPoints(ctx, points);
+        }
       }
       break;
 
     default:
       break;
   }
+};
+
+// Helper function to draw a control point
+const drawControlPoint = (ctx: CanvasRenderingContext2D, point: Point) => {
+  const size = 6;
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#2563eb';
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  ctx.rect(point.x - size / 2, point.y - size / 2, size, size);
+  ctx.fill();
+  ctx.stroke();
+};
+
+// Helper function to draw multiple control points
+const drawControlPoints = (ctx: CanvasRenderingContext2D, points: Point[]) => {
+  points.forEach((point) => drawControlPoint(ctx, point));
 };

@@ -9,4 +9,6 @@ export type Property = {
   startAngle: string;
   endAngle: string;
   sides: string;
+  rotation: string;
+  tension: string;
 };
