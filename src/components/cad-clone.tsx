@@ -21,7 +21,15 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Circle, Square, Minus, Slash, Hand } from 'lucide-react';
+import {
+  Plus,
+  Circle,
+  Square,
+  Minus,
+  Slash,
+  Hand,
+  LucideBoxSelect,
+} from 'lucide-react';
 import { ModeToggle } from './ui/mode-toggle';
 import { drawGrid, initializeCanvas } from './draw/draw-grid';
 import { Point } from '@/types/point';
@@ -707,6 +715,14 @@ export const AutoCADClone = () => {
             onClick={() => setSelectedTool('select')}
             title='Select'
           >
+            <LucideBoxSelect size={16} />
+          </Button>
+          <Button
+            variant={selectedTool === 'pan' ? 'default' : 'outline'}
+            size='sm'
+            onClick={() => setSelectedTool('pan')}
+            title='Pan'
+          >
             <Hand size={16} />
           </Button>
           <Button
@@ -837,7 +853,7 @@ export const AutoCADClone = () => {
             onMouseMove={handleMouseMove}
             onClick={handleCanvasClick}
             onMouseDown={(e) => {
-              if (selectedTool === 'select' && e.button === 0) {
+              if (selectedTool === 'pan' && e.button === 0) {
                 setIsDragging(true);
                 setDragStart({
                   x: e.clientX - e.currentTarget.getBoundingClientRect().left,

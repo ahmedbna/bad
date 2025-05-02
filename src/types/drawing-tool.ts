@@ -3,4 +3,5 @@ export type DrawingTool =
   | 'rectangle'
   | 'circle'
   | 'polyline'
-  | 'select';
+  | 'select'
+  | 'pan';
