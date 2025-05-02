@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { drawGrid, initializeCanvas } from './draw/draw-grid';
+import { drawGrid } from './draw/draw-grid';
 import { Point } from '@/types/point';
 import { Shape } from '@/types/shape';
 import { DrawingTool } from '@/types/drawing-tool';
@@ -11,6 +11,7 @@ import { canvasToWorld } from '@/utils/canvasToWorld';
 import { handleSelection } from './selection/handleSelection';
 import { SidePanel } from './sidebar/side-panel';
 import { Toolbar } from './toolbar/toolbar';
+import { useCanvasResize } from '@/hooks/useCanvasResize';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -36,75 +37,53 @@ export const AutoCADClone = () => {
 
   // Reference to track mouse position
   const [mousePosition, setMousePosition] = useState<Point | null>(null);
-  // Refs
 
+  // Refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Initialize canvas on mount
-  useEffect(() => {
-    if (canvasRef.current && containerRef.current) {
-      const canvas = canvasRef.current;
-      const container = containerRef.current;
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-      drawCanvas();
-    }
+  // Use the resize hook to handle DPI scaling
+  const dpr = useCanvasResize(canvasRef, containerRef);
 
-    // Set up event listeners for resize
-    const handleResize = () => {
-      if (canvasRef.current && containerRef.current) {
-        canvasRef.current.width = containerRef.current.clientWidth;
-        canvasRef.current.height = containerRef.current.clientHeight;
-        drawCanvas();
-      }
+  // Set up canvas dimensions and context
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Get the DPI-adjusted canvas dimensions
+    const canvasHeight = canvas.height / dpr;
+
+    // Set initial offset to position origin at bottom left
+    // This places (0,0) at the bottom-left corner
+    const initialOffset = {
+      x: 30, // Margin from left edge
+      y: canvasHeight - 30, // Position from top (inverted y-axis)
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    setOffset(initialOffset);
+
+    const resizeCanvas = () => {
+      const displayWidth = canvas.width / dpr;
+      const displayHeight = canvas.height / dpr;
+      ctx.clearRect(0, 0, displayWidth, displayHeight);
+      drawCanvas();
+    };
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    return () => {
+      window.removeEventListener('resize', resizeCanvas);
+    };
+  }, [dpr]);
 
   // Redraw canvas when shapes, temp shape, or view parameters change
   useEffect(() => {
     drawCanvas();
   }, [shapes, tempShape, scale, offset, selectedShapes, gridSize, snapToGrid]);
-
-  useEffect(() => {
-    initializeCanvas(canvasRef, setOffset);
-  }, [canvasRef]);
-
-  // // Use the resize hook to handle DPI scaling
-  // const dpr = useCanvasResize(canvasRef);
-
-  // // Initialize the canvas on component mount
-  // useEffect(() => {
-  //   const canvas = canvasRef.current;
-  //   if (!canvas) return;
-
-  //   const ctx = canvas.getContext('2d');
-  //   if (!ctx) return;
-
-  //   const resizeCanvas = () => {
-  //     // Clear canvas with device pixel ratio in mind
-  //     const displayWidth = canvas.width / dpr;
-  //     const displayHeight = canvas.height / dpr;
-
-  //     ctx.clearRect(0, 0, displayWidth, displayHeight);
-  //     // const { width, height } = canvas.getBoundingClientRect();
-  //     // canvas.width = width;
-  //     // canvas.height = height;
-
-  //     drawCanvas();
-  //   };
-
-  //   // Set up event listeners
-  //   window.addEventListener('resize', resizeCanvas);
-  //   resizeCanvas();
-
-  //   return () => {
-  //     window.removeEventListener('resize', resizeCanvas);
-  //   };
-  // }, []);
 
   // Snap point to grid if enabled
   const snapPointToGrid = (point: Point): Point => {
@@ -124,7 +103,13 @@ export const AutoCADClone = () => {
     if (!ctx) return;
 
     // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+
+    // Enable smooth rendering for all shapes
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // Draw grid
     drawGrid({
@@ -134,6 +119,7 @@ export const AutoCADClone = () => {
       offset,
       gridSize,
       majorGridInterval,
+      dpr,
     });
 
     // Draw all shapes
@@ -153,11 +139,6 @@ export const AutoCADClone = () => {
         isTemporary: true,
       });
     }
-
-    // Draw crosshair at cursor
-    // if (selectedTool !== 'select') {
-    //   drawCrosshair({ ctx, scale, offset, mousePosition, selectedTool });
-    // }
   };
 
   // Complete shape and add to shapes list
@@ -455,7 +436,10 @@ export const AutoCADClone = () => {
       {/* Main content */}
       <div className='flex flex-1 overflow-hidden'>
         {/* Drawing canvas */}
-        <div className='flex-1 relative overflow-hidden' ref={containerRef}>
+        <div
+          className='flex-1 relative overflow-hidden flex items-center justify-center '
+          ref={containerRef}
+        >
           <canvas
             ref={canvasRef}
             onWheel={handleWheel}
@@ -464,7 +448,7 @@ export const AutoCADClone = () => {
             onMouseMove={handleMouseMove}
             onMouseUp={() => setIsDragging(false)}
             onMouseLeave={() => setIsDragging(false)}
-            className='absolute top-0 left-0 cursor-crosshair bg-muted'
+            className='cursor-crosshair bg-muted rounded-xl border shadow-sm'
           />
         </div>
 

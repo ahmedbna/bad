@@ -7,6 +7,7 @@ type Props = {
   scale: number;
   offset: Point;
   majorGridInterval?: number; // Number of minor grid cells per major grid line
+  dpr: number; // Device pixel ratio
 };
 
 // Draw AutoCAD-like grid
@@ -17,6 +18,7 @@ export const drawGrid = ({
   offset,
   gridSize,
   majorGridInterval = 10, // Default to 10 minor grid cells per major grid line
+  dpr,
 }: Props) => {
   const canvas = canvasRef.current;
   if (!canvas) return;
@@ -141,11 +143,14 @@ export const drawGrid = ({
   const originSize = 36; // Size of the cross
   const cornerSize = 36; // Size of the L-shaped corner indicator
 
+  const viewWidth = canvas.width / dpr;
+  const viewHeight = canvas.height / dpr;
+
   if (
     originX >= 0 &&
-    originX <= canvas.width &&
+    originX <= viewWidth &&
     originY >= 0 &&
-    originY <= canvas.height
+    originY <= viewHeight
   ) {
     // Origin is visible on screen - draw crosshair with dot
     ctx.lineWidth = 1;
@@ -181,34 +186,34 @@ export const drawGrid = ({
       corners.push({ x: 0, y: 0, dirX: 1, dirY: 1 });
     }
     // Top-right corner
-    if (originX > canvas.width && originY < 0) {
-      corners.push({ x: canvas.width, y: 0, dirX: -1, dirY: 1 });
+    if (originX > viewWidth && originY < 0) {
+      corners.push({ x: viewWidth, y: 0, dirX: -1, dirY: 1 });
     }
     // Bottom-left corner
-    if (originX < 0 && originY > canvas.height) {
-      corners.push({ x: 0, y: canvas.height, dirX: 1, dirY: -1 });
+    if (originX < 0 && originY > viewHeight) {
+      corners.push({ x: 0, y: viewHeight, dirX: 1, dirY: -1 });
     }
     // Bottom-right corner
-    if (originX > canvas.width && originY > canvas.height) {
-      corners.push({ x: canvas.width, y: canvas.height, dirX: -1, dirY: -1 });
+    if (originX > viewWidth && originY > viewHeight) {
+      corners.push({ x: viewWidth, y: viewHeight, dirX: -1, dirY: -1 });
     }
 
     // Special cases for when origin is off on only one axis
     // Origin is off to the left
-    if (originX < 0 && originY >= 0 && originY <= canvas.height) {
+    if (originX < 0 && originY >= 0 && originY <= viewHeight) {
       corners.push({ x: 0, y: originY, dirX: 1, dirY: 0 });
     }
     // Origin is off to the right
-    if (originX > canvas.width && originY >= 0 && originY <= canvas.height) {
-      corners.push({ x: canvas.width, y: originY, dirX: -1, dirY: 0 });
+    if (originX > viewWidth && originY >= 0 && originY <= viewHeight) {
+      corners.push({ x: viewWidth, y: originY, dirX: -1, dirY: 0 });
     }
     // Origin is off to the top
-    if (originY < 0 && originX >= 0 && originX <= canvas.width) {
+    if (originY < 0 && originX >= 0 && originX <= viewWidth) {
       corners.push({ x: originX, y: 0, dirX: 0, dirY: 1 });
     }
     // Origin is off to the bottom
-    if (originY > canvas.height && originX >= 0 && originX <= canvas.width) {
-      corners.push({ x: originX, y: canvas.height, dirX: 0, dirY: -1 });
+    if (originY > viewHeight && originX >= 0 && originX <= viewWidth) {
+      corners.push({ x: originX, y: viewHeight, dirX: 0, dirY: -1 });
     }
 
     // Draw all corner indicators
@@ -238,23 +243,4 @@ export const drawGrid = ({
   }
 
   ctx.restore();
-};
-
-// Function to initialize canvas with origin at bottom left
-export const initializeCanvas = (
-  canvasRef: React.RefObject<HTMLCanvasElement | null>,
-  setOffset: (offset: Point) => void
-) => {
-  const canvas = canvasRef.current;
-  if (!canvas) return;
-
-  // Set initial offset to position origin at bottom left
-  // Leave a small margin from the edges
-  const margin = 20; // pixels from edge
-  const initialOffset = {
-    x: margin,
-    y: canvas.height - margin,
-  };
-
-  setOffset(initialOffset);
 };
