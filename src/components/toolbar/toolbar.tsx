@@ -37,6 +37,7 @@ type Props = {
   setScale: React.Dispatch<React.SetStateAction<number>>;
   setOffset: (offset: { x: number; y: number }) => void;
   handleDeleteShape: () => void;
+  setShowArcMode: (show: boolean) => void;
 };
 
 export const Toolbar = ({
@@ -52,6 +53,7 @@ export const Toolbar = ({
   setScale,
   setOffset,
   handleDeleteShape,
+  setShowArcMode,
 }: Props) => {
   return (
     <div className='p-2 border-b flex items-center space-x-4 overflow-x-auto'>
@@ -127,6 +129,7 @@ export const Toolbar = ({
           variant={selectedTool === 'arc' ? 'default' : 'outline'}
           size='sm'
           onClick={() => {
+            setShowArcMode(true);
             setSelectedTool('arc');
             setSelectedShapes([]);
           }}

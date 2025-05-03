@@ -4,6 +4,14 @@ import { Shape } from '@/types/shape';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
 import { AreaSelectionState, updateAreaSelection } from './handleAreaSelection';
+import { ArcMode } from '@/types/arc-mode';
+import {
+  previewCenterStartEndArc,
+  previewStartCenterEndArc,
+  previewStartEndDirectionArc,
+  previewStartEndRadiusArc,
+  previewThreePointArc,
+} from '../arc/handle-arc';
 
 interface MouseMoveProps {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -31,6 +39,7 @@ interface MouseMoveProps {
   setDragStart: React.Dispatch<React.SetStateAction<Point>>;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
+  arcMode: ArcMode;
 }
 
 /**
@@ -57,6 +66,7 @@ export const handleMouseMove = ({
   setTempShape,
   areaSelection,
   setAreaSelection,
+  arcMode,
 }: MouseMoveProps) => {
   try {
     // Get mouse coordinates relative to canvas
@@ -105,6 +115,7 @@ export const handleMouseMove = ({
         snapToGrid,
         gridSize,
         setTempShape,
+        arcMode,
       });
     }
   } catch (error) {
@@ -154,6 +165,7 @@ const updateTempShapeOnMouseMove = ({
   snapToGrid,
   gridSize,
   setTempShape,
+  arcMode,
 }: {
   mouseX: number;
   mouseY: number;
@@ -174,6 +186,7 @@ const updateTempShapeOnMouseMove = ({
   snapToGrid: boolean;
   gridSize: number;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
+  arcMode: ArcMode;
 }) => {
   // Convert mouse coordinates to world coordinates
   const worldPoint = canvasToWorld({
@@ -219,10 +232,10 @@ const updateTempShapeOnMouseMove = ({
 
     case 'arc':
       handleArcPreview(
-        drawingPoints,
+        arcMode,
         snappedPoint,
+        drawingPoints,
         tempShape,
-        arcAngles,
         setTempShape
       );
       break;
@@ -342,45 +355,6 @@ const handleCirclePreview = (
 };
 
 /**
- * Handles live preview for arc drawing
- */
-const handleArcPreview = (
-  drawingPoints: Point[],
-  snappedPoint: Point,
-  tempShape: Shape,
-  arcAngles: { startAngle: number; endAngle: number },
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
-) => {
-  const arcCenter = drawingPoints[0];
-
-  if (drawingPoints.length === 1) {
-    // Showing radius preview
-    const arcRadius = calculateDistance(arcCenter, snappedPoint);
-    const arcAngle = angleBetweenPoints(arcCenter, snappedPoint);
-
-    setTempShape({
-      ...tempShape,
-      properties: {
-        radius: arcRadius,
-        startAngle: arcAngle,
-        endAngle: arcAngle + arcAngles.endAngle - arcAngles.startAngle,
-      },
-    });
-  } else if (drawingPoints.length === 2) {
-    // Showing end angle preview
-    const arcAngle = angleBetweenPoints(arcCenter, snappedPoint);
-
-    setTempShape({
-      ...tempShape,
-      properties: {
-        ...tempShape.properties,
-        endAngle: arcAngle,
-      },
-    });
-  }
-};
-
-/**
  * Handles live preview for ellipse drawing
  */
 const handleEllipsePreview = (
@@ -476,6 +450,31 @@ const handleSplinePreview = (
         tension: splineTension,
       },
     });
+  }
+};
+
+/**
+ * Handles live preview for arc drawing
+ */
+const handleArcPreview = (
+  arcMode: ArcMode,
+  point: Point,
+  drawingPoints: Point[],
+  tempShape: Shape,
+  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+) => {
+  if (!tempShape) return;
+
+  if (arcMode === 'ThreePoint') {
+    previewThreePointArc(point, drawingPoints, tempShape, setTempShape);
+  } else if (arcMode === 'StartCenterEnd') {
+    previewStartCenterEndArc(point, drawingPoints, tempShape, setTempShape);
+  } else if (arcMode === 'CenterStartEnd') {
+    previewCenterStartEndArc(point, drawingPoints, tempShape, setTempShape);
+  } else if (arcMode === 'StartEndRadius') {
+    previewStartEndRadiusArc(point, drawingPoints, tempShape, setTempShape);
+  } else if (arcMode === 'StartEndDirection') {
+    previewStartEndDirectionArc(point, drawingPoints, tempShape, setTempShape);
   }
 };
 

@@ -8,6 +8,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Point } from '@/types/point';
 import { DrawingTool } from '@/types/drawing-tool';
 import { Property } from '@/types/property';
+import {
+  angleBetweenPoints,
+  calculateArcFromStartEndDirection,
+  findArcCentersFromRadius,
+} from '@/utils/calculations';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -85,6 +90,59 @@ export const Properties = ({
       default:
         break;
     }
+
+    // switch (arcMode) {
+    //   case 'StartEndRadius':
+    //     if (drawingPoints.length !== 2 || propertyInput.radius === '') return;
+
+    //     const radius = parseFloat(propertyInput.radius);
+    //     if (isNaN(radius)) return;
+
+    //     const startPoint = drawingPoints[0];
+    //     const endPoint = drawingPoints[1];
+
+    //     // Calculate center points (there are two possibilities)
+    //     const centers = findArcCentersFromRadius(startPoint, endPoint, radius);
+    //     if (centers.length === 0) return;
+
+    //     // Use the first center point (typically the one creating the smaller arc)
+    //     const center = centers[0];
+    //     const startAngle = angleBetweenPoints(center, startPoint);
+    //     const endAngle = angleBetweenPoints(center, endPoint);
+
+    //     completeShape([center], {
+    //       radius,
+    //       startAngle,
+    //       endAngle,
+    //     });
+    //     break;
+
+    //   case 'StartEndDirection':
+    //     if (drawingPoints.length !== 2 || propertyInput.direction === '')
+    //       return;
+
+    //     const direction = parseFloat(propertyInput.direction) * (Math.PI / 180); // Convert to radians
+    //     if (isNaN(direction)) return;
+
+    //     const startPt = drawingPoints[0];
+    //     const endPt = drawingPoints[1];
+
+    //     // Calculate arc parameters
+    //     const arcParams = calculateArcFromStartEndDirection(
+    //       startPt,
+    //       endPt,
+    //       direction
+    //     );
+
+    //     if (arcParams.center) {
+    //       completeShape([arcParams.center], {
+    //         radius: arcParams.radius,
+    //         startAngle: arcParams.startAngle,
+    //         endAngle: arcParams.endAngle,
+    //       });
+    //     }
+    //     break;
+    // }
   };
 
   return (

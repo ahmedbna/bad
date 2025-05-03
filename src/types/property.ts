@@ -4,6 +4,7 @@ export type Property = {
   height: string;
   radius: string;
   diameter: string;
+  direction: string;
   radiusX: string;
   radiusY: string;
   startAngle: string;

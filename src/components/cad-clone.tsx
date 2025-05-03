@@ -31,6 +31,8 @@ import {
   renderAreaSelection,
 } from './events/handleAreaSelection';
 import { handleMouseUp } from './events/handleMouseUp';
+import { ArcMode } from '@/types/arc-mode';
+import { ArcModeSelection } from './arc/arc-mode-selection';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -44,6 +46,7 @@ export const AutoCADClone = () => {
     height: '',
     radius: '',
     diameter: '',
+    direction: '',
     radiusX: '',
     radiusY: '',
     startAngle: '',
@@ -73,10 +76,18 @@ export const AutoCADClone = () => {
 
   // Dialog values
   const [polygonSides, setPolygonSides] = useState(6);
-  const [arcAngles, setArcAngles] = useState({
+
+  const [arcMode, setArcMode] = useState<ArcMode>('ThreePoint');
+  const [showArcMode, setShowArcMode] = useState(false);
+  // Drawing state for arcs
+  const [arcAngles, setArcAngles] = useState<{
+    startAngle: number;
+    endAngle: number;
+  }>({
     startAngle: 0,
-    endAngle: Math.PI * 1.5,
+    endAngle: Math.PI * 2,
   });
+
   const [ellipseParams, setEllipseParams] = useState({
     radiusX: 100,
     radiusY: 60,
@@ -237,6 +248,7 @@ export const AutoCADClone = () => {
       type: selectedTool,
       points,
       properties,
+      isCompleted: true,
     };
 
     setShapes((prev) => [...prev, newShape]);
@@ -249,6 +261,7 @@ export const AutoCADClone = () => {
       height: '',
       radius: '',
       diameter: '',
+      direction: '',
       radiusX: '',
       radiusY: '',
       startAngle: '',
@@ -270,6 +283,7 @@ export const AutoCADClone = () => {
       height: '',
       radius: '',
       diameter: '',
+      direction: '',
       radiusX: '',
       radiusY: '',
       startAngle: '',
@@ -290,30 +304,6 @@ export const AutoCADClone = () => {
     setSelectedShapes([]);
   };
 
-  // Handle polygon dialog confirmation
-  const handlePolygonDialogConfirm = () => {
-    setShowPolygonDialog(false);
-    // The dialog values will be used when drawing the polygon
-  };
-
-  // Handle arc dialog confirmation
-  const handleArcDialogConfirm = () => {
-    setShowArcDialog(false);
-    // The dialog values will be used when drawing the arc
-  };
-
-  // Handle ellipse dialog confirmation
-  const handleEllipseDialogConfirm = () => {
-    setShowEllipseDialog(false);
-    // The dialog values will be used when drawing the ellipse
-  };
-
-  // Handle spline dialog confirmation
-  const handleSplineDialogConfirm = () => {
-    setShowSplineDialog(false);
-    // The dialog values will be used when drawing the spline
-  };
-
   return (
     <div className='flex flex-col h-screen'>
       {/* Top toolbar */}
@@ -330,6 +320,7 @@ export const AutoCADClone = () => {
         setScale={setScale}
         setOffset={setOffset}
         handleDeleteShape={handleDeleteShape}
+        setShowArcMode={setShowArcMode}
       />
 
       {/* Main content */}
@@ -363,6 +354,7 @@ export const AutoCADClone = () => {
                 setSelectedShapes,
                 snapToGrid,
                 gridSize,
+                arcMode,
               })
             }
             onDoubleClick={(e) =>
@@ -412,6 +404,7 @@ export const AutoCADClone = () => {
                 setTempShape,
                 areaSelection,
                 setAreaSelection,
+                arcMode,
               })
             }
             onMouseUp={(e) =>
@@ -473,61 +466,7 @@ export const AutoCADClone = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button type='submit' onClick={handlePolygonDialogConfirm}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Arc dialog */}
-      <Dialog open={showArcDialog} onOpenChange={setShowArcDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Arc Settings</DialogTitle>
-          </DialogHeader>
-          <div className='grid gap-4 py-4'>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='startAngle' className='text-right'>
-                Start Angle (degrees)
-              </Label>
-              <Input
-                id='startAngle'
-                type='number'
-                min='0'
-                max='360'
-                value={Math.round((arcAngles.startAngle * 180) / Math.PI)}
-                onChange={(e) =>
-                  setArcAngles((prev) => ({
-                    ...prev,
-                    startAngle: (parseInt(e.target.value, 10) * Math.PI) / 180,
-                  }))
-                }
-                className='col-span-3'
-              />
-            </div>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='endAngle' className='text-right'>
-                End Angle (degrees)
-              </Label>
-              <Input
-                id='endAngle'
-                type='number'
-                min='0'
-                max='360'
-                value={Math.round((arcAngles.endAngle * 180) / Math.PI)}
-                onChange={(e) =>
-                  setArcAngles((prev) => ({
-                    ...prev,
-                    endAngle: (parseInt(e.target.value, 10) * Math.PI) / 180,
-                  }))
-                }
-                className='col-span-3'
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type='submit' onClick={handleArcDialogConfirm}>
+            <Button type='submit' onClick={() => setShowPolygonDialog(false)}>
               Confirm
             </Button>
           </DialogFooter>
@@ -598,7 +537,7 @@ export const AutoCADClone = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button type='submit' onClick={handleEllipseDialogConfirm}>
+            <Button type='submit' onClick={() => setShowEllipseDialog(false)}>
               Confirm
             </Button>
           </DialogFooter>
@@ -634,12 +573,18 @@ export const AutoCADClone = () => {
             </p>
           </div>
           <DialogFooter>
-            <Button type='submit' onClick={handleSplineDialogConfirm}>
+            <Button type='submit' onClick={() => setShowSplineDialog(false)}>
               Confirm
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ArcModeSelection
+        setArcMode={setArcMode}
+        showArcMode={showArcMode}
+        setShowArcMode={setShowArcMode}
+      />
     </div>
   );
 };

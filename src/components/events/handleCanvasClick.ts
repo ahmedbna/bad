@@ -5,6 +5,19 @@ import { Shape } from '@/types/shape';
 import { handleSelection } from './handleSelection';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
+import {
+  angleBetweenPoints,
+  calculateDistance,
+  calculatePerpendicularDistance,
+} from '@/utils/calculations';
+import { ArcMode } from '@/types/arc-mode';
+import {
+  handleCenterStartEndArc,
+  handleStartCenterEndArc,
+  handleStartEndDirectionArc,
+  handleStartEndRadiusArc,
+  handleThreePointArc,
+} from '../arc/handle-arc';
 
 interface Props {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -29,6 +42,7 @@ interface Props {
   setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
   snapToGrid: boolean;
   gridSize: number;
+  arcMode: ArcMode;
 }
 
 /**
@@ -52,6 +66,7 @@ export const handleCanvasClick = ({
   setSelectedShapes,
   snapToGrid,
   gridSize,
+  arcMode,
 }: Props) => {
   try {
     // Selection tool handling
@@ -112,7 +127,8 @@ export const handleCanvasClick = ({
       polygonSides,
       setDrawingPoints,
       setTempShape,
-      completeShape
+      completeShape,
+      arcMode
     );
   } catch (error) {
     console.error('Error in handleCanvasClick:', error);
@@ -164,7 +180,8 @@ const handleShapeProgress = (
   polygonSides: number,
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
-  completeShape: (points: Point[], properties?: ShapeProperties) => void
+  completeShape: (points: Point[], properties?: ShapeProperties) => void,
+  arcMode: ArcMode
 ) => {
   switch (selectedTool) {
     case 'line':
@@ -191,11 +208,10 @@ const handleShapeProgress = (
       break;
 
     case 'arc':
-      handleArcProgress(
+      handleArcDrawing(
+        arcMode,
         snappedPoint,
         drawingPoints,
-        tempShape,
-        arcAngles,
         setDrawingPoints,
         setTempShape,
         completeShape
@@ -282,52 +298,6 @@ const handleCircleProgress = (
   const center = drawingPoints[0];
   const radius = calculateDistance(center, snappedPoint);
   completeShape([center], { radius });
-};
-
-/**
- * Handles arc-specific drawing logic
- */
-const handleArcProgress = (
-  snappedPoint: Point,
-  drawingPoints: Point[],
-  tempShape: Shape | null,
-  arcAngles: { startAngle: number; endAngle: number },
-  setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
-  completeShape: (points: Point[], properties?: ShapeProperties) => void
-) => {
-  const center = drawingPoints[0];
-
-  if (drawingPoints.length === 1) {
-    // Second click determines radius
-    const radius = calculateDistance(center, snappedPoint);
-    const angle = angleBetweenPoints(center, snappedPoint);
-
-    setDrawingPoints([...drawingPoints, snappedPoint]);
-
-    // Update temp shape with radius and start angle
-    setTempShape((prevShape) =>
-      prevShape
-        ? {
-            ...prevShape,
-            properties: {
-              radius,
-              startAngle: angle,
-              endAngle: angle + arcAngles.endAngle - arcAngles.startAngle,
-            },
-          }
-        : null
-    );
-  } else if (drawingPoints.length === 2) {
-    // Third click completes the arc
-    const angle = angleBetweenPoints(center, snappedPoint);
-
-    completeShape([center], {
-      radius: tempShape?.properties?.radius || 0,
-      startAngle: tempShape?.properties?.startAngle || 0,
-      endAngle: angle,
-    });
-  }
 };
 
 /**
@@ -444,32 +414,55 @@ const handleSplineProgress = (
 };
 
 /**
- * Calculate distance between two points
+ * Handles arc-specific drawing logic
  */
-const calculateDistance = (p1: Point, p2: Point): number => {
-  const dx = p2.x - p1.x;
-  const dy = p2.y - p1.y;
-  return Math.sqrt(dx * dx + dy * dy);
-};
-
-/**
- * Calculate angle between two points (in radians)
- */
-const angleBetweenPoints = (center: Point, p: Point): number => {
-  return Math.atan2(p.y - center.y, p.x - center.x);
-};
-
-/**
- * Calculate perpendicular distance from a point to a line through origin at given angle
- */
-const calculatePerpendicularDistance = (
-  center: Point,
+const handleArcDrawing = (
+  arcMode: ArcMode,
   point: Point,
-  rotation: number
-): number => {
-  const dx = point.x - center.x;
-  const dy = point.y - center.y;
-  const projectedX = dx * Math.cos(rotation) + dy * Math.sin(rotation);
-  const projectedY = -dx * Math.sin(rotation) + dy * Math.cos(rotation);
-  return Math.abs(projectedY);
+  drawingPoints: Point[],
+  setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  completeShape: (points: Point[], properties?: ShapeProperties) => void
+) => {
+  if (arcMode === 'ThreePoint') {
+    handleThreePointArc(
+      point,
+      drawingPoints,
+      setDrawingPoints,
+      setTempShape,
+      completeShape
+    );
+  } else if (arcMode === 'StartCenterEnd') {
+    handleStartCenterEndArc(
+      point,
+      drawingPoints,
+      setDrawingPoints,
+      setTempShape,
+      completeShape
+    );
+  } else if (arcMode === 'CenterStartEnd') {
+    handleCenterStartEndArc(
+      point,
+      drawingPoints,
+      setDrawingPoints,
+      setTempShape,
+      completeShape
+    );
+  } else if (arcMode === 'StartEndRadius') {
+    handleStartEndRadiusArc(
+      point,
+      drawingPoints,
+      setDrawingPoints,
+      setTempShape,
+      completeShape
+    );
+  } else if (arcMode === 'StartEndDirection') {
+    handleStartEndDirectionArc(
+      point,
+      drawingPoints,
+      setDrawingPoints,
+      setTempShape,
+      completeShape
+    );
+  }
 };
