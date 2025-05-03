@@ -25,6 +25,8 @@ export type Shape = {
 
     rotation?: number;
     tension?: number;
+
+    isClockwise?: boolean;
   };
   isCompleted?: boolean;
 };

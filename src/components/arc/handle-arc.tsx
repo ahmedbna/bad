@@ -9,9 +9,10 @@ import {
   calculateDistance,
   calculateRadiusFromBulge,
   isAngleBetween,
+  normalizeAngle,
 } from '@/utils/calculations';
 
-// Handle drawing for Three-Point Arc
+// Improved handler for Three-Point Arc
 export const handleThreePointArc = (
   clickPoint: Point,
   drawingPoints: Point[],
@@ -31,6 +32,14 @@ export const handleThreePointArc = (
   } else if (drawingPoints.length === 1) {
     // Second point (middle point)
     setDrawingPoints([...drawingPoints, clickPoint]);
+
+    // Show a line from start to second point
+    setTempShape({
+      id: 'temp',
+      type: 'line',
+      points: [drawingPoints[0], clickPoint],
+      isCompleted: false,
+    });
   } else if (drawingPoints.length === 2) {
     // Third point (end point) - complete the arc
     const [startPoint, midPoint] = drawingPoints;
@@ -41,30 +50,42 @@ export const handleThreePointArc = (
     if (!center) return; // Points are collinear
 
     const radius = calculateDistance(center, startPoint);
-    const startAngle = angleBetweenPoints(center, startPoint);
-    const endAngle = angleBetweenPoints(center, endPoint);
+    const startAngle = normalizeAngle(angleBetweenPoints(center, startPoint));
+    const endAngle = normalizeAngle(angleBetweenPoints(center, endPoint));
+    const midAngle = normalizeAngle(angleBetweenPoints(center, midPoint));
 
-    // Determine if arc goes clockwise or counterclockwise
-    let midAngle = angleBetweenPoints(center, midPoint);
+    // Determine arc direction (clockwise or counterclockwise)
     let isClockwise = !isAngleBetween(midAngle, startAngle, endAngle);
 
-    // Adjust end angle for proper arc direction
-    let adjustedEndAngle = endAngle;
-    if (isClockwise && endAngle > startAngle) {
-      adjustedEndAngle = endAngle - 2 * Math.PI;
-    } else if (!isClockwise && endAngle < startAngle) {
-      adjustedEndAngle = endAngle + 2 * Math.PI;
+    // Calculate sweep angle based on direction
+    let sweepAngle;
+    if (isClockwise) {
+      sweepAngle =
+        startAngle > endAngle
+          ? startAngle - endAngle
+          : startAngle - endAngle + 2 * Math.PI;
+    } else {
+      sweepAngle =
+        endAngle > startAngle
+          ? endAngle - startAngle
+          : endAngle - startAngle + 2 * Math.PI;
     }
+
+    // Adjust end angle for proper arc direction
+    let adjustedEndAngle = isClockwise
+      ? normalizeAngle(startAngle - sweepAngle)
+      : normalizeAngle(startAngle + sweepAngle);
 
     completeShape([center], {
       radius,
       startAngle,
       endAngle: adjustedEndAngle,
+      isClockwise,
     });
   }
 };
 
-// Handle drawing for Start-Center-End Arc
+// Improved handler for Start-Center-End Arc
 export const handleStartCenterEndArc = (
   clickPoint: Point,
   drawingPoints: Point[],
@@ -86,7 +107,7 @@ export const handleStartCenterEndArc = (
     const startPoint = drawingPoints[0];
     const center = clickPoint;
     const radius = calculateDistance(center, startPoint);
-    const startAngle = angleBetweenPoints(center, startPoint);
+    const startAngle = normalizeAngle(angleBetweenPoints(center, startPoint));
 
     setDrawingPoints([...drawingPoints, clickPoint]);
     setTempShape({
@@ -107,18 +128,39 @@ export const handleStartCenterEndArc = (
     const endPoint = clickPoint;
 
     const radius = calculateDistance(center, startPoint);
-    const startAngle = angleBetweenPoints(center, startPoint);
-    const endAngle = angleBetweenPoints(center, endPoint);
+    const startAngle = normalizeAngle(angleBetweenPoints(center, startPoint));
+    const endAngle = normalizeAngle(angleBetweenPoints(center, endPoint));
+
+    // Default to counterclockwise (positive) direction for consistency with AutoCAD
+    let isClockwise = false;
+
+    // Calculate sweep angle - always go counterclockwise by default
+    let sweepAngle =
+      endAngle > startAngle
+        ? endAngle - startAngle
+        : endAngle - startAngle + 2 * Math.PI;
+
+    // If sweep angle is more than 180 degrees, assume we want the shorter arc
+    if (sweepAngle > Math.PI) {
+      isClockwise = true;
+      sweepAngle = 2 * Math.PI - sweepAngle;
+    }
+
+    // Final adjusted end angle
+    const adjustedEndAngle = isClockwise
+      ? normalizeAngle(startAngle - sweepAngle)
+      : normalizeAngle(startAngle + sweepAngle);
 
     completeShape([center], {
       radius,
       startAngle,
-      endAngle,
+      endAngle: adjustedEndAngle,
+      isClockwise,
     });
   }
 };
 
-// Handle drawing for Center-Start-End Arc
+// Improved handler for Center-Start-End Arc
 export const handleCenterStartEndArc = (
   clickPoint: Point,
   drawingPoints: Point[],
@@ -131,8 +173,11 @@ export const handleCenterStartEndArc = (
     setDrawingPoints([clickPoint]);
     setTempShape({
       id: 'temp',
-      type: 'arc',
+      type: 'circle',
       points: [clickPoint],
+      properties: {
+        radius: 0,
+      },
       isCompleted: false,
     });
   } else if (drawingPoints.length === 1) {
@@ -140,7 +185,7 @@ export const handleCenterStartEndArc = (
     const center = drawingPoints[0];
     const startPoint = clickPoint;
     const radius = calculateDistance(center, startPoint);
-    const startAngle = angleBetweenPoints(center, startPoint);
+    const startAngle = normalizeAngle(angleBetweenPoints(center, startPoint));
 
     setDrawingPoints([...drawingPoints, clickPoint]);
     setTempShape({
@@ -161,18 +206,36 @@ export const handleCenterStartEndArc = (
     const endPoint = clickPoint;
 
     const radius = calculateDistance(center, startPoint);
-    const startAngle = angleBetweenPoints(center, startPoint);
-    const endAngle = angleBetweenPoints(center, endPoint);
+    const startAngle = normalizeAngle(angleBetweenPoints(center, startPoint));
+    const endAngle = normalizeAngle(angleBetweenPoints(center, endPoint));
+
+    // Default to counterclockwise direction
+    let isClockwise = false;
+
+    // Calculate sweep angle - choose the shortest path by default
+    let sweepAngle = Math.abs(endAngle - startAngle);
+    if (sweepAngle > Math.PI) {
+      sweepAngle = 2 * Math.PI - sweepAngle;
+      isClockwise = endAngle > startAngle;
+    } else {
+      isClockwise = endAngle < startAngle;
+    }
+
+    // Final adjusted end angle
+    const adjustedEndAngle = isClockwise
+      ? normalizeAngle(startAngle - sweepAngle)
+      : normalizeAngle(startAngle + sweepAngle);
 
     completeShape([center], {
       radius,
       startAngle,
-      endAngle,
+      endAngle: adjustedEndAngle,
+      isClockwise,
     });
   }
 };
 
-// Handle drawing for Start-End-Radius Arc
+// Improved handler for Start-End-Radius Arc
 export const handleStartEndRadiusArc = (
   clickPoint: Point,
   drawingPoints: Point[],
@@ -212,24 +275,22 @@ export const handleStartEndRadiusArc = (
     // Calculate radius based on the distance from the third click to the line
     const radius = calculateRadiusFromBulge(startPoint, endPoint, bulgePoint);
 
-    // Calculate center point
-    const { center, startAngle, endAngle } = calculateArcFromStartEndBulge(
-      startPoint,
-      endPoint,
-      bulgePoint
-    );
+    // Calculate center point and angles
+    const { center, startAngle, endAngle, isClockwise } =
+      calculateArcFromStartEndBulge(startPoint, endPoint, bulgePoint);
 
     if (center) {
       completeShape([center], {
         radius,
-        startAngle,
-        endAngle,
+        startAngle: normalizeAngle(startAngle),
+        endAngle: normalizeAngle(endAngle),
+        isClockwise,
       });
     }
   }
 };
 
-// Handle drawing for Start-End-Direction Arc
+// Improved handler for Start-End-Direction Arc
 export const handleStartEndDirectionArc = (
   clickPoint: Point,
   drawingPoints: Point[],
@@ -267,23 +328,24 @@ export const handleStartEndDirectionArc = (
     const dirPoint = clickPoint;
 
     // Calculate start direction angle
-    const dirAngle = angleBetweenPoints(startPoint, dirPoint);
+    const dirAngle = normalizeAngle(angleBetweenPoints(startPoint, dirPoint));
 
     // Calculate center and radius based on start point, end point, and direction
-    const { center, radius, startAngle, endAngle } =
+    const { center, radius, startAngle, endAngle, isClockwise } =
       calculateArcFromStartEndDirection(startPoint, endPoint, dirAngle);
 
     if (center) {
       completeShape([center], {
         radius,
-        startAngle,
-        endAngle,
+        startAngle: normalizeAngle(startAngle),
+        endAngle: normalizeAngle(endAngle),
+        isClockwise,
       });
     }
   }
 };
 
-// Preview handlers for each arc mode
+// Improved preview handlers for better visual feedback
 export const previewThreePointArc = (
   mousePoint: Point,
   drawingPoints: Point[],
@@ -315,20 +377,31 @@ export const previewThreePointArc = (
     }
 
     const radius = calculateDistance(center, startPoint);
-    const startAngle = angleBetweenPoints(center, startPoint);
-    const endAngle = angleBetweenPoints(center, endPoint);
+    const startAngle = normalizeAngle(angleBetweenPoints(center, startPoint));
+    const endAngle = normalizeAngle(angleBetweenPoints(center, endPoint));
+    const midAngle = normalizeAngle(angleBetweenPoints(center, midPoint));
 
     // Determine if arc goes clockwise or counterclockwise
-    let midAngle = angleBetweenPoints(center, midPoint);
     let isClockwise = !isAngleBetween(midAngle, startAngle, endAngle);
 
-    // Adjust end angle for proper arc direction
-    let adjustedEndAngle = endAngle;
-    if (isClockwise && endAngle > startAngle) {
-      adjustedEndAngle = endAngle - 2 * Math.PI;
-    } else if (!isClockwise && endAngle < startAngle) {
-      adjustedEndAngle = endAngle + 2 * Math.PI;
+    // Calculate sweep angle based on direction
+    let sweepAngle;
+    if (isClockwise) {
+      sweepAngle =
+        startAngle > endAngle
+          ? startAngle - endAngle
+          : startAngle - endAngle + 2 * Math.PI;
+    } else {
+      sweepAngle =
+        endAngle > startAngle
+          ? endAngle - startAngle
+          : endAngle - startAngle + 2 * Math.PI;
     }
+
+    // Adjust end angle for proper arc direction
+    let adjustedEndAngle = isClockwise
+      ? normalizeAngle(startAngle - sweepAngle)
+      : normalizeAngle(startAngle + sweepAngle);
 
     setTempShape({
       ...tempShape,
@@ -338,6 +411,7 @@ export const previewThreePointArc = (
         radius,
         startAngle,
         endAngle: adjustedEndAngle,
+        isClockwise,
       },
     });
   }
@@ -350,11 +424,20 @@ export const previewStartCenterEndArc = (
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
 ) => {
   if (drawingPoints.length === 1) {
-    // Preview line from start to potential center
+    // Preview circle with radius from start to mouse position
+    const startPoint = drawingPoints[0];
+    const potentialCenter = mousePoint;
+    const radius = calculateDistance(potentialCenter, startPoint);
+
     setTempShape({
       ...tempShape,
-      type: 'line',
-      points: [drawingPoints[0], mousePoint],
+      type: 'circle',
+      points: [potentialCenter],
+      properties: {
+        radius,
+        // Add dashed property to indicate it's a preview
+        // isDashed: true,
+      },
     });
   } else if (drawingPoints.length === 2) {
     // Preview arc from start to current mouse position
@@ -363,8 +446,24 @@ export const previewStartCenterEndArc = (
     const endPoint = mousePoint;
 
     const radius = calculateDistance(center, startPoint);
-    const startAngle = angleBetweenPoints(center, startPoint);
-    const endAngle = angleBetweenPoints(center, endPoint);
+    const startAngle = normalizeAngle(angleBetweenPoints(center, startPoint));
+    const endAngle = normalizeAngle(angleBetweenPoints(center, endPoint));
+
+    // Default to shorter arc path
+    let isClockwise = false;
+    let sweepAngle = Math.abs(endAngle - startAngle);
+
+    if (sweepAngle > Math.PI) {
+      sweepAngle = 2 * Math.PI - sweepAngle;
+      isClockwise = endAngle > startAngle;
+    } else {
+      isClockwise = endAngle < startAngle;
+    }
+
+    // Final adjusted end angle
+    const adjustedEndAngle = isClockwise
+      ? normalizeAngle(startAngle - sweepAngle)
+      : normalizeAngle(startAngle + sweepAngle);
 
     setTempShape({
       ...tempShape,
@@ -373,7 +472,8 @@ export const previewStartCenterEndArc = (
       properties: {
         radius,
         startAngle,
-        endAngle,
+        endAngle: adjustedEndAngle,
+        isClockwise,
       },
     });
   }
@@ -386,10 +486,9 @@ export const previewCenterStartEndArc = (
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
 ) => {
   if (drawingPoints.length === 1) {
-    // Preview line from center to start point
+    // Preview circle from center to mouse position
     const center = drawingPoints[0];
-    const startPoint = mousePoint;
-    const radius = calculateDistance(center, startPoint);
+    const radius = calculateDistance(center, mousePoint);
 
     setTempShape({
       ...tempShape,
@@ -397,6 +496,7 @@ export const previewCenterStartEndArc = (
       points: [center],
       properties: {
         radius,
+        // isDashed: true,
       },
     });
   } else if (drawingPoints.length === 2) {
@@ -406,8 +506,24 @@ export const previewCenterStartEndArc = (
     const endPoint = mousePoint;
 
     const radius = calculateDistance(center, startPoint);
-    const startAngle = angleBetweenPoints(center, startPoint);
-    const endAngle = angleBetweenPoints(center, endPoint);
+    const startAngle = normalizeAngle(angleBetweenPoints(center, startPoint));
+    const endAngle = normalizeAngle(angleBetweenPoints(center, endPoint));
+
+    // Default to shorter arc path
+    let isClockwise = false;
+    let sweepAngle = Math.abs(endAngle - startAngle);
+
+    if (sweepAngle > Math.PI) {
+      sweepAngle = 2 * Math.PI - sweepAngle;
+      isClockwise = endAngle > startAngle;
+    } else {
+      isClockwise = endAngle < startAngle;
+    }
+
+    // Final adjusted end angle
+    const adjustedEndAngle = isClockwise
+      ? normalizeAngle(startAngle - sweepAngle)
+      : normalizeAngle(startAngle + sweepAngle);
 
     setTempShape({
       ...tempShape,
@@ -416,7 +532,8 @@ export const previewCenterStartEndArc = (
       properties: {
         radius,
         startAngle,
-        endAngle,
+        endAngle: adjustedEndAngle,
+        isClockwise,
       },
     });
   }
@@ -429,7 +546,7 @@ export const previewStartEndRadiusArc = (
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
 ) => {
   if (drawingPoints.length === 1) {
-    // Preview line from start to end
+    // Preview line from start to potential end
     setTempShape({
       ...tempShape,
       type: 'line',
@@ -442,11 +559,8 @@ export const previewStartEndRadiusArc = (
     const bulgePoint = mousePoint;
 
     // Calculate arc parameters
-    const { center, startAngle, endAngle } = calculateArcFromStartEndBulge(
-      startPoint,
-      endPoint,
-      bulgePoint
-    );
+    const { center, startAngle, endAngle, isClockwise } =
+      calculateArcFromStartEndBulge(startPoint, endPoint, bulgePoint);
 
     if (center) {
       const radius = calculateDistance(center, startPoint);
@@ -456,9 +570,17 @@ export const previewStartEndRadiusArc = (
         points: [center],
         properties: {
           radius,
-          startAngle,
-          endAngle,
+          startAngle: normalizeAngle(startAngle),
+          endAngle: normalizeAngle(endAngle),
+          isClockwise,
         },
+      });
+    } else {
+      // Failed to calculate arc, show the chord line
+      setTempShape({
+        ...tempShape,
+        type: 'line',
+        points: [startPoint, endPoint],
       });
     }
   }
@@ -484,10 +606,10 @@ export const previewStartEndDirectionArc = (
     const dirPoint = mousePoint;
 
     // Calculate direction angle
-    const dirAngle = angleBetweenPoints(startPoint, dirPoint);
+    const dirAngle = normalizeAngle(angleBetweenPoints(startPoint, dirPoint));
 
     // Calculate arc parameters
-    const { center, radius, startAngle, endAngle } =
+    const { center, radius, startAngle, endAngle, isClockwise } =
       calculateArcFromStartEndDirection(startPoint, endPoint, dirAngle);
 
     if (center) {
@@ -497,8 +619,9 @@ export const previewStartEndDirectionArc = (
         points: [center],
         properties: {
           radius,
-          startAngle,
-          endAngle,
+          startAngle: normalizeAngle(startAngle),
+          endAngle: normalizeAngle(endAngle),
+          isClockwise,
         },
       });
     } else {

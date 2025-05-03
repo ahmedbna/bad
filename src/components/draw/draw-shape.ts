@@ -168,10 +168,26 @@ export const drawShape = ({
         const radius = (shape.properties?.radius || 0) * scale;
         const startAngle = shape.properties?.startAngle || 0;
         const endAngle = shape.properties?.endAngle || Math.PI * 2;
+        const isClockwise = shape.properties?.isClockwise || false;
+
+        // If it's a temporary shape and has the isDashed property, use dashed lines
+        // if (isTemporary && shape.properties?.isDashed) {
+        //   ctx.setLineDash([5, 5]);
+        // }
 
         ctx.beginPath();
-        ctx.arc(center.x, center.y, radius, startAngle, endAngle);
+
+        // In HTML5 Canvas, true = counterclockwise, false = clockwise
+        // But in our internal logic, isClockwise has the opposite meaning
+        // So we need to invert the flag here
+        ctx.arc(center.x, center.y, radius, startAngle, endAngle, !isClockwise);
+
         ctx.stroke();
+
+        // Reset dashed line setting
+        // if (isTemporary && shape.properties?.isDashed) {
+        //   ctx.setLineDash([]);
+        // }
 
         // Draw control points when selected
         if (isSelected) {
@@ -204,6 +220,34 @@ export const drawShape = ({
           ctx.lineTo(endPoint.x, endPoint.y);
           ctx.stroke();
           ctx.setLineDash([]);
+
+          // Draw a small indicator showing the arc direction
+          const midAngle = isClockwise
+            ? (startAngle + endAngle) / 2 + Math.PI
+            : (startAngle + endAngle) / 2;
+
+          const midRadius = radius * 0.9;
+          const arrowSize = 8;
+
+          const arrowPoint = {
+            x: center.x + midRadius * Math.cos(midAngle),
+            y: center.y + midRadius * Math.sin(midAngle),
+          };
+
+          const tangentAngle = midAngle + Math.PI / 2;
+
+          ctx.beginPath();
+          ctx.moveTo(arrowPoint.x, arrowPoint.y);
+          ctx.lineTo(
+            arrowPoint.x + arrowSize * Math.cos(tangentAngle - Math.PI / 6),
+            arrowPoint.y + arrowSize * Math.sin(tangentAngle - Math.PI / 6)
+          );
+          ctx.moveTo(arrowPoint.x, arrowPoint.y);
+          ctx.lineTo(
+            arrowPoint.x + arrowSize * Math.cos(tangentAngle + Math.PI / 6),
+            arrowPoint.y + arrowSize * Math.sin(tangentAngle + Math.PI / 6)
+          );
+          ctx.stroke();
         }
       }
       break;

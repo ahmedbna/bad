@@ -24,4 +24,6 @@ export interface ShapeProperties {
   endAngle?: number;
   isFullEllipse?: boolean;
   tension?: number;
+  completeShape?: boolean;
+  isClockwise?: boolean;
 }

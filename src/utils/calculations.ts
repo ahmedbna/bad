@@ -17,6 +17,13 @@ export const angleBetweenPoints = (center: Point, p: Point): number => {
 };
 
 /**
+ * Normalize angle to [0, 2π]
+ */
+export const normalizeAngle = (angle: number): number => {
+  return ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+};
+
+/**
  * Calculate perpendicular distance from a point to a line through origin at given angle
  */
 export const calculatePerpendicularDistance = (
@@ -31,7 +38,9 @@ export const calculatePerpendicularDistance = (
   return Math.abs(projectedY);
 };
 
-// Function to calculate the center of an arc passing through three points
+/**
+ * Calculate the center of an arc passing through three points
+ */
 export const calculateArcCenter = (
   p1: Point,
   p2: Point,
@@ -78,7 +87,9 @@ export const calculateArcCenter = (
   return { x, y };
 };
 
-// Calculate radius from a bulge point
+/**
+ * Calculate radius from a bulge point
+ */
 export const calculateRadiusFromBulge = (
   startPoint: Point,
   endPoint: Point,
@@ -90,16 +101,15 @@ export const calculateRadiusFromBulge = (
   return calculateDistance(center, startPoint);
 };
 
-// Helper function to check if an angle is between two other angles
+/**
+ * Check if an angle is between two other angles
+ */
 export const isAngleBetween = (
   angle: number,
   start: number,
   end: number
 ): boolean => {
   // Normalize angles to [0, 2π]
-  const normalizeAngle = (a: number) =>
-    ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-
   const normAngle = normalizeAngle(angle);
   const normStart = normalizeAngle(start);
   const normEnd = normalizeAngle(end);
@@ -111,7 +121,9 @@ export const isAngleBetween = (
   }
 };
 
-// Calculate arc parameters from start, end, and bulge point
+/**
+ * Calculate arc parameters from start, end, and bulge point
+ */
 export const calculateArcFromStartEndBulge = (
   startPoint: Point,
   endPoint: Point,
@@ -119,15 +131,15 @@ export const calculateArcFromStartEndBulge = (
 ) => {
   const center = calculateArcCenter(startPoint, bulgePoint, endPoint);
   if (!center) {
-    return { center: null, startAngle: 0, endAngle: 0 };
+    return { center: null, startAngle: 0, endAngle: 0, isClockwise: false };
   }
 
   const radius = calculateDistance(center, startPoint);
   const startAngle = angleBetweenPoints(center, startPoint);
   const endAngle = angleBetweenPoints(center, endPoint);
+  const bulgeAngle = angleBetweenPoints(center, bulgePoint);
 
   // Determine if arc goes clockwise or counterclockwise
-  const bulgeAngle = angleBetweenPoints(center, bulgePoint);
   const isClockwise = !isAngleBetween(bulgeAngle, startAngle, endAngle);
 
   // Adjust end angle for proper arc direction
@@ -138,10 +150,18 @@ export const calculateArcFromStartEndBulge = (
     adjustedEndAngle = endAngle + 2 * Math.PI;
   }
 
-  return { center, startAngle, endAngle: adjustedEndAngle };
+  return {
+    center,
+    radius,
+    startAngle,
+    endAngle: adjustedEndAngle,
+    isClockwise,
+  };
 };
 
-// Calculate arc parameters from start, end, and direction
+/**
+ * Calculate arc parameters from start, end, and direction
+ */
 export const calculateArcFromStartEndDirection = (
   startPoint: Point,
   endPoint: Point,
@@ -166,26 +186,13 @@ export const calculateArcFromStartEndDirection = (
   const perpX = -dy;
   const perpY = dx;
 
-  // Direction from start point is perpendicular to the center-to-start vector
-  // So center-to-start is perpendicular to the direction
-  // Using dot product: (center-start)·dir = 0
-  // (center.x - start.x)*dirX + (center.y - start.y)*dirY = 0
-
-  // Parameterize the perpendicular bisector: midPoint + t * perpDirection
-  // This gives us potential centers
-
-  // Solving for the parameter t where the center's position satisfies the perpendicular relationship
-  // This is a complex calculation involving determining where the perpendicular bisector
-  // intersects with the line going through startPoint in the dirAngle direction
-
-  // For simplicity, we'll use a numerical approach with two candidate centers
-
   // Try different distances along the perpendicular bisector
   let bestCenter: Point | null = null;
   let bestError = Infinity;
   let bestRadius = 0;
   let bestStartAngle = 0;
   let bestEndAngle = 0;
+  let isClockwise = false;
 
   // Test a range of potential centers
   for (let t = -100; t <= 100; t += 0.5) {
@@ -213,17 +220,58 @@ export const calculateArcFromStartEndDirection = (
   }
 
   if (bestError > 0.1 || !bestCenter) {
-    return { center: null, radius: 0, startAngle: 0, endAngle: 0 };
+    return {
+      center: null,
+      radius: 0,
+      startAngle: 0,
+      endAngle: 0,
+      isClockwise: false,
+    };
   }
+
+  // Determine direction (clockwise/counterclockwise)
+  // For direction-based arcs, we need to check which way the arc should go
+  // based on the start direction and end point position
+  const dirToEnd = {
+    x: endPoint.x - startPoint.x,
+    y: endPoint.y - startPoint.y,
+  };
+
+  // Get cross product to determine which side the end point is on
+  const crossProduct = dirX * dirToEnd.y - dirY * dirToEnd.x;
+  isClockwise = crossProduct < 0;
+
+  // Calculate sweep angle
+  let sweepAngle;
+  if (isClockwise) {
+    sweepAngle =
+      bestStartAngle > bestEndAngle
+        ? bestStartAngle - bestEndAngle
+        : bestStartAngle - bestEndAngle + 2 * Math.PI;
+  } else {
+    sweepAngle =
+      bestEndAngle > bestStartAngle
+        ? bestEndAngle - bestStartAngle
+        : bestEndAngle - bestStartAngle + 2 * Math.PI;
+  }
+
+  // Adjust end angle for proper arc direction
+  const adjustedEndAngle = isClockwise
+    ? normalizeAngle(bestStartAngle - sweepAngle)
+    : normalizeAngle(bestStartAngle + sweepAngle);
 
   return {
     center: bestCenter,
     radius: bestRadius,
     startAngle: bestStartAngle,
-    endAngle: bestEndAngle,
+    endAngle: adjustedEndAngle,
+    isClockwise,
   };
 };
 
+/**
+ * Find possible arc centers given two points and a radius
+ */
 export const findArcCentersFromRadius = (
   p1: Point,
   p2: Point,
@@ -268,4 +316,83 @@ export const findArcCentersFromRadius = (
   };
 
   return [center1, center2];
+};
+
+/**
+ * Calculate sweep angle based on start angle, end angle, and direction
+ */
+export const calculateSweepAngle = (
+  startAngle: number,
+  endAngle: number,
+  isClockwise: boolean
+): number => {
+  const normStart = normalizeAngle(startAngle);
+  const normEnd = normalizeAngle(endAngle);
+
+  if (isClockwise) {
+    return normStart > normEnd
+      ? normStart - normEnd
+      : normStart - normEnd + 2 * Math.PI;
+  } else {
+    return normEnd > normStart
+      ? normEnd - normStart
+      : normEnd - normStart + 2 * Math.PI;
+  }
+};
+
+/**
+ * Calculate angle based on start angle and sweep angle
+ */
+export const calculateEndAngleFromSweep = (
+  startAngle: number,
+  sweepAngle: number,
+  isClockwise: boolean
+): number => {
+  const normStart = normalizeAngle(startAngle);
+
+  if (isClockwise) {
+    return normalizeAngle(normStart - sweepAngle);
+  } else {
+    return normalizeAngle(normStart + sweepAngle);
+  }
+};
+
+/**
+ * Calculate point at a specific angle and distance from center
+ */
+export const pointOnCircle = (
+  center: Point,
+  radius: number,
+  angle: number
+): Point => {
+  return {
+    x: center.x + radius * Math.cos(angle),
+    y: center.y + radius * Math.sin(angle),
+  };
+};
+
+/**
+ * Calculate point on arc at specific parameter t (0 to 1)
+ */
+export const pointOnArc = (
+  center: Point,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+  isClockwise: boolean,
+  t: number
+): Point => {
+  // Ensure t is between 0 and 1
+  t = Math.max(0, Math.min(1, t));
+
+  // Calculate sweep angle
+  const sweepAngle = calculateSweepAngle(startAngle, endAngle, isClockwise);
+
+  // Calculate the angle at parameter t
+  const angle = isClockwise
+    ? normalizeAngle(startAngle - t * sweepAngle)
+    : normalizeAngle(startAngle + t * sweepAngle);
+
+  // Return point on circle at calculated angle
+  return pointOnCircle(center, radius, angle);
 };
