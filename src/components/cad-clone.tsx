@@ -6,9 +6,6 @@ import { Point } from '@/types/point';
 import { Shape } from '@/types/shape';
 import { DrawingTool } from '@/types/drawing-tool';
 import { drawShape } from './draw/draw-shape';
-import { worldToCanvas } from '@/utils/worldToCanvas';
-import { canvasToWorld } from '@/utils/canvasToWorld';
-import { handleSelection } from './selection/handleSelection';
 import { SidePanel } from './sidebar/side-panel';
 import { Toolbar } from './toolbar/toolbar';
 import { useCanvasResize } from '@/hooks/useCanvasResize';
@@ -23,6 +20,11 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from './ui/slider';
+import { handleCanvasClick } from './events/handleCanvasClick';
+import { handleMouseMove } from './events/handleMouseMove';
+import { handleCanvasDoubleClick } from './events/handleCanvasDoubleClick';
+import { handleWheel } from './events/handleWheel';
+import { handleMouseDown } from './events/handleMouseDown';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -150,15 +152,6 @@ export const AutoCADClone = () => {
     drawCanvas();
   }, [shapes, tempShape, scale, offset, selectedShapes, gridSize, snapToGrid]);
 
-  // Snap point to grid if enabled
-  const snapPointToGrid = (point: Point): Point => {
-    if (!snapToGrid) return point;
-    return {
-      x: Math.round(point.x / gridSize) * gridSize,
-      y: Math.round(point.y / gridSize) * gridSize,
-    };
-  };
-
   // Draw the canvas
   const drawCanvas = () => {
     const canvas = canvasRef.current;
@@ -204,18 +197,6 @@ export const AutoCADClone = () => {
         isTemporary: true,
       });
     }
-  };
-
-  // Calculate distance between two points
-  const distanceBetweenPoints = (p1: Point, p2: Point): number => {
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  // Calculate angle between two points (in radians)
-  const angleBetweenPoints = (center: Point, p: Point): number => {
-    return Math.atan2(p.y - center.y, p.x - center.x);
   };
 
   // Complete shape and add to shapes list
@@ -304,476 +285,6 @@ export const AutoCADClone = () => {
     // The dialog values will be used when drawing the spline
   };
 
-  // Handle canvas click
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (selectedTool === 'select') {
-      // Handle selection
-      handleSelection({ e, scale, offset, shapes, setSelectedShapes });
-      return;
-    }
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const worldPoint = canvasToWorld({
-      point: { x: mouseX, y: mouseY },
-      scale,
-      offset,
-    });
-    const snappedPoint = snapPointToGrid(worldPoint);
-
-    if (drawingPoints.length === 0) {
-      // First point
-      setDrawingPoints([snappedPoint]);
-
-      // Create temporary shape
-      const newTempShape: Shape = {
-        id: `temp-${Date.now()}`,
-        type: selectedTool,
-        points: [snappedPoint],
-        properties: {},
-      };
-
-      setTempShape(newTempShape);
-    } else {
-      // Complete the shape based on the tool
-      switch (selectedTool) {
-        case 'line':
-          completeShape([drawingPoints[0], snappedPoint]);
-          break;
-
-        case 'polyline':
-          // Add point to polyline
-          const updatedPoints = [...drawingPoints, snappedPoint];
-          setDrawingPoints(updatedPoints);
-          if (e.detail === 2) {
-            // Double click
-            completeShape(updatedPoints);
-          } else {
-            // Update temp shape with new point
-            if (tempShape) {
-              setTempShape({
-                ...tempShape,
-                points: updatedPoints,
-              });
-            }
-          }
-          break;
-
-        case 'rectangle':
-          completeShape([drawingPoints[0], snappedPoint]);
-          break;
-
-        case 'circle':
-          const center = drawingPoints[0];
-          const dx = snappedPoint.x - center.x;
-          const dy = snappedPoint.y - center.y;
-          const radius = Math.sqrt(dx * dx + dy * dy);
-
-          completeShape([center], { radius });
-          break;
-
-        case 'arc':
-          if (drawingPoints.length === 1) {
-            // Second click determines radius
-            const center = drawingPoints[0];
-            const dx = snappedPoint.x - center.x;
-            const dy = snappedPoint.y - center.y;
-            const radius = Math.sqrt(dx * dx + dy * dy);
-            const angle = angleBetweenPoints(center, snappedPoint);
-
-            setDrawingPoints([...drawingPoints, snappedPoint]);
-
-            // Update temp shape with radius and start angle
-            if (tempShape) {
-              setTempShape({
-                ...tempShape,
-                properties: {
-                  radius,
-                  startAngle: angle,
-                  endAngle: angle + arcAngles.endAngle - arcAngles.startAngle,
-                },
-              });
-            }
-          } else if (drawingPoints.length === 2) {
-            // Third click completes the arc
-            const center = drawingPoints[0];
-            const angle = angleBetweenPoints(center, snappedPoint);
-
-            completeShape([center], {
-              radius: tempShape?.properties?.radius || 0,
-              startAngle: tempShape?.properties?.startAngle || 0,
-              endAngle: angle,
-            });
-          }
-          break;
-
-        case 'ellipse':
-          if (drawingPoints.length === 1) {
-            // Second click determines radiusX and sets the direction
-            const center = drawingPoints[0];
-            const dx = snappedPoint.x - center.x;
-            const dy = snappedPoint.y - center.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            const angle = angleBetweenPoints(center, snappedPoint);
-
-            setDrawingPoints([...drawingPoints, snappedPoint]);
-
-            // Update temp shape with first axis
-            if (tempShape) {
-              setTempShape({
-                ...tempShape,
-                properties: {
-                  radiusX: distance,
-                  radiusY:
-                    ellipseParams.radiusY * (distance / ellipseParams.radiusX),
-                  rotation: angle,
-                  isFullEllipse: ellipseParams.isFullEllipse,
-                },
-              });
-            }
-          } else if (drawingPoints.length === 2) {
-            // Third click determines radiusY
-            const center = drawingPoints[0];
-            const firstRadius = tempShape?.properties?.radiusX || 0;
-            const rotation = tempShape?.properties?.rotation || 0;
-
-            // Calculate perpendicular distance from center to current point
-            const dx = snappedPoint.x - center.x;
-            const dy = snappedPoint.y - center.y;
-            const projectedX =
-              dx * Math.cos(rotation) + dy * Math.sin(rotation);
-            const projectedY =
-              -dx * Math.sin(rotation) + dy * Math.cos(rotation);
-            const radiusY = Math.abs(projectedY);
-
-            completeShape([center], {
-              radiusX: firstRadius,
-              radiusY: radiusY,
-              rotation: rotation,
-              isFullEllipse: ellipseParams.isFullEllipse,
-            });
-          }
-          break;
-
-        case 'polygon':
-          const polygonCenter = drawingPoints[0];
-          const polygonDx = snappedPoint.x - polygonCenter.x;
-          const polygonDy = snappedPoint.y - polygonCenter.y;
-          const polygonRadius = Math.sqrt(
-            polygonDx * polygonDx + polygonDy * polygonDy
-          );
-
-          completeShape([polygonCenter], {
-            radius: polygonRadius,
-            sides: parseInt(polygonSides.toString(), 10),
-          });
-          break;
-
-        case 'spline':
-          if (drawingPoints.length >= 2) {
-            setDrawingPoints([...drawingPoints, snappedPoint]);
-
-            // Update the temp shape with the new point
-            if (tempShape) {
-              setTempShape({
-                ...tempShape,
-                points: [...drawingPoints, snappedPoint],
-                properties: { tension: splineTension },
-              });
-            }
-
-            // Don't complete the shape yet - splines need at least 3 points
-            // and can have multiple points, typically completed by double-click
-            // or a separate finish action
-          } else {
-            setDrawingPoints([...drawingPoints, snappedPoint]);
-
-            // Update the temp shape
-            if (tempShape) {
-              setTempShape({
-                ...tempShape,
-                points: [...tempShape.points, snappedPoint],
-                properties: { tension: splineTension },
-              });
-            }
-          }
-          break;
-
-        default:
-          completeShape([...drawingPoints, snappedPoint]);
-          break;
-      }
-    }
-  };
-
-  // Handle canvas double click (used to complete multi-point shapes like splines)
-  const handleCanvasDoubleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (selectedTool === 'spline' && drawingPoints.length >= 3) {
-      // Complete the spline with existing points
-      completeShape(drawingPoints, { tension: splineTension });
-    }
-  };
-
-  // Handle mouse move
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    setMousePosition({ x: mouseX, y: mouseY });
-
-    // Handle panning
-    if (isDragging) {
-      const dx = mouseX - dragStart.x;
-      const dy = mouseY - dragStart.y;
-
-      setOffset((prev) => ({
-        x: prev.x + dx,
-        y: prev.y + dy,
-      }));
-
-      setDragStart({ x: mouseX, y: mouseY });
-    }
-
-    // Update temporary shape if drawing
-    if (tempShape && drawingPoints.length > 0) {
-      const worldPoint = canvasToWorld({
-        point: { x: mouseX, y: mouseY },
-        scale,
-        offset,
-      });
-      const snappedPoint = snapPointToGrid(worldPoint);
-
-      switch (selectedTool) {
-        case 'line':
-          setTempShape({
-            ...tempShape,
-            points: [drawingPoints[0], snappedPoint],
-          });
-          break;
-
-        case 'polyline':
-          if (drawingPoints.length > 0) {
-            const newPoints = [...drawingPoints];
-            if (newPoints.length > 1) {
-              // Replace the last preview point
-              newPoints[newPoints.length - 1] = snappedPoint;
-            } else {
-              // Add a preview point
-              newPoints.push(snappedPoint);
-            }
-
-            setTempShape({
-              ...tempShape,
-              points: newPoints,
-            });
-          }
-          break;
-
-        case 'rectangle':
-          setTempShape({
-            ...tempShape,
-            points: [drawingPoints[0], snappedPoint],
-          });
-          break;
-
-        case 'circle':
-          const circleCenter = drawingPoints[0];
-          const dx = snappedPoint.x - circleCenter.x;
-          const dy = snappedPoint.y - circleCenter.y;
-          const radius = Math.sqrt(dx * dx + dy * dy);
-
-          setTempShape({
-            ...tempShape,
-            properties: { radius },
-          });
-          break;
-
-        case 'arc':
-          if (drawingPoints.length === 1) {
-            // Showing radius preview
-            const arcCenter = drawingPoints[0];
-            const arcDx = snappedPoint.x - arcCenter.x;
-            const arcDy = snappedPoint.y - arcCenter.y;
-            const arcRadius = Math.sqrt(arcDx * arcDx + arcDy * arcDy);
-            const arcAngle = angleBetweenPoints(arcCenter, snappedPoint);
-
-            setTempShape({
-              ...tempShape,
-              properties: {
-                radius: arcRadius,
-                startAngle: arcAngle,
-                endAngle: arcAngle + arcAngles.endAngle - arcAngles.startAngle,
-              },
-            });
-          } else if (drawingPoints.length === 2) {
-            // Showing end angle preview
-            const arcCenter = drawingPoints[0];
-            const arcAngle = angleBetweenPoints(arcCenter, snappedPoint);
-
-            setTempShape({
-              ...tempShape,
-              properties: {
-                ...tempShape.properties,
-                endAngle: arcAngle,
-              },
-            });
-          }
-          break;
-
-        case 'ellipse':
-          if (drawingPoints.length === 1) {
-            // Preview for first axis
-            const ellipseCenter = drawingPoints[0];
-            const ellipseDx = snappedPoint.x - ellipseCenter.x;
-            const ellipseDy = snappedPoint.y - ellipseCenter.y;
-            const distance = Math.sqrt(
-              ellipseDx * ellipseDx + ellipseDy * ellipseDy
-            );
-            const angle = angleBetweenPoints(ellipseCenter, snappedPoint);
-
-            setTempShape({
-              ...tempShape,
-              properties: {
-                radiusX: distance,
-                radiusY:
-                  ellipseParams.radiusY *
-                  (distance / ellipseParams.radiusX || 1),
-                rotation: angle,
-                isFullEllipse: ellipseParams.isFullEllipse,
-              },
-            });
-          } else if (drawingPoints.length === 2) {
-            // Preview for second axis
-            const ellipseCenter = drawingPoints[0];
-            const firstRadius = tempShape.properties?.radiusX || 0;
-            const rotation = tempShape.properties?.rotation || 0;
-
-            // Calculate perpendicular distance
-            const ellipseDx = snappedPoint.x - ellipseCenter.x;
-            const ellipseDy = snappedPoint.y - ellipseCenter.y;
-            const projectedX =
-              ellipseDx * Math.cos(rotation) + ellipseDy * Math.sin(rotation);
-            const projectedY =
-              -ellipseDx * Math.sin(rotation) + ellipseDy * Math.cos(rotation);
-            const radiusY = Math.abs(projectedY);
-
-            setTempShape({
-              ...tempShape,
-              properties: {
-                ...tempShape.properties,
-                radiusY: radiusY,
-              },
-            });
-          }
-          break;
-
-        case 'polygon':
-          const polygonCenter = drawingPoints[0];
-          const polygonDx = snappedPoint.x - polygonCenter.x;
-          const polygonDy = snappedPoint.y - polygonCenter.y;
-          const polygonRadius = Math.sqrt(
-            polygonDx * polygonDx + polygonDy * polygonDy
-          );
-
-          setTempShape({
-            ...tempShape,
-            properties: {
-              radius: polygonRadius,
-              sides: parseInt(polygonSides.toString(), 10),
-            },
-          });
-          break;
-
-        case 'spline':
-          if (drawingPoints.length > 0) {
-            setTempShape({
-              ...tempShape,
-              points: [...drawingPoints, snappedPoint],
-              properties: { tension: splineTension },
-            });
-          }
-          break;
-
-        default:
-          break;
-      }
-    }
-  };
-
-  // Handle mouse down
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (selectedTool === 'pan' && e.button === 0) {
-      setIsDragging(true);
-      setDragStart({
-        x: e.clientX - e.currentTarget.getBoundingClientRect().left,
-        y: e.clientY - e.currentTarget.getBoundingClientRect().top,
-      });
-    }
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const worldPoint = canvasToWorld({
-      point: { x: mouseX, y: mouseY },
-      scale,
-      offset,
-    });
-    const snappedPoint = snapPointToGrid(worldPoint);
-
-    if (selectedTool === 'polyline') {
-      const newPoints = [...drawingPoints, snappedPoint];
-      setDrawingPoints(newPoints);
-
-      setTempShape({
-        id: 'temp-polyline',
-        type: 'polyline',
-        points: newPoints,
-      });
-    }
-  };
-
-  // Handle mouse wheel for zooming
-  const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-
-    // Smoother zoom factor
-    const zoomIntensity = 0.05;
-    const direction = e.deltaY > 0 ? -1 : 1;
-    const zoomFactor = 1 + direction * zoomIntensity;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    // Get world position under cursor before zoom
-    const worldPointBeforeZoom = canvasToWorld({
-      point: { x: mouseX, y: mouseY },
-      scale,
-      offset,
-    });
-
-    // New scale
-    const newScale = scale * zoomFactor;
-    setScale(newScale);
-
-    // Get screen position of same world point after zoom
-    const newScreenPoint = worldToCanvas({
-      point: worldPointBeforeZoom,
-      scale: newScale,
-      offset,
-    });
-
-    // Adjust offset so zoom centers around the cursor
-    setOffset((prev) => ({
-      x: prev.x + (mouseX - newScreenPoint.x),
-      y: prev.y + (mouseY - newScreenPoint.y),
-    }));
-  };
-
   return (
     <div className='flex flex-col h-screen'>
       {/* Top toolbar */}
@@ -801,11 +312,76 @@ export const AutoCADClone = () => {
         >
           <canvas
             ref={canvasRef}
-            onWheel={handleWheel}
-            onClick={handleCanvasClick}
-            onDoubleClick={handleCanvasDoubleClick}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
+            onWheel={(e) =>
+              handleWheel({ e, scale, offset, setScale, setOffset })
+            }
+            onClick={(e) =>
+              handleCanvasClick({
+                e,
+                selectedTool,
+                scale,
+                offset,
+                drawingPoints,
+                setDrawingPoints,
+                setTempShape,
+                tempShape,
+                arcAngles,
+                ellipseParams,
+                splineTension,
+                polygonSides,
+                completeShape,
+                shapes,
+                setSelectedShapes,
+                snapToGrid,
+                gridSize,
+              })
+            }
+            onDoubleClick={(e) =>
+              handleCanvasDoubleClick({
+                e,
+                selectedTool,
+                drawingPoints,
+                splineTension,
+                completeShape,
+              })
+            }
+            onMouseDown={(e) =>
+              handleMouseDown({
+                e,
+                selectedTool,
+                scale,
+                offset,
+                drawingPoints,
+                snapToGrid,
+                gridSize,
+                setIsDragging,
+                setDragStart,
+                setDrawingPoints,
+                setTempShape,
+              })
+            }
+            onMouseMove={(e) =>
+              handleMouseMove({
+                e,
+                selectedTool,
+                scale,
+                offset,
+                isDragging,
+                dragStart,
+                tempShape,
+                drawingPoints,
+                arcAngles,
+                ellipseParams,
+                polygonSides,
+                splineTension,
+                snapToGrid,
+                gridSize,
+                setMousePosition,
+                setOffset,
+                setDragStart,
+                setTempShape,
+              })
+            }
             onMouseUp={() => setIsDragging(false)}
             onMouseLeave={() => setIsDragging(false)}
             className='cursor-crosshair bg-muted rounded-xl border shadow-sm'

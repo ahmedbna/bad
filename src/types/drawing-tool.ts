@@ -1,4 +1,5 @@
 export type DrawingTool =
+  | 'select'
   | 'line'
   | 'rectangle'
   | 'circle'
@@ -7,5 +8,4 @@ export type DrawingTool =
   | 'ellipse'
   | 'polygon'
   | 'spline'
-  | 'select'
   | 'pan';

@@ -12,3 +12,15 @@ export type Property = {
   rotation: string;
   tension: string;
 };
+
+export interface ShapeProperties {
+  radius?: number;
+  radiusX?: number;
+  radiusY?: number;
+  rotation?: number;
+  sides?: number;
+  startAngle?: number;
+  endAngle?: number;
+  isFullEllipse?: boolean;
+  tension?: number;
+}
