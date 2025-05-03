@@ -25,6 +25,12 @@ import { handleMouseMove } from './events/handleMouseMove';
 import { handleCanvasDoubleClick } from './events/handleCanvasDoubleClick';
 import { handleWheel } from './events/handleWheel';
 import { handleMouseDown } from './events/handleMouseDown';
+import {
+  AreaSelectionState,
+  createInitialAreaSelectionState,
+  renderAreaSelection,
+} from './events/handleAreaSelection';
+import { handleMouseUp } from './events/handleMouseUp';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -51,6 +57,10 @@ export const AutoCADClone = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Point>({ x: 0, y: 0 });
   const [selectedShapes, setSelectedShapes] = useState<string[]>([]);
+  const [areaSelection, setAreaSelection] = useState(
+    createInitialAreaSelectionState()
+  );
+
   const [gridSize, setGridSize] = useState(20);
   const [majorGridInterval, setMajorGridInterval] = useState(10);
   const [snapToGrid, setSnapToGrid] = useState(true);
@@ -150,7 +160,16 @@ export const AutoCADClone = () => {
   // Redraw canvas when shapes, temp shape, or view parameters change
   useEffect(() => {
     drawCanvas();
-  }, [shapes, tempShape, scale, offset, selectedShapes, gridSize, snapToGrid]);
+  }, [
+    shapes,
+    tempShape,
+    scale,
+    offset,
+    selectedShapes,
+    areaSelection,
+    gridSize,
+    snapToGrid,
+  ]);
 
   // Draw the canvas
   const drawCanvas = () => {
@@ -183,7 +202,14 @@ export const AutoCADClone = () => {
     // Draw all shapes
     shapes.forEach((shape) => {
       const isSelected = selectedShapes.includes(shape.id);
-      drawShape({ ctx, scale, offset, shape, isSelected, isTemporary: false });
+      drawShape({
+        ctx,
+        scale,
+        offset,
+        shape,
+        isSelected,
+        isTemporary: false,
+      });
     });
 
     // Draw temporary shape while drawing
@@ -197,6 +223,9 @@ export const AutoCADClone = () => {
         isTemporary: true,
       });
     }
+
+    // Draw area selection if active
+    renderAreaSelection(ctx, areaSelection, scale, offset);
   };
 
   // Complete shape and add to shapes list
@@ -358,6 +387,7 @@ export const AutoCADClone = () => {
                 setDragStart,
                 setDrawingPoints,
                 setTempShape,
+                setAreaSelection,
               })
             }
             onMouseMove={(e) =>
@@ -380,9 +410,20 @@ export const AutoCADClone = () => {
                 setOffset,
                 setDragStart,
                 setTempShape,
+                areaSelection,
+                setAreaSelection,
               })
             }
-            onMouseUp={() => setIsDragging(false)}
+            onMouseUp={(e) =>
+              handleMouseUp({
+                e,
+                areaSelection,
+                shapes,
+                setAreaSelection,
+                setSelectedShapes,
+                setIsDragging,
+              })
+            }
             onMouseLeave={() => setIsDragging(false)}
             className='cursor-crosshair bg-muted rounded-xl border shadow-sm'
           />

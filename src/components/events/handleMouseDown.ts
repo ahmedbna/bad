@@ -2,6 +2,7 @@ import { Point } from '@/types/point';
 import { Shape } from '@/types/shape';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
+import { AreaSelectionState, startAreaSelection } from './handleAreaSelection';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -15,6 +16,7 @@ type Props = {
   setDragStart: React.Dispatch<React.SetStateAction<Point>>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
+  setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
 };
 
 // Handle mouse down
@@ -30,7 +32,13 @@ export const handleMouseDown = ({
   setDragStart,
   setDrawingPoints,
   setTempShape,
+  setAreaSelection,
 }: Props) => {
+  if (selectedTool === 'select') {
+    // Start area selection
+    startAreaSelection(e, scale, offset, setAreaSelection);
+  }
+
   if (selectedTool === 'pan' && e.button === 0) {
     setIsDragging(true);
     setDragStart({

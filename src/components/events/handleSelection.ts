@@ -58,11 +58,6 @@ export const handleSelection = ({
       return;
     }
   }
-
-  // If no shape found and not shift-selecting, clear selection
-  if (!isShiftSelect) {
-    setSelectedShapes([]);
-  }
 };
 
 // Check if point is in shape

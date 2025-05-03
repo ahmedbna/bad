@@ -1,8 +1,9 @@
 import { Point } from '@/types/point';
 import { Shape } from '@/types/shape';
 import { canvasToWorld } from '@/utils/canvasToWorld';
+import { worldToCanvas } from '@/utils/worldToCanvas';
 
-type AreaSelectionState = {
+export type AreaSelectionState = {
   active: boolean;
   startPoint: Point | null;
   endPoint: Point | null;
@@ -689,16 +690,16 @@ export const renderAreaSelection = (
   )
     return;
 
-  // Calculate canvas coordinates
-  const canvasStart = {
-    x: (areaSelection.startPoint.x + offset.x) * scale,
-    y: (areaSelection.startPoint.y + offset.y) * scale,
-  };
-
-  const canvasEnd = {
-    x: (areaSelection.endPoint.x + offset.x) * scale,
-    y: (areaSelection.endPoint.y + offset.y) * scale,
-  };
+  const canvasStart = worldToCanvas({
+    point: areaSelection.startPoint,
+    scale,
+    offset,
+  });
+  const canvasEnd = worldToCanvas({
+    point: areaSelection.endPoint,
+    scale,
+    offset,
+  });
 
   const width = canvasEnd.x - canvasStart.x;
   const height = canvasEnd.y - canvasStart.y;

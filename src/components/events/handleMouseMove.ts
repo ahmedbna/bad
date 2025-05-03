@@ -3,6 +3,7 @@ import { Point } from '@/types/point';
 import { Shape } from '@/types/shape';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
+import { AreaSelectionState, updateAreaSelection } from './handleAreaSelection';
 
 interface MouseMoveProps {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -24,10 +25,12 @@ interface MouseMoveProps {
   splineTension: number;
   snapToGrid: boolean;
   gridSize: number;
+  areaSelection: AreaSelectionState;
   setMousePosition: React.Dispatch<React.SetStateAction<Point | null>>;
   setOffset: React.Dispatch<React.SetStateAction<Point>>;
   setDragStart: React.Dispatch<React.SetStateAction<Point>>;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
+  setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
 }
 
 /**
@@ -52,6 +55,8 @@ export const handleMouseMove = ({
   setOffset,
   setDragStart,
   setTempShape,
+  areaSelection,
+  setAreaSelection,
 }: MouseMoveProps) => {
   try {
     // Get mouse coordinates relative to canvas
@@ -71,6 +76,11 @@ export const handleMouseMove = ({
 
     // Update mouse position state
     setMousePosition({ x: mouseX, y: mouseY });
+
+    if (areaSelection.active) {
+      // Update area selection
+      updateAreaSelection(e, scale, offset, areaSelection, setAreaSelection);
+    }
 
     // Handle panning when dragging
     if (isDragging) {
