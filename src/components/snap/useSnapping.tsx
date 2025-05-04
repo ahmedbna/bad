@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Point } from '@/types/point';
 import { Shape } from '@/types/shape';
+import { canvasToWorld } from '@/utils/canvasToWorld';
+import { distance } from '@/utils/calculations';
 
 // Define snap modes
 export enum SnapMode {
@@ -38,15 +40,17 @@ export interface SnapSettings {
   gridSize: number;
 }
 
+type Props = {
+  scale: number;
+  offset: Point;
+  shapes: Shape[];
+  snapSettings: SnapSettings;
+};
+
 /**
  * Custom hook for handling snapping functionality
  */
-export const useSnapping = (
-  shapes: Shape[],
-  snapSettings: SnapSettings,
-  scale: number,
-  offset: Point
-) => {
+export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
   const [activeSnapResult, setActiveSnapResult] = useState<SnapResult>(null);
   const [snapModes, setSnapModes] = useState<Set<SnapMode>>(snapSettings.modes);
   const [snapThreshold, setSnapThreshold] = useState<number>(
@@ -58,33 +62,6 @@ export const useSnapping = (
     setSnapModes(snapSettings.modes);
     setSnapThreshold(snapSettings.threshold);
   }, [snapSettings]);
-
-  /**
-   * Calculate distance between two points
-   */
-  const distance = (p1: Point, p2: Point): number => {
-    return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-  };
-
-  /**
-   * Convert screen coordinates to world coordinates
-   */
-  const screenToWorld = (screenPoint: Point): Point => {
-    return {
-      x: (screenPoint.x - offset.x) / scale,
-      y: (offset.y - screenPoint.y) / scale, // Y is inverted in screen coordinates
-    };
-  };
-
-  /**
-   * Convert world coordinates to screen coordinates
-   */
-  const worldToScreen = (worldPoint: Point): Point => {
-    return {
-      x: worldPoint.x * scale + offset.x,
-      y: offset.y - worldPoint.y * scale, // Y is inverted in screen coordinates
-    };
-  };
 
   /**
    * Find endpoint snap (first and last points of lines, polylines, etc.)
@@ -1338,7 +1315,7 @@ export const useSnapping = (
    * Handle cursor movement to find and set active snap
    */
   const handleCursorMove = (screenPoint: Point) => {
-    const worldPoint = screenToWorld(screenPoint);
+    const worldPoint = canvasToWorld({ point: screenPoint, offset, scale });
     const snap = findSnap(worldPoint);
     setActiveSnapResult(snap);
     return snap ? snap.point : worldPoint;
@@ -1356,7 +1333,5 @@ export const useSnapping = (
     activeSnapResult,
     handleCursorMove,
     clearSnap,
-    screenToWorld,
-    worldToScreen,
   };
 };
