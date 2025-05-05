@@ -18,6 +18,7 @@ import {
   handleStartEndRadiusArc,
   handleThreePointArc,
 } from '../arc/handle-arc';
+import { SnapResult } from '../snap/useSnapping';
 
 interface Props {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -43,6 +44,8 @@ interface Props {
   snapToGrid: boolean;
   gridSize: number;
   arcMode: ArcMode;
+  snapEnabled: boolean;
+  activeSnapResult: SnapResult;
 }
 
 /**
@@ -67,8 +70,35 @@ export const handleCanvasClick = ({
   snapToGrid,
   gridSize,
   arcMode,
+  snapEnabled,
+  activeSnapResult,
 }: Props) => {
   try {
+    // Get mouse coordinates relative to canvas
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Use snap point if available, otherwise calculate world point
+    let worldPoint: Point;
+    if (snapEnabled && activeSnapResult) {
+      worldPoint = activeSnapResult.point;
+    } else {
+      worldPoint = canvasToWorld({
+        point: { x: mouseX, y: mouseY },
+        offset,
+        scale,
+      });
+
+      // Apply grid snapping if enabled and no other snap is active
+      if (snapToGrid && !activeSnapResult) {
+        worldPoint = {
+          x: Math.round(worldPoint.x / gridSize) * gridSize,
+          y: Math.round(worldPoint.y / gridSize) * gridSize,
+        };
+      }
+    }
+
     // Selection tool handling
     if (selectedTool === 'select') {
       handleSelection({
@@ -81,11 +111,6 @@ export const handleCanvasClick = ({
       return;
     }
 
-    // Get mouse coordinates relative to canvas
-    const rect = e.currentTarget.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
     // Early exit if click is outside the canvas bounds
     if (
       mouseX < 0 ||
@@ -96,12 +121,6 @@ export const handleCanvasClick = ({
       return;
     }
 
-    // Convert mouse coordinates to world coordinates
-    const worldPoint = canvasToWorld({
-      point: { x: mouseX, y: mouseY },
-      scale,
-      offset,
-    });
     const snappedPoint = snapPointToGrid({
       point: worldPoint,
       snapToGrid,

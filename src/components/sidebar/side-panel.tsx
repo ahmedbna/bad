@@ -6,6 +6,7 @@ import { Point } from '@/types/point';
 import { Property } from '@/types/property';
 import { Shape } from '@/types/shape';
 import { Status } from './status';
+import { SnapMode, SnapResult } from '../snap/useSnapping';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -26,6 +27,14 @@ type Props = {
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
   setPropertyInput: React.Dispatch<React.SetStateAction<Property>>;
+  activeSnapResult: SnapResult | null;
+  snapSettings: {
+    enabled: boolean;
+    modes: Set<SnapMode>;
+    threshold: number;
+    gridSize: number;
+  };
+  toggleSnapMode: (mode: SnapMode) => void;
 };
 
 export const SidePanel = ({
@@ -45,6 +54,9 @@ export const SidePanel = ({
   offset,
   handleCancelDrawing,
   completeShape,
+  activeSnapResult,
+  snapSettings,
+  toggleSnapMode,
 }: Props) => {
   return (
     <div className='w-64 border-l p-4 overflow-y-auto'>

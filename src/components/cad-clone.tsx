@@ -9,30 +9,23 @@ import { drawShape } from './draw/draw-shape';
 import { SidePanel } from './sidebar/side-panel';
 import { Toolbar } from './toolbar/toolbar';
 import { useCanvasResize } from '@/hooks/useCanvasResize';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Slider } from './ui/slider';
 import { handleCanvasClick } from './events/handleCanvasClick';
 import { handleMouseMove } from './events/handleMouseMove';
 import { handleCanvasDoubleClick } from './events/handleCanvasDoubleClick';
 import { handleWheel } from './events/handleWheel';
 import { handleMouseDown } from './events/handleMouseDown';
 import {
-  AreaSelectionState,
-  createInitialAreaSelectionState,
   renderAreaSelection,
+  createInitialAreaSelectionState,
 } from './events/handleAreaSelection';
 import { handleMouseUp } from './events/handleMouseUp';
 import { ArcMode } from '@/types/arc-mode';
-import { ArcModeSelection } from './arc/arc-mode-selection';
+import { ArcModeDialog } from '@/components/dialogs/arc-mode-dialog';
+import { useSnapping, SnapMode } from '@/components/snap/useSnapping';
+import { renderSnapIndicator } from '@/components/draw/renderSnapIndicator';
+import { PolygonDialog } from '@/components/dialogs/polygon-dialog';
+import { EllipseDialog } from './dialogs/ellipse-dialog';
+import { SplineDialog } from './dialogs/spline-dialog';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -67,6 +60,35 @@ export const AutoCADClone = () => {
   const [gridSize, setGridSize] = useState(20);
   const [majorGridInterval, setMajorGridInterval] = useState(10);
   const [snapToGrid, setSnapToGrid] = useState(true);
+
+  // Snapping configuration
+  const [snapSettings, setSnapSettings] = useState({
+    enabled: true,
+    modes: new Set([
+      SnapMode.ENDPOINT,
+      SnapMode.MIDPOINT,
+      SnapMode.CENTER,
+      SnapMode.GRID,
+    ]),
+    threshold: 10,
+    gridSize: gridSize,
+  });
+
+  // Update snap settings when grid size changes
+  useEffect(() => {
+    setSnapSettings((prev) => ({
+      ...prev,
+      gridSize: gridSize,
+    }));
+  }, [gridSize]);
+
+  // Initialize snapping hook
+  const { activeSnapResult, handleCursorMove, clearSnap } = useSnapping({
+    shapes,
+    snapSettings,
+    scale,
+    offset,
+  });
 
   // Dialog states
   const [showPolygonDialog, setShowPolygonDialog] = useState(false);
@@ -149,12 +171,6 @@ export const AutoCADClone = () => {
       setShowPolygonDialog(false);
     }
 
-    if (selectedTool === 'arc') {
-      setShowArcDialog(true);
-    } else {
-      setShowArcDialog(false);
-    }
-
     if (selectedTool === 'ellipse') {
       setShowEllipseDialog(true);
     } else {
@@ -180,6 +196,7 @@ export const AutoCADClone = () => {
     areaSelection,
     gridSize,
     snapToGrid,
+    activeSnapResult,
   ]);
 
   // Draw the canvas
@@ -237,6 +254,11 @@ export const AutoCADClone = () => {
 
     // Draw area selection if active
     renderAreaSelection(ctx, areaSelection, scale, offset);
+
+    // Draw snap indicator if active
+    if (snapSettings.enabled && activeSnapResult) {
+      renderSnapIndicator(ctx, activeSnapResult, scale, offset);
+    }
   };
 
   // Complete shape and add to shapes list
@@ -270,6 +292,7 @@ export const AutoCADClone = () => {
       rotation: '',
       tension: '',
     });
+    clearSnap();
   };
 
   // Clear drawing and cancel current operation
@@ -292,6 +315,7 @@ export const AutoCADClone = () => {
       rotation: '',
       tension: '0.5',
     });
+    clearSnap();
   };
 
   // Delete selected shapes
@@ -302,6 +326,38 @@ export const AutoCADClone = () => {
       prev.filter((shape) => !selectedShapes.includes(shape.id))
     );
     setSelectedShapes([]);
+  };
+
+  // Toggle snap mode
+  const toggleSnapMode = (mode: SnapMode) => {
+    setSnapSettings((prev) => {
+      const newModes = new Set(prev.modes);
+      if (newModes.has(mode)) {
+        newModes.delete(mode);
+      } else {
+        newModes.add(mode);
+      }
+      return {
+        ...prev,
+        modes: newModes,
+      };
+    });
+  };
+
+  // Toggle snapping on/off
+  const toggleSnapping = () => {
+    setSnapSettings((prev) => ({
+      ...prev,
+      enabled: !prev.enabled,
+    }));
+  };
+
+  // Update snap threshold
+  const updateSnapThreshold = (value: number) => {
+    setSnapSettings((prev) => ({
+      ...prev,
+      threshold: value,
+    }));
   };
 
   return (
@@ -321,6 +377,10 @@ export const AutoCADClone = () => {
         setOffset={setOffset}
         handleDeleteShape={handleDeleteShape}
         setShowArcMode={setShowArcMode}
+        snapSettings={snapSettings}
+        toggleSnapMode={toggleSnapMode}
+        toggleSnapping={toggleSnapping}
+        updateSnapThreshold={updateSnapThreshold}
       />
 
       {/* Main content */}
@@ -355,6 +415,8 @@ export const AutoCADClone = () => {
                 snapToGrid,
                 gridSize,
                 arcMode,
+                snapEnabled: snapSettings.enabled,
+                activeSnapResult,
               })
             }
             onDoubleClick={(e) =>
@@ -380,6 +442,8 @@ export const AutoCADClone = () => {
                 setDrawingPoints,
                 setTempShape,
                 setAreaSelection,
+                snapEnabled: snapSettings.enabled,
+                activeSnapResult,
               })
             }
             onMouseMove={(e) =>
@@ -405,6 +469,8 @@ export const AutoCADClone = () => {
                 areaSelection,
                 setAreaSelection,
                 arcMode,
+                snapEnabled: snapSettings.enabled,
+                handleCursorMove,
               })
             }
             onMouseUp={(e) =>
@@ -417,7 +483,10 @@ export const AutoCADClone = () => {
                 setIsDragging,
               })
             }
-            onMouseLeave={() => setIsDragging(false)}
+            onMouseLeave={() => {
+              setIsDragging(false);
+              clearSnap();
+            }}
             className='cursor-crosshair bg-muted rounded-xl border shadow-sm'
           />
         </div>
@@ -440,147 +509,34 @@ export const AutoCADClone = () => {
           mousePosition={mousePosition}
           handleCancelDrawing={handleCancelDrawing}
           completeShape={completeShape}
+          activeSnapResult={activeSnapResult}
+          snapSettings={snapSettings}
+          toggleSnapMode={toggleSnapMode}
         />
       </div>
 
-      {/* Polygon dialog */}
-      <Dialog open={showPolygonDialog} onOpenChange={setShowPolygonDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Polygon Settings</DialogTitle>
-          </DialogHeader>
-          <div className='grid gap-4 py-4'>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='sides' className='text-right'>
-                Number of Sides
-              </Label>
-              <Input
-                id='sides'
-                type='number'
-                min='3'
-                max='32'
-                value={polygonSides}
-                onChange={(e) => setPolygonSides(parseInt(e.target.value, 10))}
-                className='col-span-3'
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type='submit' onClick={() => setShowPolygonDialog(false)}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <PolygonDialog
+        polygonSides={polygonSides}
+        showPolygonDialog={showPolygonDialog}
+        setPolygonSides={setPolygonSides}
+        setShowPolygonDialog={setShowPolygonDialog}
+      />
 
-      {/* Ellipse dialog */}
-      <Dialog open={showEllipseDialog} onOpenChange={setShowEllipseDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ellipse Settings</DialogTitle>
-          </DialogHeader>
-          <div className='grid gap-4 py-4'>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='radiusX' className='text-right'>
-                X Radius
-              </Label>
-              <Input
-                id='radiusX'
-                type='number'
-                min='1'
-                value={ellipseParams.radiusX}
-                onChange={(e) =>
-                  setEllipseParams((prev) => ({
-                    ...prev,
-                    radiusX: parseInt(e.target.value, 10),
-                  }))
-                }
-                className='col-span-3'
-              />
-            </div>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='radiusY' className='text-right'>
-                Y Radius
-              </Label>
-              <Input
-                id='radiusY'
-                type='number'
-                min='1'
-                value={ellipseParams.radiusY}
-                onChange={(e) =>
-                  setEllipseParams((prev) => ({
-                    ...prev,
-                    radiusY: parseInt(e.target.value, 10),
-                  }))
-                }
-                className='col-span-3'
-              />
-            </div>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='rotation' className='text-right'>
-                Rotation (degrees)
-              </Label>
-              <Input
-                id='rotation'
-                type='number'
-                min='0'
-                max='360'
-                value={Math.round((ellipseParams.rotation * 180) / Math.PI)}
-                onChange={(e) =>
-                  setEllipseParams((prev) => ({
-                    ...prev,
-                    rotation: (parseInt(e.target.value, 10) * Math.PI) / 180,
-                  }))
-                }
-                className='col-span-3'
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button type='submit' onClick={() => setShowEllipseDialog(false)}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EllipseDialog
+        showEllipseDialog={showEllipseDialog}
+        setShowEllipseDialog={setShowEllipseDialog}
+        ellipseParams={ellipseParams}
+        setEllipseParams={setEllipseParams}
+      />
 
-      {/* Spline dialog */}
-      <Dialog open={showSplineDialog} onOpenChange={setShowSplineDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Spline Settings</DialogTitle>
-          </DialogHeader>
-          <div className='grid gap-4 py-4'>
-            <div className='grid grid-cols-4 items-center gap-4'>
-              <Label htmlFor='tension' className='text-right'>
-                Tension
-              </Label>
-              <div className='col-span-3 flex items-center gap-2'>
-                <Slider
-                  id='tension'
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  value={[splineTension]}
-                  onValueChange={(value) => setSplineTension(value[0])}
-                />
-                <span>{splineTension.toFixed(1)}</span>
-              </div>
-            </div>
-            <p className='text-sm text-muted-foreground'>
-              Note: Double-click to complete the spline after adding at least 3
-              points.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button type='submit' onClick={() => setShowSplineDialog(false)}>
-              Confirm
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <SplineDialog
+        showSplineDialog={showSplineDialog}
+        setShowSplineDialog={setShowSplineDialog}
+        splineTension={splineTension}
+        setSplineTension={setSplineTension}
+      />
 
-      <ArcModeSelection
+      <ArcModeDialog
         setArcMode={setArcMode}
         showArcMode={showArcMode}
         setShowArcMode={setShowArcMode}

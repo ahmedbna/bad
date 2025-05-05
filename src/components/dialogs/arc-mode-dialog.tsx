@@ -16,7 +16,7 @@ type Props = {
   setArcMode: (mode: ArcMode) => void;
 };
 
-export const ArcModeSelection = ({
+export const ArcModeDialog = ({
   showArcMode,
   setShowArcMode,
   setArcMode,

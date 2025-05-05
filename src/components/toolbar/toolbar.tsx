@@ -20,9 +20,34 @@ import {
   Hexagon,
   PenTool,
   Egg,
+  Grid,
+  Crosshair,
+  Target,
+  Workflow,
+  Asterisk,
+  ArrowDownRight,
+  ArrowDownLeft,
+  RouteOff,
+  BoomBox,
+  ArrowUpRight,
+  Magnet,
 } from 'lucide-react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { DrawingTool } from '@/types/drawing-tool';
+import { SnapMode } from '../snap/useSnapping';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Slider as SliderComponent } from '@/components/ui/slider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type Props = {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
@@ -38,6 +63,15 @@ type Props = {
   setOffset: (offset: { x: number; y: number }) => void;
   handleDeleteShape: () => void;
   setShowArcMode: (show: boolean) => void;
+  snapSettings: {
+    enabled: boolean;
+    modes: Set<SnapMode>;
+    threshold: number;
+    gridSize: number;
+  };
+  toggleSnapMode: (mode: SnapMode) => void;
+  toggleSnapping: () => void;
+  updateSnapThreshold: (value: number) => void;
 };
 
 export const Toolbar = ({
@@ -54,7 +88,15 @@ export const Toolbar = ({
   setOffset,
   handleDeleteShape,
   setShowArcMode,
+  snapSettings,
+  toggleSnapMode,
+  toggleSnapping,
+  updateSnapThreshold,
 }: Props) => {
+  const isSnapModeActive = (mode: SnapMode): boolean => {
+    return snapSettings.modes.has(mode);
+  };
+
   return (
     <div className='p-2 border-b flex items-center space-x-4 overflow-x-auto'>
       <div className='flex space-x-2'>
@@ -174,14 +216,142 @@ export const Toolbar = ({
 
       <Separator orientation='vertical' className='h-8' />
 
+      {/* Snapping Controls */}
+      <div className='flex items-center space-x-2'>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={snapSettings.enabled ? 'default' : 'outline'}
+                size='sm'
+                onClick={toggleSnapping}
+              >
+                <Magnet size={16} className='mr-1' />
+                {snapSettings.enabled ? 'Snap: On' : 'Snap: Off'}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Enable/disable all snapping</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <DropdownMenu>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button variant='outline' size='sm'>
+                    Snap Modes <Crosshair size={16} className='ml-1' />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Configure active snap modes</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <DropdownMenuContent className='w-52'>
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.ENDPOINT)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.ENDPOINT)}
+            >
+              <Target size={16} className='mr-2' /> Endpoint
+            </DropdownMenuCheckboxItem>
+
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.MIDPOINT)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.MIDPOINT)}
+            >
+              <ArrowDownRight size={16} className='mr-2' /> Midpoint
+            </DropdownMenuCheckboxItem>
+
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.CENTER)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.CENTER)}
+            >
+              <Asterisk size={16} className='mr-2' /> Center
+            </DropdownMenuCheckboxItem>
+
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.NODE)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.NODE)}
+            >
+              <BoomBox size={16} className='mr-2' /> Node
+            </DropdownMenuCheckboxItem>
+
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.QUADRANT)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.QUADRANT)}
+            >
+              <Workflow size={16} className='mr-2' /> Quadrant
+            </DropdownMenuCheckboxItem>
+
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.INTERSECTION)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.INTERSECTION)}
+            >
+              <ArrowUpRight size={16} className='mr-2' /> Intersection
+            </DropdownMenuCheckboxItem>
+
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.PERPENDICULAR)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.PERPENDICULAR)}
+            >
+              <ArrowDownLeft size={16} className='mr-2' /> Perpendicular
+            </DropdownMenuCheckboxItem>
+
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.TANGENT)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.TANGENT)}
+            >
+              <RouteOff size={16} className='mr-2' /> Tangent
+            </DropdownMenuCheckboxItem>
+
+            <DropdownMenuCheckboxItem
+              checked={isSnapModeActive(SnapMode.GRID)}
+              onCheckedChange={() => toggleSnapMode(SnapMode.GRID)}
+            >
+              <Grid size={16} className='mr-2' /> Grid
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className='flex items-center space-x-2'>
+                {/* <Slider size={16} /> */}
+                <div className='w-24'>
+                  <SliderComponent
+                    value={[snapSettings.threshold]}
+                    min={1}
+                    max={20}
+                    step={1}
+                    onValueChange={(value) => updateSnapThreshold(value[0])}
+                  />
+                </div>
+                <span className='text-xs'>{snapSettings.threshold}px</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Snap threshold distance</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+
+      <Separator orientation='vertical' className='h-8' />
+
       <div className='flex items-center space-x-2'>
         <Button
           variant='outline'
           size='sm'
           onClick={() => setSnapToGrid(!snapToGrid)}
-          title={snapToGrid ? 'Snap On' : 'Snap Off'}
+          title={snapToGrid ? 'Grid Snap On' : 'Grid Snap Off'}
         >
-          {snapToGrid ? 'Snap: On' : 'Snap: Off'}
+          <Grid size={16} className='mr-1' />
+          {snapToGrid ? 'Grid: On' : 'Grid: Off'}
         </Button>
 
         <Select

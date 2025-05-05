@@ -40,6 +40,8 @@ interface MouseMoveProps {
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
   arcMode: ArcMode;
+  snapEnabled: boolean;
+  handleCursorMove: (screenPoint: Point) => Point;
 }
 
 /**
@@ -67,12 +69,32 @@ export const handleMouseMove = ({
   areaSelection,
   setAreaSelection,
   arcMode,
+  snapEnabled,
+  handleCursorMove,
 }: MouseMoveProps) => {
   try {
-    // Get mouse coordinates relative to canvas
+    // Get mouse position in canvas coordinates
     const rect = e.currentTarget.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
+    const canvasPoint = { x: mouseX, y: mouseY };
+
+    // First check for snapping - this will update activeSnapResult state
+    let worldPoint: Point;
+    if (snapEnabled) {
+      // handleCursorMove will update the activeSnapResult and return the snap point or original point
+      worldPoint = handleCursorMove(canvasPoint);
+    } else {
+      worldPoint = canvasToWorld({ point: canvasPoint, offset, scale });
+
+      // Apply grid snapping if enabled
+      if (snapToGrid) {
+        worldPoint = {
+          x: Math.round(worldPoint.x / gridSize) * gridSize,
+          y: Math.round(worldPoint.y / gridSize) * gridSize,
+        };
+      }
+    }
 
     // Early exit if mouse is outside the canvas bounds
     if (

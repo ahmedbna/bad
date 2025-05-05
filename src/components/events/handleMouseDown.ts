@@ -3,6 +3,7 @@ import { Shape } from '@/types/shape';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
 import { AreaSelectionState, startAreaSelection } from './handleAreaSelection';
+import { SnapResult } from '../snap/useSnapping';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -17,6 +18,8 @@ type Props = {
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
+  snapEnabled: boolean;
+  activeSnapResult: SnapResult;
 };
 
 // Handle mouse down
@@ -33,7 +36,34 @@ export const handleMouseDown = ({
   setDrawingPoints,
   setTempShape,
   setAreaSelection,
+  snapEnabled,
+  activeSnapResult,
 }: Props) => {
+  // Get mouse position in canvas coordinates
+  const rect = e.currentTarget.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+
+  // Use snap point if available, otherwise calculate world point
+  let worldPoint: Point;
+  if (snapEnabled && activeSnapResult) {
+    worldPoint = activeSnapResult.point;
+  } else {
+    worldPoint = canvasToWorld({
+      point: { x: mouseX, y: mouseY },
+      offset,
+      scale,
+    });
+
+    // Apply grid snapping if enabled and no other snap is active
+    if (snapToGrid && !activeSnapResult) {
+      worldPoint = {
+        x: Math.round(worldPoint.x / gridSize) * gridSize,
+        y: Math.round(worldPoint.y / gridSize) * gridSize,
+      };
+    }
+  }
+
   if (selectedTool === 'select') {
     // Start area selection
     startAreaSelection(e, scale, offset, setAreaSelection);
@@ -47,15 +77,6 @@ export const handleMouseDown = ({
     });
   }
 
-  const rect = e.currentTarget.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
-
-  const worldPoint = canvasToWorld({
-    point: { x: mouseX, y: mouseY },
-    scale,
-    offset,
-  });
   const snappedPoint = snapPointToGrid({
     point: worldPoint,
     snapToGrid,
