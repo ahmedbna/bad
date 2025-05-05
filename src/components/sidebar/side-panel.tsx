@@ -7,6 +7,7 @@ import { Property } from '@/types/property';
 import { Shape } from '@/types/shape';
 import { Status } from './status';
 import { SnapMode, SnapResult } from '../snap/useSnapping';
+import { SnapControls } from './snap-controls';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -71,6 +72,13 @@ export const SidePanel = ({
         setTempShape={setTempShape}
         setCoordinateInput={setCoordinateInput}
         completeShape={completeShape}
+      />
+
+      {/* Add the SnapControls component */}
+      <SnapControls
+        snapSettings={snapSettings}
+        toggleSnapMode={toggleSnapMode}
+        activeSnapResult={activeSnapResult}
       />
 
       <Properties

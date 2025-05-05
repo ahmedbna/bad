@@ -68,7 +68,7 @@ export const AutoCADClone = () => {
       SnapMode.ENDPOINT,
       SnapMode.MIDPOINT,
       SnapMode.CENTER,
-      SnapMode.GRID,
+      SnapMode.QUADRANT,
     ]),
     threshold: 10,
     gridSize: gridSize,

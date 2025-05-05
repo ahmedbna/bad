@@ -31,6 +31,7 @@ import {
   BoomBox,
   ArrowUpRight,
   Magnet,
+  Sliders,
 } from 'lucide-react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { DrawingTool } from '@/types/drawing-tool';
@@ -41,7 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Slider as SliderComponent } from '@/components/ui/slider';
+import { Slider } from '@/components/ui/slider';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -321,9 +322,9 @@ export const Toolbar = ({
           <Tooltip>
             <TooltipTrigger asChild>
               <div className='flex items-center space-x-2'>
-                {/* <Slider size={16} /> */}
+                <Sliders size={16} />
                 <div className='w-24'>
-                  <SliderComponent
+                  <Slider
                     value={[snapSettings.threshold]}
                     min={1}
                     max={20}
