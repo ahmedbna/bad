@@ -1,10 +1,9 @@
-import { DrawingTool } from '@/types/drawing-tool';
+import { DrawingTool } from '@/constants';
 import { CoordinatesInput } from './coordinates-input';
 import { Properties } from './properties';
 import { SelectedProperties } from './selected-properties';
-import { Point } from '@/types/point';
-import { Property } from '@/types/property';
-import { Shape } from '@/types/shape';
+import { Property, Point } from '@/types';
+import { Shape } from '@/types';
 import { Status } from './status';
 import { SnapMode, SnapResult } from '../snap/useSnapping';
 import { SnapControls } from './snap-controls';
@@ -60,7 +59,7 @@ export const SidePanel = ({
   toggleSnapMode,
 }: Props) => {
   return (
-    <div className='w-64 border-l p-4 overflow-y-auto'>
+    <div className='w-64 border-r p-4 overflow-y-auto'>
       <h3 className='font-semibold mb-4'>Properties</h3>
 
       <CoordinatesInput

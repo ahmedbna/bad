@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { drawGrid } from './draw/draw-grid';
-import { Point } from '@/types/point';
-import { Shape } from '@/types/shape';
-import { DrawingTool } from '@/types/drawing-tool';
+import { Point } from '@/types';
+import { Shape } from '@/types';
+import { DrawingTool, ArcMode } from '@/constants';
 import { drawShape } from './draw/draw-shape';
 import { SidePanel } from './sidebar/side-panel';
 import { Toolbar } from './toolbar/toolbar';
@@ -19,13 +19,14 @@ import {
   createInitialAreaSelectionState,
 } from './events/handleAreaSelection';
 import { handleMouseUp } from './events/handleMouseUp';
-import { ArcMode } from '@/types/arc-mode';
 import { ArcModeDialog } from '@/components/dialogs/arc-mode-dialog';
 import { useSnapping, SnapMode } from '@/components/snap/useSnapping';
 import { renderSnapIndicator } from '@/components/draw/renderSnapIndicator';
 import { PolygonDialog } from '@/components/dialogs/polygon-dialog';
 import { EllipseDialog } from './dialogs/ellipse-dialog';
 import { SplineDialog } from './dialogs/spline-dialog';
+import { TextDialog } from './dialogs/text-dialog';
+import { DimensionDialog } from './dialogs/dimension-dialog';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -48,6 +49,29 @@ export const AutoCADClone = () => {
     rotation: '',
     tension: '',
   });
+
+  const [textParams, setTextParams] = useState({
+    content: 'Sample Text',
+    fontSize: 12,
+    fontFamily: 'Arial',
+    fontStyle: 'normal',
+    fontWeight: 'normal',
+    rotation: 0,
+    justification: 'left' as 'left' | 'center' | 'right',
+  });
+
+  const [dimensionParams, setDimensionParams] = useState({
+    dimensionType: 'linear' as 'linear' | 'angular' | 'radius' | 'diameter',
+    offset: 25,
+    extensionLineOffset: 5,
+    arrowSize: 8,
+    textHeight: 12,
+    precision: 2,
+    units: '',
+    showValue: true,
+    textRotation: 0,
+  });
+
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -92,9 +116,10 @@ export const AutoCADClone = () => {
 
   // Dialog states
   const [showPolygonDialog, setShowPolygonDialog] = useState(false);
-  const [showArcDialog, setShowArcDialog] = useState(false);
   const [showEllipseDialog, setShowEllipseDialog] = useState(false);
   const [showSplineDialog, setShowSplineDialog] = useState(false);
+  const [showTextDialog, setShowTextDialog] = useState(false);
+  const [showDimensionDialog, setShowDimensionDialog] = useState(false);
 
   // Dialog values
   const [polygonSides, setPolygonSides] = useState(6);
@@ -165,6 +190,18 @@ export const AutoCADClone = () => {
 
   // Show appropriate dialog when tool is selected
   useEffect(() => {
+    if (selectedTool === 'text') {
+      setShowTextDialog(true);
+    } else {
+      setShowTextDialog(false);
+    }
+
+    if (selectedTool === 'dimension') {
+      setShowDimensionDialog(true);
+    } else {
+      setShowDimensionDialog(false);
+    }
+
     if (selectedTool === 'polygon') {
       setShowPolygonDialog(true);
     } else {
@@ -385,6 +422,29 @@ export const AutoCADClone = () => {
 
       {/* Main content */}
       <div className='flex flex-1 overflow-hidden'>
+        {/* Side panel */}
+        <SidePanel
+          scale={scale}
+          offset={offset}
+          shapes={shapes}
+          selectedTool={selectedTool}
+          drawingPoints={drawingPoints}
+          coordinateInput={coordinateInput}
+          tempShape={tempShape}
+          setDrawingPoints={setDrawingPoints}
+          setTempShape={setTempShape}
+          setCoordinateInput={setCoordinateInput}
+          setPropertyInput={setPropertyInput}
+          propertyInput={propertyInput}
+          selectedShapes={selectedShapes}
+          mousePosition={mousePosition}
+          handleCancelDrawing={handleCancelDrawing}
+          completeShape={completeShape}
+          activeSnapResult={activeSnapResult}
+          snapSettings={snapSettings}
+          toggleSnapMode={toggleSnapMode}
+        />
+
         {/* Drawing canvas */}
         <div
           className='flex-1 relative overflow-hidden flex items-center justify-center '
@@ -417,6 +477,8 @@ export const AutoCADClone = () => {
                 arcMode,
                 snapEnabled: snapSettings.enabled,
                 activeSnapResult,
+                textParams,
+                dimensionParams,
               })
             }
             onDoubleClick={(e) =>
@@ -490,29 +552,6 @@ export const AutoCADClone = () => {
             className='cursor-crosshair bg-muted rounded-xl border shadow-sm'
           />
         </div>
-
-        {/* Side panel */}
-        <SidePanel
-          scale={scale}
-          offset={offset}
-          shapes={shapes}
-          selectedTool={selectedTool}
-          drawingPoints={drawingPoints}
-          coordinateInput={coordinateInput}
-          tempShape={tempShape}
-          setDrawingPoints={setDrawingPoints}
-          setTempShape={setTempShape}
-          setCoordinateInput={setCoordinateInput}
-          setPropertyInput={setPropertyInput}
-          propertyInput={propertyInput}
-          selectedShapes={selectedShapes}
-          mousePosition={mousePosition}
-          handleCancelDrawing={handleCancelDrawing}
-          completeShape={completeShape}
-          activeSnapResult={activeSnapResult}
-          snapSettings={snapSettings}
-          toggleSnapMode={toggleSnapMode}
-        />
       </div>
 
       <PolygonDialog
@@ -540,6 +579,20 @@ export const AutoCADClone = () => {
         setArcMode={setArcMode}
         showArcMode={showArcMode}
         setShowArcMode={setShowArcMode}
+      />
+
+      <TextDialog
+        showTextDialog={showTextDialog}
+        setShowTextDialog={setShowTextDialog}
+        textParams={textParams}
+        setTextParams={setTextParams}
+      />
+
+      <DimensionDialog
+        showDimensionDialog={showDimensionDialog}
+        setShowDimensionDialog={setShowDimensionDialog}
+        dimensionParams={dimensionParams}
+        setDimensionParams={setDimensionParams}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { Shape } from '@/types/shape';
+import { Shape } from '@/types';
 import {
   AreaSelectionState,
   completeAreaSelection,

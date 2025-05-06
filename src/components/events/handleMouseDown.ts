@@ -1,5 +1,5 @@
 import { Point } from '@/types/point';
-import { Shape } from '@/types/shape';
+import { Shape } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
 import { AreaSelectionState, startAreaSelection } from './handleAreaSelection';

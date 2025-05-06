@@ -1,4 +1,4 @@
-import { Point } from '@/types/point';
+import { Point } from '@/types';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 import { SnapMode, SnapResult } from '@/components/snap/useSnapping';
 

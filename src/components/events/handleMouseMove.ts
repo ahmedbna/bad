@@ -1,6 +1,6 @@
 import { DrawingTool } from '@/types/drawing-tool';
 import { Point } from '@/types/point';
-import { Shape } from '@/types/shape';
+import { Shape } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
 import { AreaSelectionState, updateAreaSelection } from './handleAreaSelection';

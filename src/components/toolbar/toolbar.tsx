@@ -32,14 +32,17 @@ import {
   ArrowUpRight,
   Magnet,
   Sliders,
+  Ruler,
+  Type,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
-import { DrawingTool } from '@/types/drawing-tool';
+import { DrawingTool } from '@/constants';
 import { SnapMode } from '../snap/useSnapping';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Slider } from '@/components/ui/slider';
@@ -111,6 +114,7 @@ export const Toolbar = ({
         >
           <LucideBoxSelect size={16} />
         </Button>
+
         <Button
           variant={selectedTool === 'pan' ? 'default' : 'outline'}
           size='sm'
@@ -135,6 +139,7 @@ export const Toolbar = ({
         >
           <Minus size={16} />
         </Button>
+
         <Button
           variant={selectedTool === 'polyline' ? 'default' : 'outline'}
           size='sm'
@@ -146,6 +151,7 @@ export const Toolbar = ({
         >
           <Slash size={16} />
         </Button>
+
         <Button
           variant={selectedTool === 'rectangle' ? 'default' : 'outline'}
           size='sm'
@@ -157,6 +163,7 @@ export const Toolbar = ({
         >
           <Square size={16} />
         </Button>
+
         <Button
           variant={selectedTool === 'circle' ? 'default' : 'outline'}
           size='sm'
@@ -168,6 +175,7 @@ export const Toolbar = ({
         >
           <Circle size={16} />
         </Button>
+
         <Button
           variant={selectedTool === 'arc' ? 'default' : 'outline'}
           size='sm'
@@ -180,6 +188,7 @@ export const Toolbar = ({
         >
           <Spline size={16} />
         </Button>
+
         <Button
           variant={selectedTool === 'ellipse' ? 'default' : 'outline'}
           size='sm'
@@ -191,6 +200,7 @@ export const Toolbar = ({
         >
           <Egg size={16} />
         </Button>
+
         <Button
           variant={selectedTool === 'polygon' ? 'default' : 'outline'}
           size='sm'
@@ -202,6 +212,7 @@ export const Toolbar = ({
         >
           <Hexagon size={16} />
         </Button>
+
         <Button
           variant={selectedTool === 'spline' ? 'default' : 'outline'}
           size='sm'
@@ -213,45 +224,66 @@ export const Toolbar = ({
         >
           <PenTool size={16} />
         </Button>
+
+        <Button
+          variant={selectedTool === 'text' ? 'default' : 'outline'}
+          size='icon'
+          className='h-8 w-8'
+          onClick={() => {
+            setSelectedTool('text');
+          }}
+          title='Text'
+        >
+          <Type size={16} />
+        </Button>
+
+        <Button
+          variant={selectedTool === 'dimension' ? 'default' : 'outline'}
+          size='icon'
+          className='h-8 w-8'
+          onClick={() => {
+            setSelectedTool('dimension');
+          }}
+          title='Dimension'
+        >
+          <Ruler size={16} />
+        </Button>
       </div>
 
       <Separator orientation='vertical' className='h-8' />
 
       {/* Snapping Controls */}
       <div className='flex items-center space-x-2'>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={snapSettings.enabled ? 'default' : 'outline'}
-                size='sm'
-                onClick={toggleSnapping}
-              >
-                <Magnet size={16} className='mr-1' />
-                {snapSettings.enabled ? 'Snap: On' : 'Snap: Off'}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Enable/disable all snapping</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant={snapSettings.enabled ? 'default' : 'outline'}
+              size='sm'
+              onClick={toggleSnapping}
+            >
+              <Magnet size={16} className='mr-1' />
+              {snapSettings.enabled ? 'Snap: On' : 'Snap: Off'}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Enable/disable all snapping</p>
+          </TooltipContent>
+        </Tooltip>
 
         <DropdownMenu>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <Button variant='outline' size='sm'>
-                    Snap Modes <Crosshair size={16} className='ml-1' />
-                  </Button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Configure active snap modes</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button variant='outline' size='sm'>
+                  Snap Modes <Crosshair size={16} className='ml-1' />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Configure active snap modes</p>
+            </TooltipContent>
+          </Tooltip>
+
           <DropdownMenuContent className='w-52'>
             <DropdownMenuCheckboxItem
               checked={isSnapModeActive(SnapMode.ENDPOINT)}
@@ -318,43 +350,31 @@ export const Toolbar = ({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className='flex items-center space-x-2'>
-                <Sliders size={16} />
-                <div className='w-24'>
-                  <Slider
-                    value={[snapSettings.threshold]}
-                    min={1}
-                    max={20}
-                    step={1}
-                    onValueChange={(value) => updateSnapThreshold(value[0])}
-                  />
-                </div>
-                <span className='text-xs'>{snapSettings.threshold}px</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className='flex items-center space-x-2'>
+              <Sliders size={16} />
+              <div className='w-24'>
+                <Slider
+                  value={[snapSettings.threshold]}
+                  min={1}
+                  max={20}
+                  step={1}
+                  onValueChange={(value) => updateSnapThreshold(value[0])}
+                />
               </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Snap threshold distance</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              <span className='text-xs'>{snapSettings.threshold}px</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Snap threshold distance</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <Separator orientation='vertical' className='h-8' />
 
       <div className='flex items-center space-x-2'>
-        <Button
-          variant='outline'
-          size='sm'
-          onClick={() => setSnapToGrid(!snapToGrid)}
-          title={snapToGrid ? 'Grid Snap On' : 'Grid Snap Off'}
-        >
-          <Grid size={16} className='mr-1' />
-          {snapToGrid ? 'Grid: On' : 'Grid: Off'}
-        </Button>
-
         <Select
           value={gridSize.toString()}
           onValueChange={(val) => setGridSize(parseInt(val))}
@@ -374,7 +394,7 @@ export const Toolbar = ({
       <Separator orientation='vertical' className='h-8' />
 
       <div className='flex items-center space-x-2'>
-        <Button
+        {/* <Button
           variant='outline'
           size='sm'
           onClick={() => {
@@ -386,14 +406,14 @@ export const Toolbar = ({
           }}
         >
           Reset View
-        </Button>
+        </Button> */}
 
         <Button
           variant='outline'
           size='sm'
           onClick={() => setScale((prev) => prev * 1.2)}
         >
-          Zoom In
+          <ZoomIn size={16} />
         </Button>
 
         <Button
@@ -401,7 +421,7 @@ export const Toolbar = ({
           size='sm'
           onClick={() => setScale((prev) => prev * 0.8)}
         >
-          Zoom Out
+          <ZoomOut size={16} />
         </Button>
       </div>
 

@@ -1,5 +1,5 @@
-import { Point } from '@/types/point';
-import { Shape } from '@/types/shape';
+import { Point } from '@/types';
+import { DimensionProperties, Shape, TextProperties } from '@/types';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 
 type Props = {
@@ -440,6 +440,13 @@ export const drawShape = ({
       }
       break;
 
+    case 'text':
+      drawText(ctx, scale, offset, shape, isSelected, isTemporary);
+      break;
+    case 'dimension':
+      drawDimension(ctx, scale, offset, shape, isSelected, isTemporary);
+      break;
+
     default:
       break;
   }
@@ -461,4 +468,279 @@ const drawControlPoint = (ctx: CanvasRenderingContext2D, point: Point) => {
 // Helper function to draw multiple control points
 const drawControlPoints = (ctx: CanvasRenderingContext2D, points: Point[]) => {
   points.forEach((point) => drawControlPoint(ctx, point));
+};
+
+// Now let's create the text rendering functions in draw-shape.ts
+export const drawText = (
+  ctx: CanvasRenderingContext2D,
+  scale: number,
+  offset: Point,
+  shape: Shape,
+  isSelected: boolean,
+  isTemporary: boolean
+) => {
+  const { points, properties } = shape;
+  if (!points.length) return;
+
+  const position = points[0];
+  const textProps = properties as TextProperties;
+
+  // Transform canvas coordinates
+  const x = offset.x + position.x * scale;
+  const y = offset.y - position.y * scale; // Invert Y coordinate
+
+  // Set text styles
+  ctx.font = `${textProps.fontStyle} ${textProps.fontWeight} ${textProps.fontSize * scale}px ${textProps.fontFamily}`;
+  ctx.fillStyle = isTemporary ? 'rgba(0, 120, 212, 0.7)' : 'black';
+  ctx.textAlign = textProps.justification;
+  ctx.textBaseline = 'middle';
+
+  // Apply rotation if specified
+  if (textProps.rotation) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate((-textProps.rotation * Math.PI) / 180); // Convert degrees to radians
+    ctx.fillText(textProps.content, 0, 0);
+    ctx.restore();
+  } else {
+    ctx.fillText(textProps.content, x, y);
+  }
+
+  // Draw selection indicators if selected
+  if (isSelected) {
+    ctx.strokeStyle = 'blue';
+    ctx.lineWidth = 1;
+
+    // Get text metrics to calculate bounding box
+    const metrics = ctx.measureText(textProps.content);
+    const textHeight = textProps.fontSize * scale;
+    const textWidth = metrics.width;
+
+    // Draw text bounding box
+    ctx.strokeRect(
+      x -
+        (textProps.justification === 'center'
+          ? textWidth / 2
+          : textProps.justification === 'right'
+            ? textWidth
+            : 0),
+      y - textHeight / 2,
+      textWidth,
+      textHeight
+    );
+
+    // Draw control points
+    const controlPoints = [
+      { x, y }, // Position point
+      { x: x + textWidth, y }, // Width point
+    ];
+
+    controlPoints.forEach((point) => {
+      ctx.fillStyle = 'blue';
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+};
+
+// Create dimension line drawing function in draw-shape.ts
+export const drawDimension = (
+  ctx: CanvasRenderingContext2D,
+  scale: number,
+  offset: Point,
+  shape: Shape,
+  isSelected: boolean,
+  isTemporary: boolean
+) => {
+  const { points, properties } = shape;
+  if (points.length < 2) return;
+
+  const startPoint = points[0];
+  const endPoint = points[1];
+  const dimProps = properties as DimensionProperties;
+
+  // Transform canvas coordinates
+  const x1 = offset.x + startPoint.x * scale;
+  const y1 = offset.y - startPoint.y * scale;
+  const x2 = offset.x + endPoint.x * scale;
+  const y2 = offset.y - endPoint.y * scale;
+
+  ctx.strokeStyle = isTemporary ? 'rgba(0, 120, 212, 0.7)' : 'black';
+  ctx.lineWidth = 1;
+
+  // For linear dimensions
+  if (dimProps.dimensionType === 'linear') {
+    // Calculate dimension line offset position
+    const dx = endPoint.x - startPoint.x;
+    const dy = endPoint.y - startPoint.y;
+    const angle = Math.atan2(dy, dx);
+    const perpAngle = angle + Math.PI / 2;
+
+    // Dimension line offset from the measured line
+    const offsetDistance = dimProps.offset * scale;
+
+    // Calculate extension line points
+    const extLine1Start = {
+      x: x1 + Math.cos(perpAngle) * dimProps.extensionLineOffset * scale,
+      y: y1 + Math.sin(perpAngle) * dimProps.extensionLineOffset * scale,
+    };
+
+    const extLine1End = {
+      x: x1 + Math.cos(perpAngle) * offsetDistance,
+      y: y1 + Math.sin(perpAngle) * offsetDistance,
+    };
+
+    const extLine2Start = {
+      x: x2 + Math.cos(perpAngle) * dimProps.extensionLineOffset * scale,
+      y: y2 + Math.sin(perpAngle) * dimProps.extensionLineOffset * scale,
+    };
+
+    const extLine2End = {
+      x: x2 + Math.cos(perpAngle) * offsetDistance,
+      y: y2 + Math.sin(perpAngle) * offsetDistance,
+    };
+
+    // Draw extension lines
+    ctx.beginPath();
+    ctx.moveTo(extLine1Start.x, extLine1Start.y);
+    ctx.lineTo(extLine1End.x, extLine1End.y);
+    ctx.moveTo(extLine2Start.x, extLine2Start.y);
+    ctx.lineTo(extLine2End.x, extLine2End.y);
+    ctx.stroke();
+
+    // Draw dimension line
+    ctx.beginPath();
+    ctx.moveTo(extLine1End.x, extLine1End.y);
+    ctx.lineTo(extLine2End.x, extLine2End.y);
+    ctx.stroke();
+
+    // Draw arrows
+    const arrowSize = dimProps.arrowSize * scale;
+    drawArrow(ctx, extLine1End, extLine2End, arrowSize);
+    drawArrow(ctx, extLine2End, extLine1End, arrowSize);
+
+    // Calculate and draw dimension text
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const textToDisplay = dimProps.showValue
+      ? distance.toFixed(dimProps.precision) + (dimProps.units || '')
+      : dimProps.value.toFixed(dimProps.precision) + (dimProps.units || '');
+
+    // Text position
+    const textX = (extLine1End.x + extLine2End.x) / 2;
+    const textY = (extLine1End.y + extLine2End.y) / 2;
+
+    // Draw text
+    ctx.save();
+    ctx.font = `${dimProps.textHeight * scale}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Rotate text if needed
+    if (dimProps.textRotation) {
+      ctx.translate(textX, textY);
+      ctx.rotate((-dimProps.textRotation * Math.PI) / 180);
+      ctx.fillText(textToDisplay, 0, 0);
+    } else {
+      // Align text with dimension line
+      ctx.translate(textX, textY);
+      ctx.rotate(-angle);
+      ctx.fillText(textToDisplay, 0, (-dimProps.textHeight * scale) / 2);
+    }
+    ctx.restore();
+  }
+
+  // Draw radius dimension
+  else if (dimProps.dimensionType === 'radius') {
+    // Center point is start point, radius point is end point
+    const centerX = x1;
+    const centerY = y1;
+    const radiusPointX = x2;
+    const radiusPointY = y2;
+
+    // Calculate radius
+    const dx = radiusPointX - centerX;
+    const dy = radiusPointY - centerY;
+    const radius = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+
+    // Draw radius line
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.lineTo(radiusPointX, radiusPointY);
+    ctx.stroke();
+
+    // Draw arrow
+    drawArrow(
+      ctx,
+      { x: radiusPointX, y: radiusPointY },
+      { x: centerX, y: centerY },
+      dimProps.arrowSize * scale
+    );
+
+    // Calculate text position
+    const textX = centerX + Math.cos(angle) * radius * 0.6;
+    const textY = centerY + Math.sin(angle) * radius * 0.6;
+
+    // Draw text
+    ctx.save();
+    ctx.font = `${dimProps.textHeight * scale}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      `R${radius.toFixed(dimProps.precision)}${dimProps.units || ''}`,
+      textX,
+      textY
+    );
+    ctx.restore();
+  }
+
+  // Draw selected state
+  if (isSelected) {
+    points.forEach((point) => {
+      const px = offset.x + point.x * scale;
+      const py = offset.y - point.y * scale;
+
+      ctx.fillStyle = 'blue';
+      ctx.beginPath();
+      ctx.arc(px, py, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw text position control handle
+    if (dimProps.textPosition) {
+      const textX = offset.x + dimProps.textPosition.x * scale;
+      const textY = offset.y - dimProps.textPosition.y * scale;
+
+      ctx.fillStyle = 'green';
+      ctx.beginPath();
+      ctx.arc(textX, textY, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+};
+
+// Helper function to draw arrows
+const drawArrow = (
+  ctx: CanvasRenderingContext2D,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  size: number
+) => {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const angle = Math.atan2(dy, dx);
+
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(
+    from.x - size * Math.cos(angle - Math.PI / 6),
+    from.y - size * Math.sin(angle - Math.PI / 6)
+  );
+  ctx.lineTo(
+    from.x - size * Math.cos(angle + Math.PI / 6),
+    from.y - size * Math.sin(angle + Math.PI / 6)
+  );
+  ctx.closePath();
+  ctx.fill();
 };

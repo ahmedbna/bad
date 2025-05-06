@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DrawingTool } from '@/types/drawing-tool';
-import { Shape } from '@/types/shape';
+import { Shape } from '@/types';
 
 type Props = {
   selectedTool: DrawingTool;

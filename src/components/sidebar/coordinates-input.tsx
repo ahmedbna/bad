@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DrawingTool } from '@/types/drawing-tool';
 import { Point } from '@/types/point';
-import { Shape } from '@/types/shape';
+import { Shape } from '@/types';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

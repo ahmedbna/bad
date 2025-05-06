@@ -1,4 +1,4 @@
-import { Point } from '@/types/point';
+import { Point } from '@/types';
 
 type Props = {
   ctx: CanvasRenderingContext2D;

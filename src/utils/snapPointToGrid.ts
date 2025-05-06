@@ -1,4 +1,4 @@
-import { Point } from '@/types/point';
+import { Point } from '@/types';
 
 interface Props {
   point: Point;

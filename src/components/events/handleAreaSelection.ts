@@ -1,5 +1,4 @@
-import { Point } from '@/types/point';
-import { Shape } from '@/types/shape';
+import { Point, Shape } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 

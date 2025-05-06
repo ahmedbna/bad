@@ -1,6 +1,4 @@
-import { Point } from '@/types/point';
-import { ShapeProperties } from '@/types/property';
-import { Shape } from '@/types/shape';
+import { Point, ShapeProperties, Shape } from '@/types';
 import {
   angleBetweenPoints,
   calculateArcCenter,

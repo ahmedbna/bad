@@ -1,7 +1,11 @@
-import { DrawingTool } from '@/types/drawing-tool';
-import { Point } from '@/types/point';
-import { ShapeProperties } from '@/types/property';
-import { Shape } from '@/types/shape';
+import { DrawingTool, ArcMode } from '@/constants';
+import {
+  Point,
+  ShapeProperties,
+  Shape,
+  TextParams,
+  DimensionParams,
+} from '@/types';
 import { handleSelection } from './handleSelection';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
@@ -10,7 +14,6 @@ import {
   calculateDistance,
   calculatePerpendicularDistance,
 } from '@/utils/calculations';
-import { ArcMode } from '@/types/arc-mode';
 import {
   handleCenterStartEndArc,
   handleStartCenterEndArc,
@@ -46,6 +49,8 @@ interface Props {
   arcMode: ArcMode;
   snapEnabled: boolean;
   activeSnapResult: SnapResult;
+  textParams?: TextParams;
+  dimensionParams: DimensionParams;
 }
 
 /**
@@ -72,6 +77,8 @@ export const handleCanvasClick = ({
   arcMode,
   snapEnabled,
   activeSnapResult,
+  textParams,
+  dimensionParams,
 }: Props) => {
   try {
     // Get mouse coordinates relative to canvas
@@ -127,6 +134,95 @@ export const handleCanvasClick = ({
       gridSize,
     });
 
+    // Handle text tool specifically
+    if (selectedTool === 'text') {
+      // For text, we only need one click to place it
+      if (textParams) {
+        completeShape([snappedPoint], {
+          textParams: {
+            content: textParams.content || 'Sample Text',
+            fontSize: textParams.fontSize || 12,
+            fontFamily: textParams.fontFamily || 'Arial',
+            fontStyle: textParams.fontStyle || 'normal',
+            fontWeight: textParams.fontWeight || 'normal',
+            rotation: textParams.rotation || 0,
+            justification: textParams.justification || 'left',
+          },
+        });
+      }
+      return;
+    }
+
+    // Handle dimension tool specifically
+    if (selectedTool === 'dimension') {
+      if (drawingPoints.length === 0) {
+        // First point for dimension - start the dimension line
+        setDrawingPoints([snappedPoint]);
+
+        // Set temporary shape for preview
+        const newDimShape: Shape = {
+          id: `temp-dim-${Date.now()}`,
+          type: 'dimension',
+          points: [snappedPoint],
+          properties: dimensionParams || {
+            dimensionType: 'linear',
+            offset: 25,
+            extensionLineOffset: 5,
+            arrowSize: 8,
+            textHeight: 12,
+            precision: 2,
+            units: '',
+            showValue: true,
+            textRotation: 0,
+            value: 0,
+          },
+          isCompleted: false,
+        };
+
+        setTempShape(newDimShape);
+      } else if (drawingPoints.length === 1) {
+        // Second point for dimension - complete the dimension
+        const dx = snappedPoint.x - drawingPoints[0].x;
+        const dy = snappedPoint.y - drawingPoints[0].y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Calculate the midpoint for text position
+        const midPoint = {
+          x: (drawingPoints[0].x + snappedPoint.x) / 2,
+          y: (drawingPoints[0].y + snappedPoint.y) / 2,
+        };
+
+        // Get perpendicular offset for text
+        const angle = Math.atan2(dy, dx);
+        const perpAngle = angle + Math.PI / 2;
+        const offsetAmount = dimensionParams?.offset || 25;
+
+        // Calculate text position
+        const textPosition = {
+          x: midPoint.x + Math.cos(perpAngle) * offsetAmount,
+          y: midPoint.y + Math.sin(perpAngle) * offsetAmount,
+        };
+
+        // Complete the dimension with calculated properties
+        completeShape([drawingPoints[0], snappedPoint], {
+          ...(dimensionParams || {
+            dimensionType: 'linear',
+            offset: 25,
+            extensionLineOffset: 5,
+            arrowSize: 8,
+            textHeight: 12,
+            precision: 2,
+            units: '',
+            showValue: true,
+            textRotation: 0,
+          }),
+          value: distance,
+          textPosition: textPosition,
+        });
+      }
+      return;
+    }
+
     // First point in a shape
     if (drawingPoints.length === 0) {
       startNewShape(snappedPoint, selectedTool, setDrawingPoints, setTempShape);
@@ -140,7 +236,6 @@ export const handleCanvasClick = ({
       selectedTool,
       drawingPoints,
       tempShape,
-      arcAngles,
       ellipseParams,
       splineTension,
       polygonSides,
@@ -188,7 +283,6 @@ const handleShapeProgress = (
   selectedTool: DrawingTool,
   drawingPoints: Point[],
   tempShape: Shape | null,
-  arcAngles: { startAngle: number; endAngle: number },
   ellipseParams: {
     radiusX: number;
     radiusY: number;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Point } from '@/types/point';
-import { Shape } from '@/types/shape';
+import { Shape } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { distance } from '@/utils/calculations';
 

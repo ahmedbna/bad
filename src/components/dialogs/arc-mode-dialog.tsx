@@ -8,7 +8,7 @@ import {
   DialogContent,
   DialogHeader,
 } from '@/components/ui/dialog';
-import { ArcMode } from '@/types/arc-mode';
+import { ArcMode } from '@/constants';
 
 type Props = {
   showArcMode: boolean;
