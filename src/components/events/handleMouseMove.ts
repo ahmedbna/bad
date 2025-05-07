@@ -1,10 +1,8 @@
-import { DrawingTool } from '@/types/drawing-tool';
-import { Point } from '@/types/point';
-import { Shape } from '@/types';
+import { DrawingTool, ArcMode } from '@/constants';
+import { DimensionParams, Point, Shape, TextParams } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { snapPointToGrid } from '@/utils/snapPointToGrid';
 import { AreaSelectionState, updateAreaSelection } from './handleAreaSelection';
-import { ArcMode } from '@/types/arc-mode';
 import {
   previewCenterStartEndArc,
   previewStartCenterEndArc,
@@ -42,6 +40,8 @@ interface MouseMoveProps {
   arcMode: ArcMode;
   snapEnabled: boolean;
   handleCursorMove: (screenPoint: Point) => Point;
+  textParams: TextParams;
+  dimensionParams: DimensionParams;
 }
 
 /**
@@ -71,6 +71,8 @@ export const handleMouseMove = ({
   arcMode,
   snapEnabled,
   handleCursorMove,
+  textParams,
+  dimensionParams,
 }: MouseMoveProps) => {
   try {
     // Get mouse position in canvas coordinates
@@ -138,6 +140,8 @@ export const handleMouseMove = ({
         gridSize,
         setTempShape,
         arcMode,
+        textParams,
+        dimensionParams,
       });
     }
   } catch (error) {
@@ -188,6 +192,8 @@ const updateTempShapeOnMouseMove = ({
   gridSize,
   setTempShape,
   arcMode,
+  textParams,
+  dimensionParams,
 }: {
   mouseX: number;
   mouseY: number;
@@ -209,6 +215,8 @@ const updateTempShapeOnMouseMove = ({
   gridSize: number;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
   arcMode: ArcMode;
+  textParams: TextParams;
+  dimensionParams: DimensionParams;
 }) => {
   // Convert mouse coordinates to world coordinates
   const worldPoint = canvasToWorld({
@@ -288,6 +296,26 @@ const updateTempShapeOnMouseMove = ({
         snappedPoint,
         tempShape,
         splineTension,
+        setTempShape
+      );
+      break;
+
+    case 'text':
+      handleTextPreview(
+        drawingPoints,
+        snappedPoint,
+        tempShape,
+        textParams,
+        setTempShape
+      );
+      break;
+
+    case 'dimension':
+      handleDimensionPreview(
+        drawingPoints,
+        snappedPoint,
+        tempShape,
+        dimensionParams,
         setTempShape
       );
       break;
@@ -529,4 +557,96 @@ const calculatePerpendicularDistance = (
   const projectedX = dx * Math.cos(rotation) + dy * Math.sin(rotation);
   const projectedY = -dx * Math.sin(rotation) + dy * Math.cos(rotation);
   return Math.abs(projectedY);
+};
+
+/**
+ * Handles text preview during mouse movement
+ */
+const handleTextPreview = (
+  drawingPoints: Point[],
+  currentPoint: Point,
+  tempShape: Shape,
+  textParams?: TextParams,
+  setTempShape?: React.Dispatch<React.SetStateAction<Shape | null>>
+) => {
+  if (!setTempShape) return;
+
+  // For text, we only update the position of the text
+  // Text is placed at a single point, so we can just update that point
+  setTempShape({
+    ...tempShape,
+    points: [currentPoint],
+    properties: {
+      ...tempShape.properties,
+      textParams: textParams || {
+        content: 'Sample Text',
+        fontSize: 12,
+        fontFamily: 'Arial',
+        fontStyle: 'normal',
+        fontWeight: 'normal',
+        rotation: 0,
+        justification: 'left',
+      },
+    },
+  });
+};
+
+/**
+ * Handles dimension preview during mouse movement
+ */
+const handleDimensionPreview = (
+  drawingPoints: Point[],
+  currentPoint: Point,
+  tempShape: Shape,
+  dimensionParams?: DimensionParams,
+  setTempShape?: React.Dispatch<React.SetStateAction<Shape | null>>
+) => {
+  if (!setTempShape || drawingPoints.length < 1) return;
+
+  // Calculate the distance between the points
+  const dx = currentPoint.x - drawingPoints[0].x;
+  const dy = currentPoint.y - drawingPoints[0].y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Calculate the midpoint for text position
+  const midPoint = {
+    x: (drawingPoints[0].x + currentPoint.x) / 2,
+    y: (drawingPoints[0].y + currentPoint.y) / 2,
+  };
+
+  // Get perpendicular offset for text
+  const angle = Math.atan2(dy, dx);
+  const perpAngle = angle + Math.PI / 2;
+  const offsetAmount = dimensionParams?.offset || 25;
+
+  // Calculate text position
+  const textPosition = {
+    x: midPoint.x + Math.cos(perpAngle) * offsetAmount,
+    y: midPoint.y + Math.sin(perpAngle) * offsetAmount,
+  };
+
+  // Update the dimension shape
+  setTempShape({
+    ...tempShape,
+    points: [drawingPoints[0], currentPoint],
+    properties: {
+      ...tempShape.properties,
+      dimensionParams: {
+        value: distance,
+        textPosition: textPosition,
+        dimensionType: dimensionParams?.dimensionType || 'linear',
+        offset: dimensionParams?.offset || 25,
+        extensionLineOffset: dimensionParams?.extensionLineOffset || 5,
+        arrowSize: dimensionParams?.arrowSize || 8,
+        textHeight: dimensionParams?.textHeight || 12,
+        precision: dimensionParams?.precision || 2,
+        units: dimensionParams?.units || '',
+        showValue:
+          dimensionParams?.showValue !== undefined
+            ? dimensionParams.showValue
+            : true,
+        textRotation: dimensionParams?.textRotation || 0,
+      },
+    },
+  });
 };

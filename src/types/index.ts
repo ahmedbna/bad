@@ -1,4 +1,4 @@
-import { DrawingTool } from '../../constants';
+import { DrawingTool } from '../constants';
 
 export type Point = { x: number; y: number };
 
@@ -28,21 +28,12 @@ export type Shape = {
     tension?: number;
 
     isClockwise?: boolean;
+
+    textParams?: TextParams;
+    dimensionParams?: DimensionParams;
   };
   isCompleted?: boolean;
 };
-
-// Add to @/types/shape.ts for text objects
-export interface TextProperties {
-  content: string;
-  fontSize: number;
-  fontFamily: string;
-  fontStyle: string;
-  fontWeight: string;
-  height: number;
-  rotation: number;
-  justification: 'left' | 'center' | 'right';
-}
 
 // Add to @/types/shape.ts for dimension objects
 export interface DimensionProperties {
@@ -111,4 +102,6 @@ export interface DimensionParams {
   units: string;
   showValue: boolean;
   textRotation: number;
+  value?: number;
+  textPosition?: Point;
 }

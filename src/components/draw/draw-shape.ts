@@ -1,5 +1,5 @@
-import { Point } from '@/types';
-import { DimensionProperties, Shape, TextProperties } from '@/types';
+import { DimensionParams, Point, ShapeProperties, TextParams } from '@/types';
+import { DimensionProperties, Shape } from '@/types';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 
 type Props = {
@@ -483,7 +483,7 @@ export const drawText = (
   if (!points.length) return;
 
   const position = points[0];
-  const textProps = properties as TextProperties;
+  const textProps = properties as TextParams;
 
   // Transform canvas coordinates
   const x = offset.x + position.x * scale;
@@ -743,4 +743,112 @@ const drawArrow = (
   );
   ctx.closePath();
   ctx.fill();
+};
+
+/**
+ * Utility function to create a default text shape
+ */
+export const createDefaultTextShape = (
+  point: Point,
+  textParams?: TextParams
+): Shape => {
+  return {
+    id: `text-${Date.now()}`,
+    type: 'text',
+    points: [point],
+    properties: {
+      textParams: {
+        content: textParams?.content || 'Sample Text',
+        fontSize: textParams?.fontSize || 12,
+        fontFamily: textParams?.fontFamily || 'Arial',
+        fontStyle: textParams?.fontStyle || 'normal',
+        fontWeight: textParams?.fontWeight || 'normal',
+        rotation: textParams?.rotation || 0,
+        justification: textParams?.justification || 'left',
+      },
+    },
+    isCompleted: true,
+  };
+};
+
+/**
+ * Utility function to create a temporary dimension shape
+ */
+export const createTempDimensionShape = (
+  point: Point,
+  dimensionParams?: DimensionParams
+): Shape => {
+  return {
+    id: `temp-dim-${Date.now()}`,
+    type: 'dimension',
+    points: [point],
+    properties: {
+      dimensionParams: {
+        dimensionType: dimensionParams?.dimensionType || 'linear',
+        offset: dimensionParams?.offset || 25,
+        extensionLineOffset: dimensionParams?.extensionLineOffset || 5,
+        arrowSize: dimensionParams?.arrowSize || 8,
+        textHeight: dimensionParams?.textHeight || 12,
+        precision: dimensionParams?.precision || 2,
+        units: dimensionParams?.units || '',
+        showValue:
+          dimensionParams?.showValue !== undefined
+            ? dimensionParams.showValue
+            : true,
+        textRotation: dimensionParams?.textRotation || 0,
+        value: 0,
+      },
+    },
+    isCompleted: false,
+  };
+};
+
+/**
+ * Utility function to calculate dimension properties for completion
+ */
+export const calculateDimensionProperties = (
+  startPoint: Point,
+  endPoint: Point,
+  dimensionParams?: DimensionParams
+): ShapeProperties => {
+  // Calculate distance
+  const dx = endPoint.x - startPoint.x;
+  const dy = endPoint.y - startPoint.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+
+  // Calculate the midpoint for text position
+  const midPoint = {
+    x: (startPoint.x + endPoint.x) / 2,
+    y: (startPoint.y + endPoint.y) / 2,
+  };
+
+  // Get perpendicular offset for text
+  const angle = Math.atan2(dy, dx);
+  const perpAngle = angle + Math.PI / 2;
+  const offsetAmount = dimensionParams?.offset || 25;
+
+  // Calculate text position
+  const textPosition = {
+    x: midPoint.x + Math.cos(perpAngle) * offsetAmount,
+    y: midPoint.y + Math.sin(perpAngle) * offsetAmount,
+  };
+
+  return {
+    dimensionParams: {
+      dimensionType: dimensionParams?.dimensionType || 'linear',
+      offset: dimensionParams?.offset || 25,
+      extensionLineOffset: dimensionParams?.extensionLineOffset || 5,
+      arrowSize: dimensionParams?.arrowSize || 8,
+      textHeight: dimensionParams?.textHeight || 12,
+      precision: dimensionParams?.precision || 2,
+      units: dimensionParams?.units || '',
+      showValue:
+        dimensionParams?.showValue !== undefined
+          ? dimensionParams.showValue
+          : true,
+      textRotation: dimensionParams?.textRotation || 0,
+      value: distance,
+      textPosition: textPosition,
+    },
+  };
 };

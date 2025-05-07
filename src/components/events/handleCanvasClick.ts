@@ -164,17 +164,19 @@ export const handleCanvasClick = ({
           id: `temp-dim-${Date.now()}`,
           type: 'dimension',
           points: [snappedPoint],
-          properties: dimensionParams || {
-            dimensionType: 'linear',
-            offset: 25,
-            extensionLineOffset: 5,
-            arrowSize: 8,
-            textHeight: 12,
-            precision: 2,
-            units: '',
-            showValue: true,
-            textRotation: 0,
-            value: 0,
+          properties: {
+            dimensionParams: dimensionParams || {
+              dimensionType: 'linear',
+              offset: 25,
+              extensionLineOffset: 5,
+              arrowSize: 8,
+              textHeight: 12,
+              precision: 2,
+              units: '',
+              showValue: true,
+              textRotation: 0,
+              value: 0,
+            },
           },
           isCompleted: false,
         };
@@ -205,7 +207,7 @@ export const handleCanvasClick = ({
 
         // Complete the dimension with calculated properties
         completeShape([drawingPoints[0], snappedPoint], {
-          ...(dimensionParams || {
+          dimensionParams: dimensionParams || {
             dimensionType: 'linear',
             offset: 25,
             extensionLineOffset: 5,
@@ -215,9 +217,9 @@ export const handleCanvasClick = ({
             units: '',
             showValue: true,
             textRotation: 0,
-          }),
-          value: distance,
-          textPosition: textPosition,
+            value: distance,
+            textPosition: textPosition,
+          },
         });
       }
       return;

@@ -329,6 +329,7 @@ export const AutoCADClone = () => {
       rotation: '',
       tension: '',
     });
+
     clearSnap();
   };
 
@@ -533,6 +534,8 @@ export const AutoCADClone = () => {
                 arcMode,
                 snapEnabled: snapSettings.enabled,
                 handleCursorMove,
+                textParams,
+                dimensionParams,
               })
             }
             onMouseUp={(e) =>
