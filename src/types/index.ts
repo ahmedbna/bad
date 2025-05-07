@@ -6,7 +6,7 @@ export type Shape = {
   id: string;
   type: DrawingTool;
   points: Point[];
-  properties?: ShapeProperties;
+  properties: ShapeProperties;
 };
 
 export type Property = {

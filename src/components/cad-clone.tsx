@@ -82,9 +82,8 @@ export const AutoCADClone = () => {
     createInitialAreaSelectionState()
   );
 
-  const [gridSize, setGridSize] = useState(20);
   const [majorGridInterval, setMajorGridInterval] = useState(10);
-  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [gridSize, setGridSize] = useState(10);
 
   // Snapping configuration
   const [snapSettings, setSnapSettings] = useState({
@@ -95,17 +94,9 @@ export const AutoCADClone = () => {
       SnapMode.CENTER,
       SnapMode.QUADRANT,
     ]),
-    threshold: 10,
-    gridSize: gridSize,
+    threshold: 25,
+    gridSize: 10,
   });
-
-  // Update snap settings when grid size changes
-  useEffect(() => {
-    setSnapSettings((prev) => ({
-      ...prev,
-      gridSize: gridSize,
-    }));
-  }, [gridSize]);
 
   // Initialize snapping hook
   const { activeSnapResult, handleCursorMove, clearSnap } = useSnapping({
@@ -189,39 +180,6 @@ export const AutoCADClone = () => {
     };
   }, [dpr]);
 
-  // Show appropriate dialog when tool is selected
-  useEffect(() => {
-    if (selectedTool === 'text') {
-      setShowTextDialog(true);
-    } else {
-      setShowTextDialog(false);
-    }
-
-    if (selectedTool === 'dimension') {
-      setShowDimensionDialog(true);
-    } else {
-      setShowDimensionDialog(false);
-    }
-
-    if (selectedTool === 'polygon') {
-      setShowPolygonDialog(true);
-    } else {
-      setShowPolygonDialog(false);
-    }
-
-    if (selectedTool === 'ellipse') {
-      setShowEllipseDialog(true);
-    } else {
-      setShowEllipseDialog(false);
-    }
-
-    if (selectedTool === 'spline') {
-      setShowSplineDialog(true);
-    } else {
-      setShowSplineDialog(false);
-    }
-  }, [selectedTool]);
-
   // Redraw canvas when shapes, temp shape, or view parameters change
   useEffect(() => {
     drawCanvas();
@@ -233,7 +191,6 @@ export const AutoCADClone = () => {
     selectedShapes,
     areaSelection,
     gridSize,
-    snapToGrid,
     activeSnapResult,
   ]);
 
@@ -390,38 +347,8 @@ export const AutoCADClone = () => {
     }));
   };
 
-  // Update snap threshold
-  const updateSnapThreshold = (value: number) => {
-    setSnapSettings((prev) => ({
-      ...prev,
-      threshold: value,
-    }));
-  };
-
   return (
     <div className='flex flex-col h-screen'>
-      {/* Top toolbar */}
-      <Toolbar
-        selectedTool={selectedTool}
-        setSelectedTool={setSelectedTool}
-        canvasRef={canvasRef}
-        gridSize={gridSize}
-        setSelectedShapes={setSelectedShapes}
-        selectedShapes={selectedShapes}
-        setSnapToGrid={setSnapToGrid}
-        snapToGrid={snapToGrid}
-        setGridSize={setGridSize}
-        setScale={setScale}
-        setOffset={setOffset}
-        handleDeleteShape={handleDeleteShape}
-        setShowArcMode={setShowArcMode}
-        snapSettings={snapSettings}
-        toggleSnapMode={toggleSnapMode}
-        toggleSnapping={toggleSnapping}
-        updateSnapThreshold={updateSnapThreshold}
-      />
-
-      {/* Main content */}
       <div className='flex flex-1 overflow-hidden'>
         {/* Side panel */}
         <SidePanel
@@ -441,9 +368,22 @@ export const AutoCADClone = () => {
           mousePosition={mousePosition}
           handleCancelDrawing={handleCancelDrawing}
           completeShape={completeShape}
-          activeSnapResult={activeSnapResult}
           snapSettings={snapSettings}
           toggleSnapMode={toggleSnapMode}
+          setSelectedTool={setSelectedTool}
+          gridSize={gridSize}
+          setSelectedShapes={setSelectedShapes}
+          setGridSize={setGridSize}
+          setScale={setScale}
+          handleDeleteShape={handleDeleteShape}
+          setShowArcMode={setShowArcMode}
+          toggleSnapping={toggleSnapping}
+          setSnapSettings={setSnapSettings}
+          setShowTextDialog={setShowTextDialog}
+          setShowPolygonDialog={setShowPolygonDialog}
+          setShowEllipseDialog={setShowEllipseDialog}
+          setShowSplineDialog={setShowSplineDialog}
+          setShowDimensionDialog={setShowDimensionDialog}
         />
 
         {/* Drawing canvas */}
@@ -466,15 +406,12 @@ export const AutoCADClone = () => {
                 setDrawingPoints,
                 setTempShape,
                 tempShape,
-                arcAngles,
                 ellipseParams,
                 splineTension,
                 polygonSides,
                 completeShape,
                 shapes,
                 setSelectedShapes,
-                snapToGrid,
-                gridSize,
                 arcMode,
                 snapEnabled: snapSettings.enabled,
                 activeSnapResult,
@@ -498,8 +435,6 @@ export const AutoCADClone = () => {
                 scale,
                 offset,
                 drawingPoints,
-                snapToGrid,
-                gridSize,
                 setIsDragging,
                 setDragStart,
                 setDrawingPoints,
@@ -523,7 +458,6 @@ export const AutoCADClone = () => {
                 ellipseParams,
                 polygonSides,
                 splineTension,
-                snapToGrid,
                 gridSize,
                 setMousePosition,
                 setOffset,

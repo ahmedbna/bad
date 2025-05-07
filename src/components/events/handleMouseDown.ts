@@ -1,9 +1,7 @@
-import { Point } from '@/types';
-import { Shape } from '@/types';
-import { canvasToWorld } from '@/utils/canvasToWorld';
-import { snapPointToGrid } from '@/utils/snapPointToGrid';
-import { AreaSelectionState, startAreaSelection } from './handleAreaSelection';
+import { Shape, Point } from '@/types';
 import { SnapResult } from '../snap/useSnapping';
+import { canvasToWorld } from '@/utils/canvasToWorld';
+import { AreaSelectionState, startAreaSelection } from './handleAreaSelection';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -11,8 +9,6 @@ type Props = {
   scale: number;
   offset: Point;
   drawingPoints: Point[];
-  snapToGrid: boolean;
-  gridSize: number;
   setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
   setDragStart: React.Dispatch<React.SetStateAction<Point>>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
@@ -29,8 +25,6 @@ export const handleMouseDown = ({
   scale,
   offset,
   drawingPoints,
-  snapToGrid,
-  gridSize,
   setIsDragging,
   setDragStart,
   setDrawingPoints,
@@ -45,23 +39,15 @@ export const handleMouseDown = ({
   const mouseY = e.clientY - rect.top;
 
   // Use snap point if available, otherwise calculate world point
-  let worldPoint: Point;
+  let snappedPoint: Point;
   if (snapEnabled && activeSnapResult) {
-    worldPoint = activeSnapResult.point;
+    snappedPoint = activeSnapResult.point;
   } else {
-    worldPoint = canvasToWorld({
+    snappedPoint = canvasToWorld({
       point: { x: mouseX, y: mouseY },
       offset,
       scale,
     });
-
-    // Apply grid snapping if enabled and no other snap is active
-    if (snapToGrid && !activeSnapResult) {
-      worldPoint = {
-        x: Math.round(worldPoint.x / gridSize) * gridSize,
-        y: Math.round(worldPoint.y / gridSize) * gridSize,
-      };
-    }
   }
 
   if (selectedTool === 'select') {
@@ -77,12 +63,6 @@ export const handleMouseDown = ({
     });
   }
 
-  const snappedPoint = snapPointToGrid({
-    point: worldPoint,
-    snapToGrid,
-    gridSize,
-  });
-
   if (selectedTool === 'polyline') {
     const newPoints = [...drawingPoints, snappedPoint];
     setDrawingPoints(newPoints);
@@ -91,6 +71,7 @@ export const handleMouseDown = ({
       id: 'temp-polyline',
       type: 'polyline',
       points: newPoints,
+      properties: {},
     });
   }
 };

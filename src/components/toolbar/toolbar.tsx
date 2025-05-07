@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { DrawingTool } from '@/constants';
-import { SnapMode } from '../snap/useSnapping';
+import { SnapMode, SnapSettings } from '../snap/useSnapping';
 import {
   Tooltip,
   TooltipContent,
@@ -54,47 +54,48 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 type Props = {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
   selectedTool: DrawingTool;
   selectedShapes: string[];
-  snapToGrid: boolean;
   gridSize: number;
-  setSelectedTool: (tool: DrawingTool) => void;
   setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
-  setGridSize: (size: number) => void;
-  setSnapToGrid: (snap: boolean) => void;
   setScale: React.Dispatch<React.SetStateAction<number>>;
-  setOffset: (offset: { x: number; y: number }) => void;
-  handleDeleteShape: () => void;
-  setShowArcMode: (show: boolean) => void;
   snapSettings: {
     enabled: boolean;
     modes: Set<SnapMode>;
     threshold: number;
     gridSize: number;
   };
-  toggleSnapMode: (mode: SnapMode) => void;
   toggleSnapping: () => void;
+  handleDeleteShape: () => void;
+  setGridSize: (size: number) => void;
+  setShowArcMode: (show: boolean) => void;
+  toggleSnapMode: (mode: SnapMode) => void;
+  setSnapSettings: React.Dispatch<
+    React.SetStateAction<{
+      enabled: boolean;
+      modes: Set<SnapMode>;
+      threshold: number;
+      gridSize: number;
+    }>
+  >;
+  setSelectedTool: (tool: DrawingTool) => void;
   updateSnapThreshold: (value: number) => void;
 };
 
 export const Toolbar = ({
-  canvasRef,
   gridSize,
   selectedTool,
   setSelectedTool,
   setSelectedShapes,
   selectedShapes,
-  setSnapToGrid,
-  snapToGrid,
   setGridSize,
   setScale,
-  setOffset,
   handleDeleteShape,
   setShowArcMode,
   snapSettings,
   toggleSnapMode,
   toggleSnapping,
+  setSnapSettings,
   updateSnapThreshold,
 }: Props) => {
   const isSnapModeActive = (mode: SnapMode): boolean => {
@@ -254,7 +255,7 @@ export const Toolbar = ({
 
       {/* Snapping Controls */}
       <div className='flex items-center space-x-2'>
-        <Tooltip>
+        {/* <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant={snapSettings.enabled ? 'default' : 'outline'}
@@ -268,7 +269,7 @@ export const Toolbar = ({
           <TooltipContent>
             <p>Enable/disable all snapping</p>
           </TooltipContent>
-        </Tooltip>
+        </Tooltip> */}
 
         <DropdownMenu>
           <Tooltip>
@@ -285,6 +286,24 @@ export const Toolbar = ({
           </Tooltip>
 
           <DropdownMenuContent className='w-52'>
+            <Button
+              className='w-full'
+              onClick={toggleSnapping}
+              variant={snapSettings.enabled ? 'default' : 'outline'}
+            >
+              {/* <Magnet size={16} className='mr-1' /> */}
+              {snapSettings.enabled ? 'Snap: On' : 'Snap: Off'}
+            </Button>
+
+            {/* <DropdownMenuCheckboxItem
+              // checked={isSnapModeActive(SnapMode.ENDPOINT)}
+              onCheckedChange={toggleSnapping}
+              className={`bg-primary`}
+            >
+              <Magnet size={16} className='mr-1' />
+              {snapSettings.enabled ? 'Snap: On' : 'Snap: Off'}
+            </DropdownMenuCheckboxItem> */}
+
             <DropdownMenuCheckboxItem
               checked={isSnapModeActive(SnapMode.ENDPOINT)}
               onCheckedChange={() => toggleSnapMode(SnapMode.ENDPOINT)}
@@ -350,7 +369,7 @@ export const Toolbar = ({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Tooltip>
+        {/* <Tooltip>
           <TooltipTrigger asChild>
             <div className='flex items-center space-x-2'>
               <Sliders size={16} />
@@ -369,7 +388,7 @@ export const Toolbar = ({
           <TooltipContent>
             <p>Snap threshold distance</p>
           </TooltipContent>
-        </Tooltip>
+        </Tooltip> */}
       </div>
 
       <Separator orientation='vertical' className='h-8' />
@@ -377,7 +396,13 @@ export const Toolbar = ({
       <div className='flex items-center space-x-2'>
         <Select
           value={gridSize.toString()}
-          onValueChange={(val) => setGridSize(parseInt(val))}
+          onValueChange={(val) => {
+            setGridSize(parseInt(val));
+            setSnapSettings((prev) => ({
+              ...prev,
+              gridSize: parseInt(val),
+            }));
+          }}
         >
           <SelectTrigger className='w-24'>
             <SelectValue placeholder='Grid Size' />
@@ -387,11 +412,10 @@ export const Toolbar = ({
             <SelectItem value='10'>10 units</SelectItem>
             <SelectItem value='20'>20 units</SelectItem>
             <SelectItem value='50'>50 units</SelectItem>
+            <SelectItem value='100'>100 units</SelectItem>
           </SelectContent>
         </Select>
       </div>
-
-      <Separator orientation='vertical' className='h-8' />
 
       <div className='flex items-center space-x-2'>
         {/* <Button

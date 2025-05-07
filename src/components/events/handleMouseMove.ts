@@ -1,7 +1,6 @@
 import { DrawingTool, ArcMode } from '@/constants';
 import { DimensionParams, Point, Shape, TextParams } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
-import { snapPointToGrid } from '@/utils/snapPointToGrid';
 import { AreaSelectionState, updateAreaSelection } from './handleAreaSelection';
 import {
   previewCenterStartEndArc,
@@ -29,7 +28,6 @@ interface MouseMoveProps {
   };
   polygonSides: number;
   splineTension: number;
-  snapToGrid: boolean;
   gridSize: number;
   areaSelection: AreaSelectionState;
   setMousePosition: React.Dispatch<React.SetStateAction<Point | null>>;
@@ -60,7 +58,6 @@ export const handleMouseMove = ({
   ellipseParams,
   polygonSides,
   splineTension,
-  snapToGrid,
   gridSize,
   setMousePosition,
   setOffset,
@@ -82,20 +79,12 @@ export const handleMouseMove = ({
     const canvasPoint = { x: mouseX, y: mouseY };
 
     // First check for snapping - this will update activeSnapResult state
-    let worldPoint: Point;
+    let snappedPoint: Point;
     if (snapEnabled) {
       // handleCursorMove will update the activeSnapResult and return the snap point or original point
-      worldPoint = handleCursorMove(canvasPoint);
+      snappedPoint = handleCursorMove(canvasPoint);
     } else {
-      worldPoint = canvasToWorld({ point: canvasPoint, offset, scale });
-
-      // Apply grid snapping if enabled
-      if (snapToGrid) {
-        worldPoint = {
-          x: Math.round(worldPoint.x / gridSize) * gridSize,
-          y: Math.round(worldPoint.y / gridSize) * gridSize,
-        };
-      }
+      snappedPoint = canvasToWorld({ point: canvasPoint, offset, scale });
     }
 
     // Early exit if mouse is outside the canvas bounds
@@ -125,19 +114,13 @@ export const handleMouseMove = ({
     // Update temporary shape if drawing in progress
     if (tempShape && drawingPoints.length > 0) {
       updateTempShapeOnMouseMove({
-        mouseX,
-        mouseY,
-        scale,
-        offset,
+        snappedPoint,
         selectedTool,
         tempShape,
         drawingPoints,
-        arcAngles,
         ellipseParams,
         polygonSides,
         splineTension,
-        snapToGrid,
-        gridSize,
         setTempShape,
         arcMode,
         textParams,
@@ -177,32 +160,22 @@ const handlePanning = (
  * Updates temporary shape based on mouse movement
  */
 const updateTempShapeOnMouseMove = ({
-  mouseX,
-  mouseY,
-  scale,
-  offset,
+  snappedPoint,
   selectedTool,
   tempShape,
   drawingPoints,
-  arcAngles,
   ellipseParams,
   polygonSides,
   splineTension,
-  snapToGrid,
-  gridSize,
   setTempShape,
   arcMode,
   textParams,
   dimensionParams,
 }: {
-  mouseX: number;
-  mouseY: number;
-  scale: number;
-  offset: Point;
+  snappedPoint: Point;
   selectedTool: DrawingTool;
   tempShape: Shape;
   drawingPoints: Point[];
-  arcAngles: { startAngle: number; endAngle: number };
   ellipseParams: {
     radiusX: number;
     radiusY: number;
@@ -211,27 +184,11 @@ const updateTempShapeOnMouseMove = ({
   };
   polygonSides: number;
   splineTension: number;
-  snapToGrid: boolean;
-  gridSize: number;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
   arcMode: ArcMode;
   textParams: TextParams;
   dimensionParams: DimensionParams;
 }) => {
-  // Convert mouse coordinates to world coordinates
-  const worldPoint = canvasToWorld({
-    point: { x: mouseX, y: mouseY },
-    scale,
-    offset,
-  });
-
-  // Apply grid snapping if enabled
-  const snappedPoint = snapPointToGrid({
-    point: worldPoint,
-    snapToGrid,
-    gridSize,
-  });
-
   // Handle different tools
   switch (selectedTool) {
     case 'line':

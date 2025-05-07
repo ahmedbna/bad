@@ -1208,10 +1208,11 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
     const gridSize = snapSettings.gridSize / scale;
 
     // Snap to nearest grid point
-    const snappedX = Math.round(cursorPosition.x / gridSize) * gridSize;
-    const snappedY = Math.round(cursorPosition.y / gridSize) * gridSize;
+    const snappedPoint = {
+      x: Math.round(cursorPosition.x / gridSize) * gridSize,
+      y: Math.round(cursorPosition.y / gridSize) * gridSize,
+    };
 
-    const snappedPoint = { x: snappedX, y: snappedY };
     const dist = distance(cursorPosition, snappedPoint);
 
     return {

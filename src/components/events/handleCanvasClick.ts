@@ -8,7 +8,6 @@ import {
 } from '@/types';
 import { handleSelection } from './handleSelection';
 import { canvasToWorld } from '@/utils/canvasToWorld';
-import { snapPointToGrid } from '@/utils/snapPointToGrid';
 import {
   angleBetweenPoints,
   calculateDistance,
@@ -29,7 +28,6 @@ interface Props {
   scale: number;
   offset: Point;
   tempShape: Shape | null;
-  arcAngles: { startAngle: number; endAngle: number };
   ellipseParams: {
     radiusX: number;
     radiusY: number;
@@ -44,8 +42,6 @@ interface Props {
   completeShape: (points: Point[], properties?: ShapeProperties) => void;
   shapes: Shape[];
   setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
-  snapToGrid: boolean;
-  gridSize: number;
   arcMode: ArcMode;
   snapEnabled: boolean;
   activeSnapResult: SnapResult;
@@ -65,15 +61,12 @@ export const handleCanvasClick = ({
   setDrawingPoints,
   setTempShape,
   tempShape,
-  arcAngles,
   ellipseParams,
   splineTension,
   polygonSides,
   completeShape,
   shapes,
   setSelectedShapes,
-  snapToGrid,
-  gridSize,
   arcMode,
   snapEnabled,
   activeSnapResult,
@@ -87,23 +80,15 @@ export const handleCanvasClick = ({
     const mouseY = e.clientY - rect.top;
 
     // Use snap point if available, otherwise calculate world point
-    let worldPoint: Point;
+    let snappedPoint: Point;
     if (snapEnabled && activeSnapResult) {
-      worldPoint = activeSnapResult.point;
+      snappedPoint = activeSnapResult.point;
     } else {
-      worldPoint = canvasToWorld({
+      snappedPoint = canvasToWorld({
         point: { x: mouseX, y: mouseY },
         offset,
         scale,
       });
-
-      // Apply grid snapping if enabled and no other snap is active
-      if (snapToGrid && !activeSnapResult) {
-        worldPoint = {
-          x: Math.round(worldPoint.x / gridSize) * gridSize,
-          y: Math.round(worldPoint.y / gridSize) * gridSize,
-        };
-      }
     }
 
     // Selection tool handling
@@ -127,12 +112,6 @@ export const handleCanvasClick = ({
     ) {
       return;
     }
-
-    const snappedPoint = snapPointToGrid({
-      point: worldPoint,
-      snapToGrid,
-      gridSize,
-    });
 
     // Handle text tool specifically
     if (selectedTool === 'text') {

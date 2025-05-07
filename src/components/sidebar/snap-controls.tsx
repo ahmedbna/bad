@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { SnapMode, SnapResult } from '../snap/useSnapping';
 import { Checkbox } from '@/components/ui/checkbox';
