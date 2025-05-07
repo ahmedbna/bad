@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { drawGrid } from './draw/draw-grid';
 import { Point } from '@/types';
 import { Shape } from '@/types';
-import { DrawingTool, ArcMode } from '@/constants';
+import { DrawingTool, ArcMode, Command } from '@/constants';
 import { drawShape } from './draw/draw-shape';
 import { SidePanel } from './sidebar/side-panel';
 import { Toolbar } from './toolbar/toolbar';
@@ -30,6 +30,7 @@ import { DimensionDialog } from './dialogs/dimension-dialog';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
+  const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
   const [tempShape, setTempShape] = useState<Shape | null>(null);
@@ -384,6 +385,8 @@ export const AutoCADClone = () => {
           setShowEllipseDialog={setShowEllipseDialog}
           setShowSplineDialog={setShowSplineDialog}
           setShowDimensionDialog={setShowDimensionDialog}
+          selectedCommand={selectedCommand}
+          setSelectedCommand={setSelectedCommand}
         />
 
         {/* Drawing canvas */}

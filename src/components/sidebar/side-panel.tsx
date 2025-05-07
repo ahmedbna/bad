@@ -1,6 +1,6 @@
 'use client';
 
-import { DrawingTool } from '@/constants';
+import { Command, DrawingTool } from '@/constants';
 import { CoordinatesInput } from './coordinates-input';
 import { Properties } from './properties';
 import { SelectedProperties } from './selected-properties';
@@ -59,6 +59,8 @@ type Props = {
   setShowEllipseDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowSplineDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowDimensionDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  selectedCommand: Command | null;
+  setSelectedCommand: (tool: Command) => void;
 };
 
 export const SidePanel = ({
@@ -94,6 +96,8 @@ export const SidePanel = ({
   setShowEllipseDialog,
   setShowSplineDialog,
   setShowDimensionDialog,
+  setSelectedCommand,
+  selectedCommand,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -135,6 +139,8 @@ export const SidePanel = ({
               setShowEllipseDialog={setShowEllipseDialog}
               setShowSplineDialog={setShowSplineDialog}
               setShowDimensionDialog={setShowDimensionDialog}
+              selectedCommand={selectedCommand}
+              setSelectedCommand={setSelectedCommand}
             />
           </TabsContent>
           <TabsContent value='properties'>

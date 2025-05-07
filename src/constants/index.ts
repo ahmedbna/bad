@@ -19,3 +19,26 @@ export type DrawingTool =
   | 'pan'
   | 'text'
   | 'dimension';
+
+export type Command =
+  | 'undo'
+  | 'redo'
+  | 'delete'
+  | 'copy'
+  | 'paste'
+  | 'selectAll'
+  | 'clear'
+  | 'zoomIn'
+  | 'zoomOut'
+  | 'zoomFit'
+  | 'move'
+  | 'rotate'
+  | 'offset'
+  | 'stretch'
+  | 'trim'
+  | 'extend'
+  | 'join'
+  | 'erase'
+  | 'chamfer'
+  | 'fillet'
+  | 'mirror';

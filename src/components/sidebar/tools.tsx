@@ -38,7 +38,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
-import { DrawingTool } from '@/constants';
+import { Command, DrawingTool } from '@/constants';
 import { SnapMode } from '../snap/useSnapping';
 import {
   Tooltip,
@@ -53,6 +53,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Point } from '@/types';
 import { StatusBar } from './status-bar';
+import { Commands } from './commands';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -88,6 +89,8 @@ type Props = {
   setShowEllipseDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowSplineDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowDimensionDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  selectedCommand: Command | null;
+  setSelectedCommand: (tool: Command) => void;
 };
 
 export const Tools = ({
@@ -112,6 +115,8 @@ export const Tools = ({
   setShowEllipseDialog,
   setShowSplineDialog,
   setShowDimensionDialog,
+  selectedCommand,
+  setSelectedCommand,
 }: Props) => {
   const isSnapModeActive = (mode: SnapMode): boolean => {
     return snapSettings.modes.has(mode);
@@ -120,6 +125,7 @@ export const Tools = ({
   return (
     <div className='h-full flex flex-col'>
       <div className='h-full flex-grow overflow-y-auto'>
+        <h2 className='text-md font-bold text-muted-foreground mb-1'>Draw</h2>
         <div className='grid grid-cols-4 gap-2'>
           <Button
             title='Select'
@@ -305,24 +311,48 @@ export const Tools = ({
             <Ruler size={16} />
             <span className='text-[10px]'>Dimension</span>
           </Button>
-
-          {selectedShapes.length > 0 ? (
-            <>
-              <Separator orientation='vertical' className='h-8' />
-              <Button
-                variant='destructive'
-                size='sm'
-                onClick={handleDeleteShape}
-              >
-                Delete Selected
-              </Button>
-            </>
-          ) : null}
         </div>
       </div>
 
-      <div className='mt-2 '>
+      <Separator className='my-4' />
+
+      <h2 className='text-md font-bold text-muted-foreground mb-1'>Modify</h2>
+      <Commands
+        selectedShapes={selectedShapes}
+        selectedCommand={selectedCommand}
+        setSelectedCommand={setSelectedCommand}
+        handleDeleteShape={handleDeleteShape}
+      />
+
+      <Separator className='my-4' />
+
+      <div>
         <div className='flex items-center gap-2'>
+          <Select
+            value={gridSize.toString()}
+            onValueChange={(val) => {
+              setGridSize(parseInt(val));
+              setSnapSettings({
+                ...snapSettings,
+                gridSize: parseInt(val),
+              });
+            }}
+          >
+            <SelectTrigger size='sm'>
+              <SelectValue placeholder='Grid Size' />
+            </SelectTrigger>
+            <SelectGroup>
+              <SelectContent>
+                <SelectLabel>Grid Size</SelectLabel>
+                <SelectItem value='5'>5 units</SelectItem>
+                <SelectItem value='10'>10 units</SelectItem>
+                <SelectItem value='20'>20 units</SelectItem>
+                <SelectItem value='50'>50 units</SelectItem>
+                <SelectItem value='100'>100 units</SelectItem>
+              </SelectContent>
+            </SelectGroup>
+          </Select>
+
           <DropdownMenu>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -411,31 +441,6 @@ export const Tools = ({
               </DropdownMenuCheckboxItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Select
-            value={gridSize.toString()}
-            onValueChange={(val) => {
-              setGridSize(parseInt(val));
-              setSnapSettings({
-                ...snapSettings,
-                gridSize: parseInt(val),
-              });
-            }}
-          >
-            <SelectTrigger size='sm'>
-              <SelectValue placeholder='Grid Size' />
-            </SelectTrigger>
-            <SelectGroup>
-              <SelectContent>
-                <SelectLabel>Grid Size</SelectLabel>
-                <SelectItem value='5'>5 units</SelectItem>
-                <SelectItem value='10'>10 units</SelectItem>
-                <SelectItem value='20'>20 units</SelectItem>
-                <SelectItem value='50'>50 units</SelectItem>
-                <SelectItem value='100'>100 units</SelectItem>
-              </SelectContent>
-            </SelectGroup>
-          </Select>
         </div>
 
         <StatusBar
