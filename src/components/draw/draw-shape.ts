@@ -1,5 +1,5 @@
 import { DimensionParams, Point, ShapeProperties, TextParams } from '@/types';
-import { DimensionProperties, Shape } from '@/types';
+import { Shape } from '@/types';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 
 type Props = {
@@ -558,7 +558,7 @@ export const drawDimension = (
 
   const startPoint = points[0];
   const endPoint = points[1];
-  const dimProps = properties as DimensionProperties;
+  const dimProps = properties as DimensionParams;
 
   // Transform canvas coordinates
   const x1 = offset.x + startPoint.x * scale;

@@ -35,21 +35,6 @@ export type Shape = {
   isCompleted?: boolean;
 };
 
-// Add to @/types/shape.ts for dimension objects
-export interface DimensionProperties {
-  value: number;
-  textPosition: Point;
-  dimensionType: 'linear' | 'angular' | 'radius' | 'diameter';
-  offset: number;
-  extensionLineOffset: number;
-  arrowSize: number;
-  textHeight: number;
-  precision: number;
-  units: string;
-  showValue: boolean;
-  textRotation: number;
-}
-
 export type Property = {
   length: string;
   width: string;
@@ -102,6 +87,6 @@ export interface DimensionParams {
   units: string;
   showValue: boolean;
   textRotation: number;
-  value?: number;
+  value: number;
   textPosition?: Point;
 }
