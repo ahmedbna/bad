@@ -32,8 +32,10 @@ export function useCanvasResize(
 
       // Define fixed dimensions instead of taking container size
       // This prevents the canvas from filling the entire container
-      const canvasWidth = Math.min(container.clientWidth - 20, 1200); // Max width with 20px padding on each side
-      const canvasHeight = Math.min(container.clientHeight - 20, 800); // Max height with 20px padding on each side
+      const canvasWidth = container.clientWidth;
+      const canvasHeight = container.clientHeight;
+      // const canvasWidth = Math.min(container.clientWidth - 20, 1200); // Max width with 20px padding on each side
+      // const canvasHeight = Math.min(container.clientHeight - 20, 800); // Max height with 20px padding on each side
 
       // Adjust canvas dimensions for DPR
       canvas.width = canvasWidth * currentDpr;

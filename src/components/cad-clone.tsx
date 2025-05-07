@@ -351,7 +351,6 @@ export const AutoCADClone = () => {
   return (
     <div className='flex flex-col h-screen'>
       <div className='flex flex-1 overflow-hidden'>
-        {/* Side panel */}
         <SidePanel
           scale={scale}
           offset={offset}
@@ -391,7 +390,7 @@ export const AutoCADClone = () => {
 
         {/* Drawing canvas */}
         <div
-          className='flex-1 relative overflow-hidden flex items-center justify-center '
+          className='flex-1 relative overflow-hidden flex items-center justify-center'
           ref={containerRef}
         >
           <canvas
@@ -489,7 +488,8 @@ export const AutoCADClone = () => {
               setIsDragging(false);
               clearSnap();
             }}
-            className='cursor-crosshair bg-muted rounded-xl border shadow-sm'
+            className='cursor-crosshair bg-muted'
+            // className='cursor-crosshair bg-muted rounded-xl border shadow-sm'
           />
         </div>
       </div>
