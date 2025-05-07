@@ -1,5 +1,5 @@
-import { Point } from '@/types/point';
-import { DrawingTool } from '@/types/drawing-tool';
+import { Point } from '@/types';
+import { DrawingTool } from '@/constants';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;

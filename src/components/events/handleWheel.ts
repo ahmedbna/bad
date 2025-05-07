@@ -1,4 +1,4 @@
-import { Point } from '@/types/point';
+import { Point } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 

@@ -70,6 +70,7 @@ export const AutoCADClone = () => {
     units: '',
     showValue: true,
     textRotation: 0,
+    value: 0,
   });
 
   const [scale, setScale] = useState(1);
@@ -307,7 +308,6 @@ export const AutoCADClone = () => {
       type: selectedTool,
       points,
       properties,
-      isCompleted: true,
     };
 
     setShapes((prev) => [...prev, newShape]);

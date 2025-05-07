@@ -766,8 +766,8 @@ export const createDefaultTextShape = (
         rotation: textParams?.rotation || 0,
         justification: textParams?.justification || 'left',
       },
+      isCompleted: true,
     },
-    isCompleted: true,
   };
 };
 
@@ -798,8 +798,8 @@ export const createTempDimensionShape = (
         textRotation: dimensionParams?.textRotation || 0,
         value: 0,
       },
+      isCompleted: false,
     },
-    isCompleted: false,
   };
 };
 

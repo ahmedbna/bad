@@ -6,33 +6,7 @@ export type Shape = {
   id: string;
   type: DrawingTool;
   points: Point[];
-  properties?: {
-    radius?: number;
-    width?: number;
-    height?: number;
-    length?: number;
-    startAngle?: number;
-    endAngle?: number;
-    sides?: number;
-    isFullEllipse?: boolean;
-    radiusX?: number;
-    radiusY?: number;
-    isClosed?: boolean;
-    // For splines
-    controlPoints?: Point[];
-    degree?: number;
-    knots?: number[];
-    weights?: number[];
-
-    rotation?: number;
-    tension?: number;
-
-    isClockwise?: boolean;
-
-    textParams?: TextParams;
-    dimensionParams?: DimensionParams;
-  };
-  isCompleted?: boolean;
+  properties?: ShapeProperties;
 };
 
 export type Property = {
@@ -61,8 +35,16 @@ export interface ShapeProperties {
   endAngle?: number;
   isFullEllipse?: boolean;
   tension?: number;
-  completeShape?: boolean;
+  isCompleted?: boolean;
   isClockwise?: boolean;
+  width?: number;
+  height?: number;
+  length?: number;
+  isClosed?: boolean;
+  controlPoints?: Point[];
+  degree?: number;
+  knots?: number[];
+  weights?: number[];
   textParams?: TextParams;
   dimensionParams?: DimensionParams;
 }

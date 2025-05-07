@@ -5,9 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Point } from '@/types/point';
-import { DrawingTool } from '@/types/drawing-tool';
-import { Property } from '@/types/property';
+import { Point, Property } from '@/types';
+import { DrawingTool } from '@/constants';
 import {
   angleBetweenPoints,
   calculateArcFromStartEndDirection,

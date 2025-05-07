@@ -1,9 +1,8 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DrawingTool } from '@/types/drawing-tool';
-import { Point } from '@/types/point';
-import { Shape } from '@/types';
+import { DrawingTool } from '@/constants';
+import { Shape, Point } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 
 type Props = {

@@ -25,7 +25,7 @@ export const handleThreePointArc = (
       id: 'temp',
       type: 'arc',
       points: [clickPoint],
-      isCompleted: false,
+      properties: { isCompleted: false },
     });
   } else if (drawingPoints.length === 1) {
     // Second point (middle point)
@@ -36,7 +36,7 @@ export const handleThreePointArc = (
       id: 'temp',
       type: 'line',
       points: [drawingPoints[0], clickPoint],
-      isCompleted: false,
+      properties: { isCompleted: false },
     });
   } else if (drawingPoints.length === 2) {
     // Third point (end point) - complete the arc
@@ -98,7 +98,7 @@ export const handleStartCenterEndArc = (
       id: 'temp',
       type: 'arc',
       points: [clickPoint],
-      isCompleted: false,
+      properties: { isCompleted: false },
     });
   } else if (drawingPoints.length === 1) {
     // Second point (center)
@@ -116,8 +116,8 @@ export const handleStartCenterEndArc = (
         radius,
         startAngle,
         endAngle: startAngle,
+        isCompleted: false,
       },
-      isCompleted: false,
     });
   } else if (drawingPoints.length === 2) {
     // Third point (end point) - complete the arc
@@ -175,8 +175,8 @@ export const handleCenterStartEndArc = (
       points: [clickPoint],
       properties: {
         radius: 0,
+        isCompleted: false,
       },
-      isCompleted: false,
     });
   } else if (drawingPoints.length === 1) {
     // Second point (start point)
@@ -194,8 +194,8 @@ export const handleCenterStartEndArc = (
         radius,
         startAngle,
         endAngle: startAngle,
+        isCompleted: false,
       },
-      isCompleted: false,
     });
   } else if (drawingPoints.length === 2) {
     // Third point (end point) - complete the arc
@@ -248,7 +248,7 @@ export const handleStartEndRadiusArc = (
       id: 'temp',
       type: 'arc',
       points: [clickPoint],
-      isCompleted: false,
+      properties: { isCompleted: false },
     });
   } else if (drawingPoints.length === 1) {
     // Second point (end point)
@@ -262,7 +262,7 @@ export const handleStartEndRadiusArc = (
       id: 'temp',
       type: 'line',
       points: [startPoint, endPoint],
-      isCompleted: false,
+      properties: { isCompleted: false },
     });
   } else if (drawingPoints.length === 2) {
     // Third click determines the bulge direction and completes the arc
@@ -303,7 +303,7 @@ export const handleStartEndDirectionArc = (
       id: 'temp',
       type: 'arc',
       points: [clickPoint],
-      isCompleted: false,
+      properties: { isCompleted: false },
     });
   } else if (drawingPoints.length === 1) {
     // Second point (end point)
@@ -317,7 +317,7 @@ export const handleStartEndDirectionArc = (
       id: 'temp',
       type: 'line',
       points: [startPoint, endPoint],
-      isCompleted: false,
+      properties: { isCompleted: false },
     });
   } else if (drawingPoints.length === 2) {
     // Third click determines the start direction

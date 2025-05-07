@@ -177,8 +177,8 @@ export const handleCanvasClick = ({
               textRotation: 0,
               value: 0,
             },
+            isCompleted: false,
           },
-          isCompleted: false,
         };
 
         setTempShape(newDimShape);
