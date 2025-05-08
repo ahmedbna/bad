@@ -40,7 +40,7 @@ export const handleSelection = ({
   for (let i = shapes.length - 1; i >= 0; i--) {
     const shape = shapes[i];
 
-    if (isPointInShape(worldPoint, shape, scale)) {
+    if (isPointOnShape(worldPoint, shape, scale)) {
       setSelectedShapes((prev) => {
         // If the shape is already selected and shift is pressed, remove it
         if (prev.includes(shape.id) && isShiftSelect) {
@@ -61,7 +61,7 @@ export const handleSelection = ({
 };
 
 // Check if point is in shape
-const isPointInShape = (point: Point, shape: Shape, scale: number): boolean => {
+const isPointOnShape = (point: Point, shape: Shape, scale: number): boolean => {
   switch (shape.type) {
     case 'line':
       if (shape.points.length < 2) return false;
@@ -143,6 +143,34 @@ const isPointInShape = (point: Point, shape: Shape, scale: number): boolean => {
         point,
         shape.points,
         shape.properties?.tension || 0.5,
+        scale
+      );
+
+    case 'text':
+      if (shape.points.length < 1 || !shape.properties.textParams?.content)
+        return false;
+      return isPointInTextBounds(
+        point,
+        shape.points[0],
+        shape.properties.textParams?.content || '',
+        shape.properties?.textParams?.fontSize || 12,
+        shape.properties?.rotation || 0,
+        scale
+      );
+
+    case 'dimension':
+      if (
+        shape.points.length < 2 ||
+        shape.properties?.dimensionParams?.offset === undefined
+      ) {
+        return false;
+      }
+      return isPointOnDimension(
+        point,
+        shape.points[0],
+        shape.points[1],
+        shape.properties.dimensionParams.offset,
+        shape.properties?.dimensionParams?.value.toString() || '',
         scale
       );
 
@@ -419,4 +447,135 @@ const distance = (p1: Point, p2: Point): number => {
   const dx = p2.x - p1.x;
   const dy = p2.y - p1.y;
   return Math.sqrt(dx * dx + dy * dy);
+};
+
+// Helper function to check if a point is within text bounds
+const isPointInTextBounds = (
+  point: Point,
+  position: Point,
+  text: string,
+  fontSize: number,
+  rotation: number,
+  scale: number
+): boolean => {
+  // Calculate text metrics
+  // We'll use a rough approximation based on font size
+  const charWidth = fontSize * 0.6; // Approximate character width
+  const textWidth = text.length * charWidth;
+  const textHeight = fontSize;
+
+  // Define selection tolerance (scaled by current zoom level)
+  const tolerance = 5 / scale;
+
+  // Create a bounding rectangle for the text
+  const halfWidth = textWidth / 2;
+  const halfHeight = textHeight / 2;
+
+  // If no rotation, use simplified rectangle check
+  if (rotation === 0) {
+    return (
+      point.x >= position.x - tolerance &&
+      point.x <= position.x + textWidth + tolerance &&
+      point.y >= position.y - textHeight - tolerance &&
+      point.y <= position.y + tolerance
+    );
+  }
+
+  // For rotated text, we need to transform the point to the text's coordinate system
+  const rotationInRadians = rotation * (Math.PI / 180);
+  const dx = point.x - position.x;
+  const dy = point.y - position.y;
+
+  // Apply inverse rotation to the point
+  const rotatedX =
+    dx * Math.cos(-rotationInRadians) - dy * Math.sin(-rotationInRadians);
+  const rotatedY =
+    dx * Math.sin(-rotationInRadians) + dy * Math.cos(-rotationInRadians);
+
+  // Check if the point is within the text bounds after rotation
+  return (
+    rotatedX >= -tolerance &&
+    rotatedX <= textWidth + tolerance &&
+    rotatedY >= -textHeight - tolerance &&
+    rotatedY <= tolerance
+  );
+};
+
+// Helper function to check if a point is on a dimension object
+const isPointOnDimension = (
+  point: Point,
+  start: Point,
+  end: Point,
+  offset: number,
+  text: string | undefined,
+  scale: number
+): boolean => {
+  // Calculate dimension line direction vector
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+
+  if (length === 0) return false;
+
+  // Normalize direction vector
+  const unitX = dx / length;
+  const unitY = dy / length;
+
+  // Calculate perpendicular direction for extension lines
+  const perpX = -unitY;
+  const perpY = unitX;
+
+  // Calculate dimension line points (perpendicular to the measured line)
+  const dimStart = {
+    x: start.x + perpX * offset,
+    y: start.y + perpY * offset,
+  };
+
+  const dimEnd = {
+    x: end.x + perpX * offset,
+    y: end.y + perpY * offset,
+  };
+
+  // Define selection tolerance (scaled by current zoom level)
+  const tolerance = 5 / scale;
+
+  // Check if point is near the dimension line
+  if (isPointOnLine(point, dimStart, dimEnd, scale)) {
+    return true;
+  }
+
+  // Check if point is near the extension lines
+  if (isPointOnLine(point, start, dimStart, scale)) {
+    return true;
+  }
+
+  if (isPointOnLine(point, end, dimEnd, scale)) {
+    return true;
+  }
+
+  // Check if point is near the text (if provided)
+  if (text) {
+    // Calculate midpoint for text position
+    const textPosition = {
+      x: (dimStart.x + dimEnd.x) / 2,
+      y: (dimStart.y + dimEnd.y) / 2,
+    };
+
+    // Get rotation angle from dimension line direction
+    const textRotation =
+      Math.atan2(dimEnd.y - dimStart.y, dimEnd.x - dimStart.x) *
+      (180 / Math.PI);
+
+    // Check if point is near the text using our text bounds function
+    return isPointInTextBounds(
+      point,
+      textPosition,
+      text,
+      12, // Default font size, adjust as needed
+      textRotation,
+      scale
+    );
+  }
+
+  return false;
 };

@@ -109,11 +109,11 @@ const isShapeFullyContained = (
       const ellipseCenter = shape.points[0];
       const radiusX = shape.properties.radiusX;
       const radiusY = shape.properties.radiusY;
-      const rotation = shape.properties.rotation || 0;
+      const eRotation = shape.properties.rotation || 0;
 
       // Check extreme points of ellipse
-      const rotCos = Math.cos(rotation);
-      const rotSin = Math.sin(rotation);
+      const rotCos = Math.cos(eRotation);
+      const rotSin = Math.sin(eRotation);
 
       const points = [
         {
@@ -171,6 +171,119 @@ const isShapeFullyContained = (
         shape.points.every((point) =>
           isPointInRect(point, minX, maxX, minY, maxY)
         )
+      );
+
+    case 'text':
+      if (shape.points.length < 1 || !shape.properties?.textParams?.content)
+        return false;
+
+      const position = shape.points[0];
+      const text = shape.properties.textParams?.content || '';
+      const fontSize = shape.properties?.textParams?.fontSize || 12;
+      const rotation = shape.properties?.rotation || 0;
+
+      // Calculate text dimensions
+      const textWidth = calculateTextWidth(text, fontSize);
+      const textHeight = fontSize;
+
+      // If not rotated, simple check for bounds
+      if (rotation === 0) {
+        // Check text bounds (assuming left-aligned text)
+        return (
+          position.x >= minX &&
+          position.x + textWidth <= maxX &&
+          position.y - textHeight >= minY && // Text is typically drawn from baseline
+          position.y <= maxY
+        );
+      }
+
+      // For rotated text, check all four corners of the text box
+      const rotationRad = (rotation * Math.PI) / 180;
+      const cos = Math.cos(rotationRad);
+      const sin = Math.sin(rotationRad);
+
+      // Define text box corners
+      const textCorners = [
+        {
+          // Top-left
+          x: position.x,
+          y: position.y - textHeight,
+        },
+        {
+          // Top-right
+          x: position.x + textWidth,
+          y: position.y - textHeight,
+        },
+        {
+          // Bottom-right
+          x: position.x + textWidth,
+          y: position.y,
+        },
+        {
+          // Bottom-left
+          x: position.x,
+          y: position.y,
+        },
+      ];
+
+      // Apply rotation around position point
+      const rotatedCorners = textCorners.map((corner) => {
+        const dx = corner.x - position.x;
+        const dy = corner.y - position.y;
+        return {
+          x: position.x + dx * cos - dy * sin,
+          y: position.y + dx * sin + dy * cos,
+        };
+      });
+
+      // Check if all corners are inside the rectangle
+      return rotatedCorners.every((corner) =>
+        isPointInRect(corner, minX, maxX, minY, maxY)
+      );
+
+    case 'dimension':
+      if (
+        shape.points.length < 2 ||
+        shape.properties?.dimensionParams?.offset === undefined
+      )
+        return false;
+
+      const start = shape.points[0];
+      const end = shape.points[1];
+      const offset = shape.properties.dimensionParams.offset;
+
+      // Calculate dimension line direction vector
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+
+      if (length === 0) return false;
+
+      // Normalize direction vector
+      const unitX = dx / length;
+      const unitY = dy / length;
+
+      // Calculate perpendicular direction for extension lines
+      const perpX = -unitY;
+      const perpY = unitX;
+
+      // Calculate dimension line points
+      const dimStart = {
+        x: start.x + perpX * offset,
+        y: start.y + perpY * offset,
+      };
+
+      const dimEnd = {
+        x: end.x + perpX * offset,
+        y: end.y + perpY * offset,
+      };
+
+      // Check if all key points are inside the selection rectangle
+      return (
+        isPointInRect(start, minX, maxX, minY, maxY) &&
+        isPointInRect(end, minX, maxX, minY, maxY) &&
+        isPointInRect(dimStart, minX, maxX, minY, maxY) &&
+        isPointInRect(dimEnd, minX, maxX, minY, maxY)
       );
 
     default:
@@ -294,7 +407,7 @@ const isShapeIntersecting = (
       const ellipseCenter = shape.points[0];
       const radiusX = shape.properties.radiusX;
       const radiusY = shape.properties.radiusY;
-      const rotation = shape.properties.rotation || 0;
+      const eRotation = shape.properties.rotation || 0;
       const stepCount = 24;
 
       // Check points around the ellipse perimeter
@@ -306,12 +419,12 @@ const isShapeIntersecting = (
         // Apply rotation and translation
         const x =
           ellipseCenter.x +
-          radiusX * cos * Math.cos(rotation) -
-          radiusY * sin * Math.sin(rotation);
+          radiusX * cos * Math.cos(eRotation) -
+          radiusY * sin * Math.sin(eRotation);
         const y =
           ellipseCenter.y +
-          radiusX * cos * Math.sin(rotation) +
-          radiusY * sin * Math.cos(rotation);
+          radiusX * cos * Math.sin(eRotation) +
+          radiusY * sin * Math.cos(eRotation);
 
         if (isPointInRect({ x, y }, minX, maxX, minY, maxY)) {
           return true;
@@ -331,23 +444,23 @@ const isShapeIntersecting = (
         const p1 = {
           x:
             ellipseCenter.x +
-            radiusX * cos1 * Math.cos(rotation) -
-            radiusY * sin1 * Math.sin(rotation),
+            radiusX * cos1 * Math.cos(eRotation) -
+            radiusY * sin1 * Math.sin(eRotation),
           y:
             ellipseCenter.y +
-            radiusX * cos1 * Math.sin(rotation) +
-            radiusY * sin1 * Math.cos(rotation),
+            radiusX * cos1 * Math.sin(eRotation) +
+            radiusY * sin1 * Math.cos(eRotation),
         };
 
         const p2 = {
           x:
             ellipseCenter.x +
-            radiusX * cos2 * Math.cos(rotation) -
-            radiusY * sin2 * Math.sin(rotation),
+            radiusX * cos2 * Math.cos(eRotation) -
+            radiusY * sin2 * Math.sin(eRotation),
           y:
             ellipseCenter.y +
-            radiusX * cos2 * Math.sin(rotation) +
-            radiusY * sin2 * Math.cos(rotation),
+            radiusX * cos2 * Math.sin(eRotation) +
+            radiusY * sin2 * Math.cos(eRotation),
         };
 
         if (lineIntersectsRect(p1, p2, minX, maxX, minY, maxY)) {
@@ -426,6 +539,212 @@ const isShapeIntersecting = (
         ) {
           return true;
         }
+      }
+
+      return false;
+
+    case 'text':
+      if (shape.points.length < 1 || !shape.properties?.textParams?.content)
+        return false;
+
+      const position = shape.points[0];
+      const text = shape.properties.textParams?.content || '';
+      const fontSize = shape.properties?.textParams.fontSize || 12;
+      const rotation = shape.properties?.rotation || 0;
+
+      // Check if text insertion point is within selection rectangle
+      if (isPointInRect(position, minX, maxX, minY, maxY)) {
+        return true;
+      }
+
+      // Calculate text dimensions
+      const textWidth = calculateTextWidth(text, fontSize);
+      const textHeight = fontSize;
+
+      // If not rotated, simple check for intersection
+      if (rotation === 0) {
+        // Create text bounds
+        const textMinX = position.x;
+        const textMaxX = position.x + textWidth;
+        const textMinY = position.y - textHeight; // Text is typically drawn from baseline
+        const textMaxY = position.y;
+
+        // Check for rectangle intersection
+        return !(
+          textMaxX < minX ||
+          textMinX > maxX ||
+          textMaxY < minY ||
+          textMinY > maxY
+        );
+      }
+
+      // For rotated text, check all four corners of the text box
+      const rotationRad = (rotation * Math.PI) / 180;
+      const cos = Math.cos(rotationRad);
+      const sin = Math.sin(rotationRad);
+
+      // Define text box corners
+      const textCorners = [
+        {
+          // Top-left
+          x: position.x,
+          y: position.y - textHeight,
+        },
+        {
+          // Top-right
+          x: position.x + textWidth,
+          y: position.y - textHeight,
+        },
+        {
+          // Bottom-right
+          x: position.x + textWidth,
+          y: position.y,
+        },
+        {
+          // Bottom-left
+          x: position.x,
+          y: position.y,
+        },
+      ];
+
+      // Apply rotation around position point
+      const rotatedCorners = textCorners.map((corner) => {
+        const dx = corner.x - position.x;
+        const dy = corner.y - position.y;
+        return {
+          x: position.x + dx * cos - dy * sin,
+          y: position.y + dx * sin + dy * cos,
+        };
+      });
+
+      // Check if any corner is inside the rectangle
+      for (const corner of rotatedCorners) {
+        if (isPointInRect(corner, minX, maxX, minY, maxY)) {
+          return true;
+        }
+      }
+
+      // Check if any text edge intersects with the selection rectangle
+      for (let i = 0; i < rotatedCorners.length; i++) {
+        const j = (i + 1) % rotatedCorners.length;
+        if (
+          lineIntersectsRect(
+            rotatedCorners[i],
+            rotatedCorners[j],
+            minX,
+            maxX,
+            minY,
+            maxY
+          )
+        ) {
+          return true;
+        }
+      }
+
+      return false;
+
+    case 'dimension':
+      if (
+        shape.points.length < 2 ||
+        shape.properties?.dimensionParams?.offset === undefined
+      )
+        return false;
+
+      const start = shape.points[0];
+      const end = shape.points[1];
+      const offset = shape.properties.dimensionParams.offset;
+
+      // Check if any anchor point is in the selection rectangle
+      if (
+        isPointInRect(start, minX, maxX, minY, maxY) ||
+        isPointInRect(end, minX, maxX, minY, maxY)
+      ) {
+        return true;
+      }
+
+      // Calculate dimension line direction vector
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+
+      if (length === 0) return false;
+
+      // Normalize direction vector
+      const unitX = dx / length;
+      const unitY = dy / length;
+
+      // Calculate perpendicular direction for extension lines
+      const perpX = -unitY;
+      const perpY = unitX;
+
+      // Calculate dimension line points
+      const dimStart = {
+        x: start.x + perpX * offset,
+        y: start.y + perpY * offset,
+      };
+
+      const dimEnd = {
+        x: end.x + perpX * offset,
+        y: end.y + perpY * offset,
+      };
+
+      // Check if any dimension line point is in selection
+      if (
+        isPointInRect(dimStart, minX, maxX, minY, maxY) ||
+        isPointInRect(dimEnd, minX, maxX, minY, maxY)
+      ) {
+        return true;
+      }
+
+      // Check if the dimension line intersects the selection rectangle
+      if (lineIntersectsRect(dimStart, dimEnd, minX, maxX, minY, maxY)) {
+        return true;
+      }
+
+      // Check if extension lines intersect the selection rectangle
+      if (
+        lineIntersectsRect(start, dimStart, minX, maxX, minY, maxY) ||
+        lineIntersectsRect(end, dimEnd, minX, maxX, minY, maxY)
+      ) {
+        return true;
+      }
+
+      // Check if dimension text intersects the selection rectangle
+      if (shape.properties?.dimensionParams.value) {
+        // Calculate text position at center of dimension line
+        const textPosition = {
+          x: (dimStart.x + dimEnd.x) / 2,
+          y: (dimStart.y + dimEnd.y) / 2,
+        };
+
+        // Get rotation angle from dimension line direction
+        const textRotation =
+          Math.atan2(dimEnd.y - dimStart.y, dimEnd.x - dimStart.x) *
+          (180 / Math.PI);
+
+        // Create a text shape for intersection testing
+        const textShape: Shape = {
+          id: 'temp-text',
+          type: 'text',
+          points: [textPosition],
+          properties: {
+            textParams: {
+              // Use the text from the shape if available, otherwise use the default text
+              content:
+                shape.properties?.dimensionParams.value.toString() ?? 'Text',
+              fontSize: 12, // Default font size, adjust as needed
+              fontFamily: 'Arial', // Default font family, adjust as needed,
+              fontStyle: '',
+              fontWeight: '',
+              justification: 'center',
+              rotation: textRotation,
+            },
+            rotation: textRotation,
+          },
+        };
+
+        // Check if the text intersects with the selection rectangle
+        return isShapeIntersecting(textShape, minX, maxX, minY, maxY);
       }
 
       return false;
@@ -728,4 +1047,14 @@ export const renderAreaSelection = (
 
   // Restore context state
   ctx.restore();
+};
+
+/**
+ * Estimates the width of text based on font size
+ * This is a simplified approximation - in a real app, you'd measure actual text
+ */
+const calculateTextWidth = (text: string, fontSize: number): number => {
+  // Approximate character width as 0.6 of font size
+  const avgCharWidth = fontSize * 0.6;
+  return text.length * avgCharWidth;
 };

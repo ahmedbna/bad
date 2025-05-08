@@ -7,12 +7,7 @@ interface Props {
 }
 
 // Snap point to grid if enabled
-export const snapPointToGrid = ({
-  point,
-  snapToGrid,
-  gridSize,
-}: Props): Point => {
-  if (!snapToGrid) return point;
+export const snapPointToGrid = ({ point, gridSize }: Props): Point => {
   return {
     x: Math.round(point.x / gridSize) * gridSize,
     y: Math.round(point.y / gridSize) * gridSize,

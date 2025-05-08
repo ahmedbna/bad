@@ -348,6 +348,21 @@ export const AutoCADClone = () => {
     }));
   };
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedShapes([]);
+        setSelectedTool('select');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <div className='flex flex-col h-screen'>
       <div className='flex flex-1 overflow-hidden'>

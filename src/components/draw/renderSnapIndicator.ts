@@ -23,8 +23,8 @@ export const renderSnapIndicator = (
 
   // Common styles
   ctx.lineWidth = 1;
-  ctx.strokeStyle = '#0ea5e9'; // Sky blue color
-  ctx.fillStyle = 'rgba(14, 165, 233, 0.2)'; // Semitransparent sky blue
+  ctx.strokeStyle = '#32CD32'; // LimeGreen (darker than bright lime)
+  ctx.fillStyle = 'rgba(50, 205, 50, 0.2)'; // Semitransparent darker green
 
   // Draw different indicators based on snap mode
   switch (snapMode) {
@@ -116,24 +116,29 @@ const drawQuadrantIndicator = (
   quadrant?: 'n' | 's' | 'e' | 'w'
 ) => {
   const radius = 8;
+  const size = 8;
   ctx.beginPath();
+  ctx.moveTo(point.x, point.y - size);
+  ctx.lineTo(point.x + size, point.y);
+  ctx.lineTo(point.x, point.y + size);
+  ctx.lineTo(point.x - size, point.y);
 
-  // Draw a quarter circle based on the quadrant
-  if (quadrant === 'n') {
-    ctx.arc(point.x, point.y, radius, -Math.PI / 2, 0);
-  } else if (quadrant === 's') {
-    ctx.arc(point.x, point.y, radius, Math.PI / 2, Math.PI);
-  } else if (quadrant === 'e') {
-    ctx.arc(point.x, point.y, radius, 0, Math.PI / 2);
-  } else if (quadrant === 'w') {
-    ctx.arc(point.x, point.y, radius, Math.PI, -Math.PI / 2);
-  } else {
-    // Default if quadrant is not specified
-    ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
-  }
+  // // Draw a quarter circle based on the quadrant
+  // if (quadrant === 'n') {
+  //   ctx.arc(point.x, point.y, radius, -Math.PI / 2, 0);
+  // } else if (quadrant === 's') {
+  //   ctx.arc(point.x, point.y, radius, Math.PI / 2, Math.PI);
+  // } else if (quadrant === 'e') {
+  //   ctx.arc(point.x, point.y, radius, 0, Math.PI / 2);
+  // } else if (quadrant === 'w') {
+  //   ctx.arc(point.x, point.y, radius, Math.PI, -Math.PI / 2);
+  // } else {
+  //   // Default if quadrant is not specified
+  //   ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+  // }
+  // // Draw lines to center
+  // ctx.lineTo(point.x, point.y);
 
-  // Draw lines to center
-  ctx.lineTo(point.x, point.y);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -193,7 +198,7 @@ const drawSnapLabel = (
   snapMode: SnapMode
 ) => {
   ctx.font = '12px sans-serif';
-  ctx.fillStyle = '#0ea5e9';
+  ctx.fillStyle = '#32CD32';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
 

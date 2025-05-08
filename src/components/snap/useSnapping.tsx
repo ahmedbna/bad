@@ -76,26 +76,35 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
     let snapInfo = {};
 
     shapes.forEach((shape) => {
-      const { points } = shape;
+      const { points, type } = shape;
 
-      // Check first and last points for most shapes
-      if (points.length > 0) {
-        // First point
-        const distToFirst = distance(cursorPosition, points[0]);
-        if (distToFirst < minDistance) {
-          minDistance = distToFirst;
-          closestPoint = points[0];
-          snapInfo = { shapeId: shape.id, pointIndex: 0 };
-        }
-
-        // Last point
-        const lastIndex = points.length - 1;
-        const distToLast = distance(cursorPosition, points[lastIndex]);
-        if (distToLast < minDistance) {
-          minDistance = distToLast;
-          closestPoint = points[lastIndex];
-          snapInfo = { shapeId: shape.id, pointIndex: lastIndex };
-        }
+      if (type === 'rectangle' && points.length === 2) {
+        // Rectangle corners
+        const [p1, p2] = points;
+        const corners: Point[] = [
+          { x: p1.x, y: p1.y },
+          { x: p2.x, y: p1.y },
+          { x: p2.x, y: p2.y },
+          { x: p1.x, y: p2.y },
+        ];
+        corners.forEach((corner, index) => {
+          const dist = distance(cursorPosition, corner);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestPoint = corner;
+            snapInfo = { shapeId: shape.id, pointIndex: index };
+          }
+        });
+      } else {
+        // Check all points (polygon, polyline, etc.)
+        points.forEach((point, index) => {
+          const dist = distance(cursorPosition, point);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestPoint = point;
+            snapInfo = { shapeId: shape.id, pointIndex: index };
+          }
+        });
       }
     });
 
@@ -1204,24 +1213,34 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
   /**
    * Find grid snap (closest grid point)
    */
-  const findGridSnap = (cursorPosition: Point): SnapResult => {
-    const gridSize = snapSettings.gridSize / scale;
+  const findGridSnap = (cursorPosition: Point) => {
+    const gridSize = snapSettings.gridSize;
 
-    // Snap to nearest grid point
-    const snappedPoint = {
-      x: Math.round(cursorPosition.x / gridSize) * gridSize,
-      y: Math.round(cursorPosition.y / gridSize) * gridSize,
+    // Only snap to actual grid intersections
+    const nearestGridX = Math.round(cursorPosition.x / gridSize) * gridSize;
+    const nearestGridY = Math.round(cursorPosition.y / gridSize) * gridSize;
+
+    // Create grid intersection point
+    const gridIntersection = {
+      x: nearestGridX,
+      y: nearestGridY,
     };
 
-    const dist = distance(cursorPosition, snappedPoint);
+    // Calculate distance between cursor and grid intersection
+    const dist = distance(cursorPosition, gridIntersection);
 
-    return {
-      point: snappedPoint,
-      snapMode: SnapMode.GRID,
-      distance: dist,
-    };
+    // Only snap if within the snap threshold
+    if (dist <= snapSettings.threshold / scale) {
+      return {
+        point: gridIntersection,
+        snapMode: SnapMode.GRID,
+        distance: dist,
+      };
+    }
+
+    // Return null if not near a grid intersection
+    return null;
   };
-
   /**
    * Find the best snap based on cursor position and active snap modes
    */
@@ -1232,9 +1251,16 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
     let bestSnap: SnapResult | null = null;
 
     // Check each enabled snap mode
+    if (snapModes.has(SnapMode.CENTER)) {
+      const snap = findCenterSnap(cursorPosition, shapes);
+      // @ts-ignore
+      if (snap && (!bestSnap || snap.distance < bestSnap.distance)) {
+        bestSnap = snap;
+      }
+    }
+
     if (snapModes.has(SnapMode.ENDPOINT)) {
       const snap = findEndpointSnap(cursorPosition, shapes);
-      // @ts-ignore
       if (snap && (!bestSnap || snap.distance < bestSnap.distance)) {
         bestSnap = snap;
       }
@@ -1242,13 +1268,6 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
 
     if (snapModes.has(SnapMode.MIDPOINT)) {
       const snap = findMidpointSnap(cursorPosition, shapes);
-      if (snap && (!bestSnap || snap.distance < bestSnap.distance)) {
-        bestSnap = snap;
-      }
-    }
-
-    if (snapModes.has(SnapMode.CENTER)) {
-      const snap = findCenterSnap(cursorPosition, shapes);
       if (snap && (!bestSnap || snap.distance < bestSnap.distance)) {
         bestSnap = snap;
       }

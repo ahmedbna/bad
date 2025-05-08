@@ -100,6 +100,7 @@ export const handleCanvasClick = ({
         shapes,
         setSelectedShapes,
       });
+      // setSelectedShapes([]);
       return;
     }
 
