@@ -21,7 +21,7 @@ import {
 import { handleMouseUp } from './events/handleMouseUp';
 import { ArcModeDialog } from '@/components/dialogs/arc-mode-dialog';
 import { useSnapping, SnapMode } from '@/components/snap/useSnapping';
-import { renderSnapIndicator } from '@/components/draw/renderSnapIndicator';
+import { renderSnapIndicator } from '@/components/snap/renderSnapIndicator';
 import { PolygonDialog } from '@/components/dialogs/polygon-dialog';
 import { EllipseDialog } from './dialogs/ellipse-dialog';
 import { SplineDialog } from './dialogs/spline-dialog';
@@ -321,6 +321,7 @@ export const AutoCADClone = () => {
     setShapes((prev) =>
       prev.filter((shape) => !selectedShapes.includes(shape.id))
     );
+
     setSelectedShapes([]);
   };
 
@@ -354,6 +355,10 @@ export const AutoCADClone = () => {
         setSelectedShapes([]);
         setSelectedTool('select');
       }
+
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        handleDeleteShape();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -361,7 +366,9 @@ export const AutoCADClone = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [selectedShapes]);
+
+  console.log('shapes', shapes);
 
   return (
     <div className='flex flex-col h-screen'>

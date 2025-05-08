@@ -419,11 +419,18 @@ export const Tools = ({
                 <ArrowUpRight size={16} className='mr-2' /> Intersection
               </DropdownMenuCheckboxItem>
 
-              <DropdownMenuCheckboxItem
+              {/* <DropdownMenuCheckboxItem
                 checked={isSnapModeActive(SnapMode.PERPENDICULAR)}
                 onCheckedChange={() => toggleSnapMode(SnapMode.PERPENDICULAR)}
               >
                 <ArrowDownLeft size={16} className='mr-2' /> Perpendicular
+              </DropdownMenuCheckboxItem> */}
+
+              <DropdownMenuCheckboxItem
+                checked={isSnapModeActive(SnapMode.NEAREST)}
+                onCheckedChange={() => toggleSnapMode(SnapMode.NEAREST)}
+              >
+                <ArrowDownLeft size={16} className='mr-2' /> Nearset
               </DropdownMenuCheckboxItem>
 
               <DropdownMenuCheckboxItem

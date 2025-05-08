@@ -19,6 +19,7 @@ export enum SnapMode {
   TANGENT = 'tangent',
   NEAREST = 'nearest',
   GRID = 'grid',
+  EDGE = 'edge',
 }
 
 // Type for snap result
@@ -65,7 +66,27 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
   }, [snapSettings]);
 
   /**
-   * Find endpoint snap (first and last points of lines, polylines, etc.)
+   * Calculates the points of a regular polygon based on center, radius and sides
+   */
+  const calculatePolygonPoints = (
+    center: Point,
+    radius: number,
+    sides: number
+  ): Point[] => {
+    const points: Point[] = [];
+    for (let i = 0; i < sides; i++) {
+      // Calculate angle for each vertex (starting from top, going clockwise)
+      const angle = (Math.PI * 2 * i) / sides - Math.PI / 2;
+      points.push({
+        x: center.x + radius * Math.cos(angle),
+        y: center.y + radius * Math.sin(angle),
+      });
+    }
+    return points;
+  };
+
+  /**
+   * Find endpoint snap (vertices of polygons, first and last points of lines, etc.)
    */
   const findEndpointSnap = (
     cursorPosition: Point,
@@ -76,7 +97,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
     let snapInfo = {};
 
     shapes.forEach((shape) => {
-      const { points, type } = shape;
+      const { points, type, id, properties } = shape;
 
       if (type === 'rectangle' && points.length === 2) {
         // Rectangle corners
@@ -92,17 +113,42 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = corner;
-            snapInfo = { shapeId: shape.id, pointIndex: index };
+            snapInfo = { shapeId: id, pointIndex: index };
+          }
+        });
+      } else if (type === 'polygon') {
+        let polygonVertices: Point[];
+
+        // Special case: polygon defined by center, radius and sides
+        if (points.length === 1 && properties?.radius && properties?.sides) {
+          // Calculate actual vertices based on center, radius, and sides
+          polygonVertices = calculatePolygonPoints(
+            points[0],
+            properties.radius,
+            properties.sides
+          );
+        } else {
+          // Standard polygon with explicitly defined vertices
+          polygonVertices = points;
+        }
+
+        // For polygons, every vertex is an endpoint
+        polygonVertices.forEach((point, index) => {
+          const dist = distance(cursorPosition, point);
+          if (dist < minDistance) {
+            minDistance = dist;
+            closestPoint = point;
+            snapInfo = { shapeId: id, pointIndex: index };
           }
         });
       } else {
-        // Check all points (polygon, polyline, etc.)
+        // For all other shapes (lines, polylines, etc.)
         points.forEach((point, index) => {
           const dist = distance(cursorPosition, point);
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = point;
-            snapInfo = { shapeId: shape.id, pointIndex: index };
+            snapInfo = { shapeId: id, pointIndex: index };
           }
         });
       }
@@ -119,7 +165,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
   };
 
   /**
-   * Find midpoint snap (middle of lines, edges of rectangles, etc.)
+   * Find midpoint snap (middle of polygon sides, lines, edges of rectangles)
    */
   const findMidpointSnap = (
     cursorPosition: Point,
@@ -130,7 +176,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
     let snapInfo = {};
 
     shapes.forEach((shape) => {
-      const { points, type } = shape;
+      const { points, type, id, properties } = shape;
 
       // For lines, find midpoint
       if (type === 'line' && points.length === 2) {
@@ -142,15 +188,60 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
         if (dist < minDistance) {
           minDistance = dist;
           closestPoint = midpoint;
-          snapInfo = { shapeId: shape.id };
+          snapInfo = { shapeId: id, segmentIndex: 0 };
         }
       }
 
-      // For polylines, find midpoints of each segment
-      else if (
-        (type === 'polyline' || type === 'polygon') &&
-        points.length > 1
-      ) {
+      // For polygons, find midpoints of each side including the closing segment
+      else if (type === 'polygon') {
+        let polygonVertices: Point[];
+
+        // Special case: polygon defined by center, radius and sides
+        if (points.length === 1 && properties?.radius && properties?.sides) {
+          // Calculate actual vertices based on center, radius, and sides
+          polygonVertices = calculatePolygonPoints(
+            points[0],
+            properties.radius,
+            properties.sides
+          );
+        } else {
+          // Standard polygon with explicitly defined vertices
+          polygonVertices = points;
+        }
+
+        if (polygonVertices.length >= 3) {
+          // Check each side of the polygon
+          for (let i = 0; i < polygonVertices.length; i++) {
+            // Current point and next point (with wrap-around for last point)
+            const currentPoint = polygonVertices[i];
+            const nextPoint =
+              i < polygonVertices.length - 1
+                ? polygonVertices[i + 1]
+                : polygonVertices[0];
+
+            // Calculate midpoint of this side
+            const midpoint = {
+              x: (currentPoint.x + nextPoint.x) / 2,
+              y: (currentPoint.y + nextPoint.y) / 2,
+            };
+
+            const dist = distance(cursorPosition, midpoint);
+            if (dist < minDistance) {
+              minDistance = dist;
+              closestPoint = midpoint;
+              snapInfo = {
+                shapeId: id,
+                segmentIndex: i,
+                pointIndex1: i,
+                pointIndex2: i < polygonVertices.length - 1 ? i + 1 : 0,
+              };
+            }
+          }
+        }
+      }
+
+      // For polylines, find midpoints of each segment (no closing segment)
+      else if (type === 'polyline' && points.length > 1) {
         for (let i = 0; i < points.length - 1; i++) {
           const midpoint = {
             x: (points[i].x + points[i + 1].x) / 2,
@@ -160,36 +251,21 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = midpoint;
-            snapInfo = { shapeId: shape.id, pointIndex: i };
-          }
-        }
-
-        // For closed polygons, check the closing segment too
-        if (type === 'polygon' && points.length > 2) {
-          const midpoint = {
-            x: (points[0].x + points[points.length - 1].x) / 2,
-            y: (points[0].y + points[points.length - 1].y) / 2,
-          };
-          const dist = distance(cursorPosition, midpoint);
-          if (dist < minDistance) {
-            minDistance = dist;
-            closestPoint = midpoint;
-            snapInfo = { shapeId: shape.id, pointIndex: points.length - 1 };
+            snapInfo = { shapeId: id, segmentIndex: i };
           }
         }
       }
 
       // For rectangles, find midpoints of each side
       else if (type === 'rectangle' && points.length === 2) {
-        const p1 = points[0];
-        const p2 = points[1];
+        const [p1, p2] = points;
 
         // Midpoints of the four sides
         const midpoints = [
           { x: (p1.x + p2.x) / 2, y: p1.y }, // Top
+          { x: p2.x, y: (p1.y + p2.y) / 2 }, // Right
           { x: (p1.x + p2.x) / 2, y: p2.y }, // Bottom
           { x: p1.x, y: (p1.y + p2.y) / 2 }, // Left
-          { x: p2.x, y: (p1.y + p2.y) / 2 }, // Right
         ];
 
         midpoints.forEach((midpoint, i) => {
@@ -197,7 +273,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = midpoint;
-            snapInfo = { shapeId: shape.id, pointIndex: i };
+            snapInfo = { shapeId: id, edgeIndex: i };
           }
         });
       }
@@ -225,7 +301,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
     let snapInfo = {};
 
     shapes.forEach((shape) => {
-      const { points, type, properties } = shape;
+      const { points, type, id, properties } = shape;
       let center: Point | null = null;
 
       // For circles and arcs with center point
@@ -246,7 +322,17 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
         };
       }
 
-      // For polygons (calculate centroid)
+      // For regular polygons defined by center point
+      else if (
+        type === 'polygon' &&
+        points.length === 1 &&
+        properties?.radius &&
+        properties?.sides
+      ) {
+        center = points[0]; // The center is explicitly provided
+      }
+
+      // For standard polygons (calculate centroid)
       else if (type === 'polygon' && points.length > 2) {
         let sumX = 0,
           sumY = 0;
@@ -265,7 +351,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
         if (dist < minDistance) {
           minDistance = dist;
           closestPoint = center;
-          snapInfo = { shapeId: shape.id };
+          snapInfo = { shapeId: id };
         }
       }
     });
@@ -1241,14 +1327,15 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
     // Return null if not near a grid intersection
     return null;
   };
+
   /**
    * Find the best snap based on cursor position and active snap modes
    */
-
   const findSnap = (cursorPosition: Point): SnapResult => {
     if (!snapSettings.enabled) return null;
 
     let bestSnap: SnapResult | null = null;
+    let minDistance = Infinity;
 
     // Check each enabled snap mode
     if (snapModes.has(SnapMode.CENTER)) {
