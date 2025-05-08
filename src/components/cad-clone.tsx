@@ -26,6 +26,11 @@ import { EllipseDialog } from './dialogs/ellipse-dialog';
 import { SplineDialog } from './dialogs/spline-dialog';
 import { TextDialog } from './dialogs/text-dialog';
 import { DimensionDialog } from './dialogs/dimension-dialog';
+import { CursorPrompt } from './steps/cursor-prompts';
+import {
+  handleCoordinateInputConfirm,
+  handlePropertyInputConfirm,
+} from './steps/handle-inputs';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -49,6 +54,8 @@ export const AutoCADClone = () => {
     rotation: '',
     tension: '',
   });
+
+  const [drawingStep, setDrawingStep] = useState(0);
 
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [textParams, setTextParams] = useState({
@@ -371,6 +378,70 @@ export const AutoCADClone = () => {
     };
   }, [selectedShapes]);
 
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    inputType: string
+  ) => {
+    if (inputType === 'x' || inputType === 'y') {
+      setCoordinateInput((prev) => ({
+        ...prev,
+        [inputType]: event.target.value,
+      }));
+    } else {
+      setPropertyInput((prev) => ({
+        ...prev,
+        [inputType]: event.target.value,
+      }));
+    }
+  };
+
+  // Add this function to handle input key presses in the AutoCADClone component
+  const handleInputKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    type: string
+  ) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+
+      if (type === 'x' || type === 'y') {
+        // Only proceed if both x and y are filled
+        if (coordinateInput.x && coordinateInput.y) {
+          handleCoordinateInputConfirm({
+            coordinateInput,
+            selectedTool,
+            drawingPoints,
+            setDrawingPoints,
+            setTempShape,
+            completeShape,
+            setCoordinateInput,
+            setDrawingStep,
+            propertyInput,
+            ellipseParams,
+            splineTension,
+            polygonSides,
+            textParams,
+            dimensionParams,
+          });
+        }
+      } else {
+        handlePropertyInputConfirm({
+          propertyInput,
+          propertyType: type,
+          selectedTool,
+          drawingPoints,
+          setDrawingPoints,
+          setTempShape,
+          completeShape,
+          setPropertyInput,
+          setDrawingStep,
+          polygonSides,
+          setPolygonSides,
+          setSplineTension,
+        });
+      }
+    }
+  };
+
   return (
     <div className='flex flex-col h-screen'>
       <div className='flex flex-1 overflow-hidden'>
@@ -442,6 +513,7 @@ export const AutoCADClone = () => {
                 activeSnapResult,
                 textParams,
                 dimensionParams,
+                setDrawingStep,
               })
             }
             onDoubleClick={(e) =>
@@ -519,6 +591,16 @@ export const AutoCADClone = () => {
             }}
             className='cursor-crosshair bg-muted'
             // className='cursor-crosshair bg-muted rounded-xl border shadow-sm'
+          />
+
+          <CursorPrompt
+            mousePosition={mousePosition}
+            selectedTool={selectedTool}
+            drawingStep={drawingStep}
+            coordinateInput={coordinateInput}
+            propertyInput={propertyInput}
+            handleInputChange={handleInputChange}
+            handleInputKeyDown={handleInputKeyDown}
           />
         </div>
       </div>

@@ -47,6 +47,7 @@ interface Props {
   activeSnapResult: SnapResult;
   textParams?: TextParams;
   dimensionParams: DimensionParams;
+  setDrawingStep: React.Dispatch<React.SetStateAction<number>>;
 }
 
 /**
@@ -72,6 +73,7 @@ export const handleCanvasClick = ({
   activeSnapResult,
   textParams,
   dimensionParams,
+  setDrawingStep,
 }: Props) => {
   try {
     // Get mouse coordinates relative to canvas
@@ -91,6 +93,16 @@ export const handleCanvasClick = ({
       });
     }
 
+    // Early exit if click is outside the canvas bounds
+    if (
+      mouseX < 0 ||
+      mouseY < 0 ||
+      mouseX > rect.width ||
+      mouseY > rect.height
+    ) {
+      return;
+    }
+
     // Selection tool handling
     if (selectedTool === 'select') {
       handleSelection({
@@ -101,16 +113,6 @@ export const handleCanvasClick = ({
         setSelectedShapes,
       });
       // setSelectedShapes([]);
-      return;
-    }
-
-    // Early exit if click is outside the canvas bounds
-    if (
-      mouseX < 0 ||
-      mouseY < 0 ||
-      mouseX > rect.width ||
-      mouseY > rect.height
-    ) {
       return;
     }
 
