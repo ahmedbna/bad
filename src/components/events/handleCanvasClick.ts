@@ -6,7 +6,7 @@ import {
   TextParams,
   DimensionParams,
 } from '@/types';
-import { handleSelection } from './handleSelection';
+import { handleSelection } from '../select/handleSelection';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import {
   angleBetweenPoints,

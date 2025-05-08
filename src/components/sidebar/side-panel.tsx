@@ -141,6 +141,7 @@ export const SidePanel = ({
               setShowDimensionDialog={setShowDimensionDialog}
               selectedCommand={selectedCommand}
               setSelectedCommand={setSelectedCommand}
+              handleCancelDrawing={handleCancelDrawing}
             />
           </TabsContent>
           <TabsContent value='properties'>

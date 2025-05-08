@@ -14,6 +14,7 @@ import {
   SquareRoundCorner,
   LucideSquareArrowOutUpRight,
   Eraser,
+  Equal,
 } from 'lucide-react';
 import { Command } from '@/constants';
 
@@ -75,7 +76,7 @@ export const Commands = ({
         className='flex flex-col items-center justify-center h-12'
         variant={selectedCommand === 'offset' ? 'default' : 'outline'}
       >
-        <Tally2 size={16} />
+        <Equal className='w-4 h-4 rotate-90' />
         <span className='text-[10px]'>Offset</span>
       </Button>
 

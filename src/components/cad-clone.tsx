@@ -7,7 +7,6 @@ import { Shape } from '@/types';
 import { DrawingTool, ArcMode, Command } from '@/constants';
 import { drawShape } from './draw/draw-shape';
 import { SidePanel } from './sidebar/side-panel';
-import { Toolbar } from './toolbar/toolbar';
 import { useCanvasResize } from '@/hooks/useCanvasResize';
 import { handleCanvasClick } from './events/handleCanvasClick';
 import { handleMouseMove } from './events/handleMouseMove';
@@ -17,7 +16,7 @@ import { handleMouseDown } from './events/handleMouseDown';
 import {
   renderAreaSelection,
   createInitialAreaSelectionState,
-} from './events/handleAreaSelection';
+} from './select/handleAreaSelection';
 import { handleMouseUp } from './events/handleMouseUp';
 import { ArcModeDialog } from '@/components/dialogs/arc-mode-dialog';
 import { useSnapping, SnapMode } from '@/components/snap/useSnapping';
@@ -51,14 +50,15 @@ export const AutoCADClone = () => {
     tension: '',
   });
 
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [textParams, setTextParams] = useState({
     content: 'Sample Text',
-    fontSize: 12,
+    fontSize: 24,
     fontFamily: 'Arial',
     fontStyle: 'normal',
     fontWeight: 'normal',
     rotation: 0,
-    justification: 'left' as 'left' | 'center' | 'right',
+    justification: 'center' as 'left' | 'center' | 'right',
   });
 
   const [dimensionParams, setDimensionParams] = useState({
@@ -193,6 +193,7 @@ export const AutoCADClone = () => {
     areaSelection,
     gridSize,
     activeSnapResult,
+    textParams,
   ]);
 
   // Draw the canvas
@@ -294,6 +295,7 @@ export const AutoCADClone = () => {
   // Clear drawing and cancel current operation
   const handleCancelDrawing = () => {
     setDrawingPoints([]);
+    setSelectedShapes([]);
     setTempShape(null);
     setCoordinateInput({ x: '', y: '' });
     setPropertyInput({
@@ -311,6 +313,7 @@ export const AutoCADClone = () => {
       rotation: '',
       tension: '0.5',
     });
+
     clearSnap();
   };
 
@@ -352,7 +355,7 @@ export const AutoCADClone = () => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setSelectedShapes([]);
+        handleCancelDrawing();
         setSelectedTool('select');
       }
 
@@ -367,8 +370,6 @@ export const AutoCADClone = () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [selectedShapes]);
-
-  console.log('shapes', shapes);
 
   return (
     <div className='flex flex-col h-screen'>
@@ -450,6 +451,12 @@ export const AutoCADClone = () => {
                 drawingPoints,
                 splineTension,
                 completeShape,
+                scale,
+                offset,
+                shapes,
+                setShowTextDialog,
+                setTextParams,
+                setEditingTextId,
               })
             }
             onMouseDown={(e) =>
@@ -544,10 +551,14 @@ export const AutoCADClone = () => {
       />
 
       <TextDialog
+        shapes={shapes}
         showTextDialog={showTextDialog}
         setShowTextDialog={setShowTextDialog}
         textParams={textParams}
         setTextParams={setTextParams}
+        editingTextId={editingTextId}
+        setEditingTextId={setEditingTextId}
+        setShapes={setShapes}
       />
 
       <DimensionDialog

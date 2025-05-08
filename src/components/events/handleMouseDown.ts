@@ -1,7 +1,10 @@
 import { Shape, Point } from '@/types';
 import { SnapResult } from '../snap/useSnapping';
 import { canvasToWorld } from '@/utils/canvasToWorld';
-import { AreaSelectionState, startAreaSelection } from './handleAreaSelection';
+import {
+  AreaSelectionState,
+  startAreaSelection,
+} from '../select/handleAreaSelection';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;

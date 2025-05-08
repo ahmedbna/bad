@@ -19,13 +19,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { Shape } from '@/types';
 
-export const TextDialog = ({
-  showTextDialog,
-  setShowTextDialog,
-  textParams,
-  setTextParams,
-}: {
+type Props = {
+  shapes: Shape[];
   showTextDialog: boolean;
   setShowTextDialog: (show: boolean) => void;
   textParams: {
@@ -38,12 +35,66 @@ export const TextDialog = ({
     justification: 'left' | 'center' | 'right';
   };
   setTextParams: (params: any) => void;
-}) => {
+  editingTextId: string | null;
+  setShapes: React.Dispatch<React.SetStateAction<Shape[]>>;
+  setEditingTextId: React.Dispatch<React.SetStateAction<string | null>>;
+};
+
+export const TextDialog = ({
+  shapes,
+  showTextDialog,
+  setShowTextDialog,
+  textParams,
+  setTextParams,
+  editingTextId,
+  setShapes,
+  setEditingTextId,
+}: Props) => {
+  const handleApply = () => {
+    if (editingTextId) {
+      setShapes((prev) =>
+        prev.map((shape) =>
+          shape.id === editingTextId
+            ? {
+                ...shape,
+                properties: {
+                  ...shape.properties,
+                  textParams: {
+                    ...textParams,
+                  },
+                },
+              }
+            : shape
+        )
+      );
+    }
+    setShowTextDialog(false);
+    setEditingTextId(null);
+  };
+
   return (
     <Dialog open={showTextDialog} onOpenChange={setShowTextDialog}>
       <DialogContent className='sm:max-w-[425px]'>
         <DialogHeader>
-          <DialogTitle>Text Properties</DialogTitle>
+          <DialogTitle>
+            <div className='border rounded-md p-4 mb-4 flex justify-center items-center min-h-24 bg-muted/20'>
+              <div
+                style={{
+                  fontFamily: textParams.fontFamily,
+                  fontSize: `${textParams.fontSize}px`,
+                  fontStyle: textParams.fontStyle,
+                  fontWeight: textParams.fontWeight,
+                  transform: `rotate(${textParams.rotation}deg)`,
+                  textAlign: textParams.justification,
+                  width: '100%',
+                  overflow: 'hidden',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {textParams.content || 'Text Preview'}
+              </div>
+            </div>
+          </DialogTitle>
         </DialogHeader>
         <div className='grid gap-4 py-4'>
           <div className='grid grid-cols-4 items-center gap-4'>
@@ -181,7 +232,7 @@ export const TextDialog = ({
           </div>
         </div>
         <DialogFooter>
-          <Button type='submit' onClick={() => setShowTextDialog(false)}>
+          <Button type='submit' onClick={handleApply}>
             Apply
           </Button>
         </DialogFooter>

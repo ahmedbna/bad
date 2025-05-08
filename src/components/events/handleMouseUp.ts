@@ -2,7 +2,7 @@ import { Shape } from '@/types';
 import {
   AreaSelectionState,
   completeAreaSelection,
-} from './handleAreaSelection';
+} from '../select/handleAreaSelection';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;

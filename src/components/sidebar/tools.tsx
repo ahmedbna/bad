@@ -91,6 +91,7 @@ type Props = {
   setShowDimensionDialog: React.Dispatch<React.SetStateAction<boolean>>;
   selectedCommand: Command | null;
   setSelectedCommand: (tool: Command) => void;
+  handleCancelDrawing: () => void;
 };
 
 export const Tools = ({
@@ -117,6 +118,7 @@ export const Tools = ({
   setShowDimensionDialog,
   selectedCommand,
   setSelectedCommand,
+  handleCancelDrawing,
 }: Props) => {
   const isSnapModeActive = (mode: SnapMode): boolean => {
     return snapSettings.modes.has(mode);
@@ -129,7 +131,10 @@ export const Tools = ({
         <div className='grid grid-cols-4 gap-2'>
           <Button
             title='Select'
-            onClick={() => setSelectedTool('select')}
+            onClick={() => {
+              handleCancelDrawing();
+              setSelectedTool('select');
+            }}
             className='flex flex-col items-center justify-center h-12'
             variant={selectedTool === 'select' ? 'default' : 'outline'}
           >
@@ -140,7 +145,10 @@ export const Tools = ({
           <Button
             size='sm'
             title='Pan'
-            onClick={() => setSelectedTool('pan')}
+            onClick={() => {
+              handleCancelDrawing();
+              setSelectedTool('pan');
+            }}
             className='flex flex-col items-center justify-center h-12'
             variant={selectedTool === 'pan' ? 'default' : 'outline'}
           >
@@ -170,13 +178,13 @@ export const Tools = ({
             size='sm'
             title='Line'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('line');
             }}
             className='flex flex-col items-center justify-center h-12'
             variant={selectedTool === 'line' ? 'default' : 'outline'}
           >
-            <Minus size={16} />
+            <Slash size={16} className='rotate-45' />
             <span className='text-[10px]'>Line</span>
           </Button>
 
@@ -184,7 +192,7 @@ export const Tools = ({
             size='sm'
             title='Rectangle'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('rectangle');
             }}
             className='flex flex-col items-center justify-center h-12'
@@ -198,7 +206,7 @@ export const Tools = ({
             size='sm'
             title='Circle'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('circle');
             }}
             className='flex flex-col items-center justify-center h-12'
@@ -212,7 +220,7 @@ export const Tools = ({
             size='sm'
             title='Arc'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('arc');
               setShowArcMode(true);
             }}
@@ -227,7 +235,7 @@ export const Tools = ({
             size='sm'
             title='Ellipse'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('ellipse');
               setShowEllipseDialog(true);
             }}
@@ -242,7 +250,7 @@ export const Tools = ({
             size='sm'
             title='Polygon'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('polygon');
               setShowPolygonDialog(true);
             }}
@@ -257,7 +265,7 @@ export const Tools = ({
             size='sm'
             title='Polyline'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('polyline');
             }}
             className='flex flex-col items-center justify-center h-12'
@@ -271,7 +279,7 @@ export const Tools = ({
             size='sm'
             title='Spline'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('spline');
               setShowSplineDialog(true);
             }}
@@ -286,7 +294,7 @@ export const Tools = ({
             size='sm'
             title='Text'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('text');
               setShowTextDialog(true);
             }}
@@ -301,7 +309,7 @@ export const Tools = ({
             size='sm'
             title='Dimension'
             onClick={() => {
-              setSelectedShapes([]);
+              handleCancelDrawing();
               setSelectedTool('dimension');
               setShowDimensionDialog(true);
             }}

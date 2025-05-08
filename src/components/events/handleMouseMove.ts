@@ -1,7 +1,10 @@
 import { DrawingTool, ArcMode } from '@/constants';
 import { DimensionParams, Point, Shape, TextParams } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
-import { AreaSelectionState, updateAreaSelection } from './handleAreaSelection';
+import {
+  AreaSelectionState,
+  updateAreaSelection,
+} from '../select/handleAreaSelection';
 import {
   previewCenterStartEndArc,
   previewStartCenterEndArc,
@@ -111,8 +114,35 @@ export const handleMouseMove = ({
       return;
     }
 
-    // Update temporary shape if drawing in progress
-    if (tempShape && drawingPoints.length > 0) {
+    // Special case for text tool - show preview even before first click
+    if (selectedTool === 'text') {
+      if (!tempShape) {
+        // Create a temporary text shape for preview if it doesn't exist
+        const newTempShape: Shape = {
+          id: 'temp-text-preview',
+          type: 'text',
+          points: [snappedPoint], // Store text position here
+          properties: {
+            textParams: {
+              ...textParams,
+            },
+          },
+        };
+        setTempShape(newTempShape);
+      } else {
+        // Update existing temp shape with new position
+        setTempShape({
+          ...tempShape,
+          points: [snappedPoint], // Update position
+          properties: {
+            ...tempShape.properties,
+            textParams: textParams,
+          },
+        });
+      }
+    }
+    // Update temporary shape if drawing in progress for other tools
+    else if (tempShape && drawingPoints.length > 0) {
       updateTempShapeOnMouseMove({
         snappedPoint,
         selectedTool,
@@ -258,13 +288,7 @@ const updateTempShapeOnMouseMove = ({
       break;
 
     case 'text':
-      handleTextPreview(
-        drawingPoints,
-        snappedPoint,
-        tempShape,
-        textParams,
-        setTempShape
-      );
+      handleTextPreview(snappedPoint, tempShape, textParams, setTempShape);
       break;
 
     case 'dimension':
@@ -520,34 +544,24 @@ const calculatePerpendicularDistance = (
  * Handles text preview during mouse movement
  */
 const handleTextPreview = (
-  drawingPoints: Point[],
   currentPoint: Point,
   tempShape: Shape,
-  textParams?: TextParams,
-  setTempShape?: React.Dispatch<React.SetStateAction<Shape | null>>
+  textParams: TextParams,
+  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
 ) => {
-  if (!setTempShape) return;
-
-  // For text, we only update the position of the text
-  // Text is placed at a single point, so we can just update that point
+  // Update the temporary shape with the current mouse position
+  // The position of text is stored in the points array
   setTempShape({
     ...tempShape,
-    points: [currentPoint],
+    points: [currentPoint], // This is where the text position is stored
     properties: {
       ...tempShape.properties,
-      textParams: textParams || {
-        content: 'Sample Text',
-        fontSize: 12,
-        fontFamily: 'Arial',
-        fontStyle: 'normal',
-        fontWeight: 'normal',
-        rotation: 0,
-        justification: 'left',
+      textParams: {
+        ...textParams,
       },
     },
   });
 };
-
 /**
  * Handles dimension preview during mouse movement
  */
