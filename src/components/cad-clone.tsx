@@ -362,6 +362,8 @@ export const AutoCADClone = () => {
           setSelectedCommand={setSelectedCommand}
           selectedTab={selectedTab}
           setSelectedTab={setSelectedTab}
+          setDrawingPoints={setDrawingPoints}
+          setTempShape={setTempShape}
         />
 
         {/* Drawing canvas */}

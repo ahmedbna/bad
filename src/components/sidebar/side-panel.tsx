@@ -1,7 +1,7 @@
 'use client';
 
 import { Command, DrawingTool } from '@/constants';
-import { Point } from '@/types';
+import { Point, Shape } from '@/types';
 import { SnapMode } from '../snap/useSnapping';
 import { Tools } from './tools';
 import { ModeToggle } from '@/components/ui/mode-toggle';
@@ -48,6 +48,8 @@ type Props = {
   setSelectedCommand: (tool: Command) => void;
   selectedTab: string;
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
+  setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
+  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
 };
 
 export const SidePanel = ({
@@ -78,6 +80,8 @@ export const SidePanel = ({
   selectedCommand,
   selectedTab,
   setSelectedTab,
+  setDrawingPoints,
+  setTempShape,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -137,7 +141,9 @@ export const SidePanel = ({
               selectedTool={selectedTool}
               drawingPoints={drawingPoints}
               completeShape={completeShape}
+              setDrawingPoints={setDrawingPoints}
               handleCancelDrawing={handleCancelDrawing}
+              setTempShape={setTempShape}
             />
           </TabsContent>
           <TabsContent value='ai'>
