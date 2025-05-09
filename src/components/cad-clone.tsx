@@ -33,27 +33,10 @@ export const AutoCADClone = () => {
   const [shapes, setShapes] = useState<Shape[]>([]);
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
   const [tempShape, setTempShape] = useState<Shape | null>(null);
-  const [coordinateInput, setCoordinateInput] = useState({ x: '', y: '' });
-  const [propertyInput, setPropertyInput] = useState({
-    length: '',
-    width: '',
-    height: '',
-    radius: '',
-    diameter: '',
-    direction: '',
-    radiusX: '',
-    radiusY: '',
-    startAngle: '',
-    endAngle: '',
-    sides: '6',
-    rotation: '',
-    tension: '',
-  });
 
-  const [drawingStep, setDrawingStep] = useState(0);
   const [selectedTab, setSelectedTab] = useState('tools');
-
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
+
   const [textParams, setTextParams] = useState({
     content: 'Sample Text',
     fontSize: 24,
@@ -275,22 +258,6 @@ export const AutoCADClone = () => {
     setShapes((prev) => [...prev, newShape]);
     setDrawingPoints([]);
     setTempShape(null);
-    setCoordinateInput({ x: '', y: '' });
-    setPropertyInput({
-      length: '',
-      width: '',
-      height: '',
-      radius: '',
-      diameter: '',
-      direction: '',
-      radiusX: '',
-      radiusY: '',
-      startAngle: '',
-      endAngle: '',
-      sides: '6',
-      rotation: '',
-      tension: '',
-    });
 
     clearSnap();
   };
@@ -300,22 +267,6 @@ export const AutoCADClone = () => {
     setDrawingPoints([]);
     setSelectedShapes([]);
     setTempShape(null);
-    setCoordinateInput({ x: '', y: '' });
-    setPropertyInput({
-      length: '',
-      width: '',
-      height: '',
-      radius: '',
-      diameter: '',
-      direction: '',
-      radiusX: '',
-      radiusY: '',
-      startAngle: '',
-      endAngle: '',
-      sides: '6',
-      rotation: '',
-      tension: '0.5',
-    });
 
     clearSnap();
   };
@@ -388,10 +339,6 @@ export const AutoCADClone = () => {
           offset={offset}
           selectedTool={selectedTool}
           drawingPoints={drawingPoints}
-          coordinateInput={coordinateInput}
-          setCoordinateInput={setCoordinateInput}
-          setPropertyInput={setPropertyInput}
-          propertyInput={propertyInput}
           selectedShapes={selectedShapes}
           mousePosition={mousePosition}
           handleCancelDrawing={handleCancelDrawing}
@@ -448,7 +395,6 @@ export const AutoCADClone = () => {
                 activeSnapResult,
                 textParams,
                 dimensionParams,
-                setDrawingStep,
               })
             }
             onDoubleClick={(e) =>

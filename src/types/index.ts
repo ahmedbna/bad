@@ -4,25 +4,9 @@ export type Point = { x: number; y: number };
 
 export type Shape = {
   id: string;
-  type: DrawingTool;
   points: Point[];
+  type: DrawingTool;
   properties: ShapeProperties;
-};
-
-export type Property = {
-  length: string;
-  width: string;
-  height: string;
-  radius: string;
-  diameter: string;
-  direction: string;
-  radiusX: string;
-  radiusY: string;
-  startAngle: string;
-  endAngle: string;
-  sides: string;
-  rotation: string;
-  tension: string;
 };
 
 export interface ShapeProperties {

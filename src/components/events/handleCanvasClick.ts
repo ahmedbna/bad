@@ -47,7 +47,6 @@ interface Props {
   activeSnapResult: SnapResult;
   textParams?: TextParams;
   dimensionParams: DimensionParams;
-  setDrawingStep: React.Dispatch<React.SetStateAction<number>>;
 }
 
 /**
@@ -73,7 +72,6 @@ export const handleCanvasClick = ({
   activeSnapResult,
   textParams,
   dimensionParams,
-  setDrawingStep,
 }: Props) => {
   try {
     // Get mouse coordinates relative to canvas

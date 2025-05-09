@@ -1,7 +1,7 @@
 'use client';
 
 import { Command, DrawingTool } from '@/constants';
-import { Property, Point } from '@/types';
+import { Point } from '@/types';
 import { SnapMode } from '../snap/useSnapping';
 import { Tools } from './tools';
 import { ModeToggle } from '@/components/ui/mode-toggle';
@@ -11,13 +11,10 @@ import { ShapeInputPanel } from './shape-input-panel';
 type Props = {
   selectedTool: DrawingTool;
   drawingPoints: Point[];
-  propertyInput: Property;
   mousePosition: Point | null;
   scale: number;
   offset: Point;
   selectedShapes: string[];
-  coordinateInput: { x: string; y: string };
-  setPropertyInput: React.Dispatch<React.SetStateAction<Property>>;
   gridSize: number;
   setScale: React.Dispatch<React.SetStateAction<number>>;
   snapSettings: {
@@ -34,9 +31,6 @@ type Props = {
   setSelectedTool: (tool: DrawingTool) => void;
   handleCancelDrawing: () => void;
   completeShape: (points: Point[], properties?: any) => void;
-  setCoordinateInput: React.Dispatch<
-    React.SetStateAction<{ x: string; y: string }>
-  >;
   setSnapSettings: React.Dispatch<
     React.SetStateAction<{
       enabled: boolean;
@@ -59,10 +53,6 @@ type Props = {
 export const SidePanel = ({
   selectedTool,
   drawingPoints,
-  coordinateInput,
-  setCoordinateInput,
-  setPropertyInput,
-  propertyInput,
   selectedShapes,
   mousePosition,
   scale,
@@ -146,10 +136,6 @@ export const SidePanel = ({
             <ShapeInputPanel
               selectedTool={selectedTool}
               drawingPoints={drawingPoints}
-              coordinateInput={coordinateInput}
-              propertyInput={propertyInput}
-              setCoordinateInput={setCoordinateInput}
-              setPropertyInput={setPropertyInput}
               completeShape={completeShape}
               handleCancelDrawing={handleCancelDrawing}
             />

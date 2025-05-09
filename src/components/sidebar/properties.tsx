@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Point, Property } from '@/types';
+import { Point } from '@/types';
 import { DrawingTool } from '@/constants';
 import {
   angleBetweenPoints,
@@ -16,8 +16,8 @@ import {
 type Props = {
   selectedTool: DrawingTool;
   drawingPoints: Point[];
-  propertyInput: Property;
-  setPropertyInput: React.Dispatch<React.SetStateAction<Property>>;
+  propertyInput: any;
+  setPropertyInput: React.Dispatch<React.SetStateAction<any>>;
   handleCancelDrawing: () => void;
   completeShape: (points: Point[], properties?: any) => void;
 };
