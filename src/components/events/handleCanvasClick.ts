@@ -110,7 +110,6 @@ export const handleCanvasClick = ({
         shapes,
         setSelectedShapes,
       });
-      // setSelectedShapes([]);
       return;
     }
 
@@ -185,21 +184,30 @@ export const handleCanvasClick = ({
           y: midPoint.y + Math.sin(perpAngle) * offsetAmount,
         };
 
+        // Calculate dimension properties
+        const lineProps = calculateLineProperties(
+          drawingPoints[0],
+          snappedPoint
+        );
+
         // Complete the dimension with calculated properties
         completeShape([drawingPoints[0], snappedPoint], {
-          dimensionParams: dimensionParams || {
-            dimensionType: 'linear',
-            offset: 25,
-            extensionLineOffset: 5,
-            arrowSize: 8,
-            textHeight: 12,
-            precision: 2,
-            units: '',
-            showValue: true,
-            textRotation: 0,
+          dimensionParams: {
+            ...(dimensionParams || {
+              dimensionType: 'linear',
+              offset: 25,
+              extensionLineOffset: 5,
+              arrowSize: 8,
+              textHeight: 12,
+              precision: 2,
+              units: '',
+              showValue: true,
+              textRotation: 0,
+            }),
             value: distance,
             textPosition: textPosition,
           },
+          ...lineProps, // Add line properties
         });
       }
       return;
@@ -280,7 +288,8 @@ const handleShapeProgress = (
 ) => {
   switch (selectedTool) {
     case 'line':
-      completeShape([drawingPoints[0], snappedPoint]);
+      const lineProps = calculateLineProperties(drawingPoints[0], snappedPoint);
+      completeShape([drawingPoints[0], snappedPoint], lineProps);
       break;
 
     case 'polyline':
@@ -295,7 +304,11 @@ const handleShapeProgress = (
       break;
 
     case 'rectangle':
-      completeShape([drawingPoints[0], snappedPoint]);
+      const rectProps = calculateRectangleProperties(
+        drawingPoints[0],
+        snappedPoint
+      );
+      completeShape([drawingPoints[0], snappedPoint], rectProps);
       break;
 
     case 'circle':
@@ -368,7 +381,8 @@ const handlePolylineProgress = (
 
   // Double click completes the polyline
   if (e.detail === 2) {
-    completeShape(updatedPoints);
+    const polylineProps = calculatePolylineProperties(updatedPoints);
+    completeShape(updatedPoints, polylineProps);
   } else {
     // Update temp shape with new point
     setTempShape((prevShape) =>
@@ -392,7 +406,8 @@ const handleCircleProgress = (
 ) => {
   const center = drawingPoints[0];
   const radius = calculateDistance(center, snappedPoint);
-  completeShape([center], { radius });
+  const circleProps = calculateCircleProperties(radius);
+  completeShape([center], circleProps);
 };
 
 /**
@@ -449,9 +464,15 @@ const handleEllipseProgress = (
       rotation
     );
 
-    completeShape([center], {
-      radiusX: firstRadius,
+    // Calculate ellipse properties
+    const ellipseProps = calculateEllipseProperties(
+      firstRadius,
       radiusY,
+      ellipseParams.isFullEllipse
+    );
+
+    completeShape([center], {
+      ...ellipseProps,
       rotation,
       isFullEllipse: ellipseParams.isFullEllipse,
     });
@@ -469,11 +490,11 @@ const handlePolygonProgress = (
 ) => {
   const center = drawingPoints[0];
   const radius = calculateDistance(center, snappedPoint);
+  const sides = parseInt(polygonSides.toString(), 10);
 
-  completeShape([center], {
-    radius,
-    sides: parseInt(polygonSides.toString(), 10),
-  });
+  const polygonProps = calculatePolygonProperties(radius, sides);
+
+  completeShape([center], polygonProps);
 };
 
 /**
@@ -504,12 +525,13 @@ const handleSplineProgress = (
 
   // Double-click to complete spline
   if (e.detail === 2 && updatedPoints.length >= 3) {
-    completeShape(updatedPoints, { tension: splineTension });
+    const splineProps = calculateSplineProperties(updatedPoints, splineTension);
+    completeShape(updatedPoints, { ...splineProps, tension: splineTension });
   }
 };
 
 /**
- * Handles arc-specific drawing logic
+ * Handles arc-specific drawing logic with updated properties calculation
  */
 const handleArcDrawing = (
   arcMode: ArcMode,
@@ -519,13 +541,58 @@ const handleArcDrawing = (
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
+  // Modified arc handlers to include property calculations
+  const originalCompleteShape = completeShape;
+
+  // Wrap the complete shape function to add arc properties before completing
+  const enhancedCompleteShape = (
+    points: Point[],
+    properties?: ShapeProperties
+  ) => {
+    if (
+      properties &&
+      properties.radius &&
+      properties.startAngle !== undefined &&
+      properties.endAngle !== undefined
+    ) {
+      // Find center point based on the arc mode and points
+      let center: Point;
+      if (arcMode === 'ThreePoint' || arcMode === 'StartEndRadius') {
+        // For these modes, we need to derive the center from properties
+        // This would be complex to calculate here, so we'll use the existing properties
+        center = (properties.center as Point) || points[0];
+      } else if (arcMode === 'StartCenterEnd') {
+        center = points[1]; // For StartCenterEnd, center is the second point
+      } else if (arcMode === 'CenterStartEnd') {
+        center = points[0]; // For CenterStartEnd, center is the first point
+      } else {
+        // Default to first point if we can't determine
+        center = points[0];
+      }
+
+      // Calculate arc properties
+      const arcProps = calculateArcProperties(
+        center,
+        properties.radius,
+        properties.startAngle,
+        properties.endAngle
+      );
+
+      // Merge with existing properties and complete
+      originalCompleteShape(points, { ...properties, ...arcProps });
+    } else {
+      // If we don't have enough data, just pass through
+      originalCompleteShape(points, properties);
+    }
+  };
+
   if (arcMode === 'ThreePoint') {
     handleThreePointArc(
       point,
       drawingPoints,
       setDrawingPoints,
       setTempShape,
-      completeShape
+      enhancedCompleteShape
     );
   } else if (arcMode === 'StartCenterEnd') {
     handleStartCenterEndArc(
@@ -533,7 +600,7 @@ const handleArcDrawing = (
       drawingPoints,
       setDrawingPoints,
       setTempShape,
-      completeShape
+      enhancedCompleteShape
     );
   } else if (arcMode === 'CenterStartEnd') {
     handleCenterStartEndArc(
@@ -541,7 +608,7 @@ const handleArcDrawing = (
       drawingPoints,
       setDrawingPoints,
       setTempShape,
-      completeShape
+      enhancedCompleteShape
     );
   } else if (arcMode === 'StartEndRadius') {
     handleStartEndRadiusArc(
@@ -549,7 +616,7 @@ const handleArcDrawing = (
       drawingPoints,
       setDrawingPoints,
       setTempShape,
-      completeShape
+      enhancedCompleteShape
     );
   } else if (arcMode === 'StartEndDirection') {
     handleStartEndDirectionArc(
@@ -557,7 +624,236 @@ const handleArcDrawing = (
       drawingPoints,
       setDrawingPoints,
       setTempShape,
-      completeShape
+      enhancedCompleteShape
     );
   }
+};
+
+/**
+ * Calculate properties for a line shape
+ */
+const calculateLineProperties = (p1: Point, p2: Point): ShapeProperties => {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  return {
+    length,
+    angle,
+    perimeter: length, // For a line, perimeter equals length
+    area: 0, // A line has no area
+  };
+};
+
+/**
+ * Calculate properties for a rectangle shape
+ */
+const calculateRectangleProperties = (
+  p1: Point,
+  p2: Point
+): ShapeProperties => {
+  const width = Math.abs(p2.x - p1.x);
+  const height = Math.abs(p2.y - p1.y);
+  const area = width * height;
+  const perimeter = 2 * (width + height);
+  const diagonal = Math.sqrt(width * width + height * height);
+
+  return {
+    width,
+    height,
+    area,
+    perimeter,
+    diagonal,
+  };
+};
+
+/**
+ * Calculate properties for a circle shape
+ */
+const calculateCircleProperties = (radius: number): ShapeProperties => {
+  const area = Math.PI * radius * radius;
+  const perimeter = 2 * Math.PI * radius;
+  const diameter = 2 * radius;
+
+  return {
+    radius,
+    diameter,
+    area,
+    perimeter,
+    circumference: perimeter,
+  };
+};
+
+/**
+ * Calculate properties for an ellipse shape
+ */
+const calculateEllipseProperties = (
+  radiusX: number,
+  radiusY: number,
+  isFullEllipse: boolean
+): ShapeProperties => {
+  // Ramanujan's approximation for ellipse perimeter
+  const h = Math.pow((radiusX - radiusY) / (radiusX + radiusY), 2);
+  const perimeter =
+    Math.PI * (radiusX + radiusY) * (1 + (3 * h) / (10 + Math.sqrt(4 - 3 * h)));
+
+  const area = Math.PI * radiusX * radiusY;
+
+  return {
+    radiusX,
+    radiusY,
+    area: isFullEllipse ? area : area / 2,
+    perimeter: isFullEllipse
+      ? perimeter
+      : perimeter / 2 + 2 * (radiusX + radiusY),
+  };
+};
+
+/**
+ * Calculate properties for a polygon shape
+ */
+const calculatePolygonProperties = (
+  radius: number,
+  sides: number
+): ShapeProperties => {
+  const internalAngle = ((sides - 2) * 180) / sides;
+  const sideLength = 2 * radius * Math.sin(Math.PI / sides);
+  const perimeter = sides * sideLength;
+  const area = (sides * radius * radius * Math.sin((2 * Math.PI) / sides)) / 2;
+  const innerRadius = radius * Math.cos(Math.PI / sides); // apothem
+
+  return {
+    radius,
+    innerRadius,
+    sides,
+    sideLength,
+    internalAngle,
+    perimeter,
+    area,
+  };
+};
+
+/**
+ * Calculate properties for a polyline shape
+ */
+const calculatePolylineProperties = (points: Point[]): ShapeProperties => {
+  let perimeter = 0;
+  let area = 0;
+  let minX = points[0].x;
+  let minY = points[0].y;
+  let maxX = points[0].x;
+  let maxY = points[0].y;
+
+  // Calculate perimeter and bounding box
+  for (let i = 0; i < points.length - 1; i++) {
+    const dx = points[i + 1].x - points[i].x;
+    const dy = points[i + 1].y - points[i].y;
+    perimeter += Math.sqrt(dx * dx + dy * dy);
+
+    minX = Math.min(minX, points[i + 1].x);
+    minY = Math.min(minY, points[i + 1].y);
+    maxX = Math.max(maxX, points[i + 1].x);
+    maxY = Math.max(maxY, points[i + 1].y);
+  }
+
+  // If closed polyline, calculate area using shoelace formula
+  if (
+    points.length > 2 &&
+    points[0].x === points[points.length - 1].x &&
+    points[0].y === points[points.length - 1].y
+  ) {
+    for (let i = 0; i < points.length - 1; i++) {
+      area += points[i].x * points[i + 1].y - points[i + 1].x * points[i].y;
+    }
+    area = Math.abs(area) / 2;
+  }
+
+  const width = maxX - minX;
+  const height = maxY - minY;
+
+  return {
+    perimeter,
+    area,
+    width,
+    height,
+    isClosed:
+      points.length > 2 &&
+      points[0].x === points[points.length - 1].x &&
+      points[0].y === points[points.length - 1].y,
+  };
+};
+
+/**
+ * Calculate properties for an arc shape
+ */
+const calculateArcProperties = (
+  center: Point,
+  radius: number,
+  startAngle: number,
+  endAngle: number
+): ShapeProperties => {
+  // Normalize angles to ensure endAngle > startAngle
+  while (endAngle <= startAngle) {
+    endAngle += 2 * Math.PI;
+  }
+
+  const angle = endAngle - startAngle;
+  const arcLength = radius * angle;
+  const chordLength = 2 * radius * Math.sin(angle / 2);
+
+  // Area of sector
+  const area = (radius * radius * angle) / 2;
+
+  return {
+    radius,
+    startAngle,
+    endAngle,
+    angle: angle * (180 / Math.PI), // Convert to degrees
+    arcLength,
+    chordLength,
+    area,
+    perimeter: arcLength,
+  };
+};
+
+/**
+ * Calculate properties for a spline shape
+ */
+const calculateSplineProperties = (
+  points: Point[],
+  tension: number
+): ShapeProperties => {
+  // For splines we can approximate with polyline segments
+  let perimeter = 0;
+  let minX = points[0].x;
+  let minY = points[0].y;
+  let maxX = points[0].x;
+  let maxY = points[0].y;
+
+  // Find bounding box
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+
+  // Approximate perimeter with line segments between control points
+  for (let i = 0; i < points.length - 1; i++) {
+    const dx = points[i + 1].x - points[i].x;
+    const dy = points[i + 1].y - points[i].y;
+    perimeter += Math.sqrt(dx * dx + dy * dy);
+  }
+
+  // For a more accurate approximation, we would need to sample the spline
+  // This is just a rough approximation based on control points
+
+  return {
+    tension,
+    perimeter,
+    width: maxX - minX,
+    height: maxY - minY,
+    controlPoints: [...points],
+  };
 };

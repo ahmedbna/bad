@@ -331,6 +331,8 @@ export const AutoCADClone = () => {
     };
   }, [selectedShapes]);
 
+  console.log('shapes', shapes);
+
   return (
     <div className='flex flex-col h-screen'>
       <div className='flex flex-1 overflow-hidden'>

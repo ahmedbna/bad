@@ -29,6 +29,18 @@ export interface ShapeProperties {
   degree?: number;
   knots?: number[];
   weights?: number[];
+  angle?: number;
+  perimeter?: number;
+  area?: number;
+  diagonal?: number;
+  diameter?: number;
+  circumference?: number;
+  sideLength?: number;
+  internalAngle?: number;
+  arcLength?: number;
+  chordLength?: number;
+  innerRadius?: number;
+  center?: Point;
   textParams?: TextParams;
   dimensionParams?: DimensionParams;
 }
