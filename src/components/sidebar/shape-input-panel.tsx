@@ -107,192 +107,6 @@ export const ShapeInputPanel = ({
     }
   }, [drawingPoints]);
 
-  // // Update temp shape preview when property inputs change
-  // useEffect(() => {
-  //   if (drawingPoints.length > 0) {
-  //     updateTempShapeFromProperties();
-  //   }
-  // }, [propertyInput]);
-
-  // Add this new useEffect to update property inputs when coordinates change
-  useEffect(() => {
-    if (drawingPoints.length > 0 && step > 0) {
-      updatePropertyInputsFromCoordinates();
-    }
-  }, [coordinateInput]);
-
-  // Add this new function to update property inputs based on coordinate changes
-  const updatePropertyInputsFromCoordinates = () => {
-    if (drawingPoints.length === 0) return;
-    const basePoint = drawingPoints[0];
-
-    // Parse current coordinate input
-    const x = parseFloat(coordinateInput.x);
-    const y = parseFloat(coordinateInput.y);
-    if (isNaN(x) || isNaN(y)) return;
-
-    const point = { x, y };
-
-    switch (selectedTool) {
-      case 'line':
-        // Calculate length and direction from coordinates
-        const dx = point.x - basePoint.x;
-        const dy = point.y - basePoint.y;
-        const length = Math.hypot(dx, dy);
-        const direction = Math.atan2(dy, dx) * (180 / Math.PI); // Convert to degrees
-
-        setPropertyInput((prev) => ({
-          ...prev,
-          length: length.toFixed(2),
-          direction: direction.toFixed(1),
-        }));
-        break;
-
-      case 'rectangle':
-        // Calculate width and height from coordinates
-        const width = Math.abs(point.x - basePoint.x);
-        const height = Math.abs(point.y - basePoint.y);
-
-        setPropertyInput((prev) => ({
-          ...prev,
-          width: width.toFixed(2),
-          height: height.toFixed(2),
-        }));
-        break;
-
-      case 'circle':
-        // Calculate radius from coordinates
-        const radius = Math.hypot(point.x - basePoint.x, point.y - basePoint.y);
-
-        setPropertyInput((prev) => ({
-          ...prev,
-          radius: radius.toFixed(2),
-          diameter: (radius * 2).toFixed(2),
-        }));
-        break;
-
-      case 'ellipse':
-        if (step === 1) {
-          // First axis
-          const radiusX = Math.hypot(
-            point.x - basePoint.x,
-            point.y - basePoint.y
-          );
-          const angle =
-            Math.atan2(point.y - basePoint.y, point.x - basePoint.x) *
-            (180 / Math.PI);
-
-          setPropertyInput((prev) => ({
-            ...prev,
-            radiusX: radiusX.toFixed(2),
-            rotation: angle.toFixed(1),
-          }));
-        } else if (step === 2 && drawingPoints.length >= 2) {
-          // Second axis
-          const dx = drawingPoints[1].x - basePoint.x;
-          const dy = drawingPoints[1].y - basePoint.y;
-          const angle = Math.atan2(dy, dx);
-
-          // Calculate perpendicular vector
-          const perpX = -Math.sin(angle);
-          const perpY = Math.cos(angle);
-
-          // Project point onto perpendicular vector
-          const dotProduct =
-            (point.x - basePoint.x) * perpX + (point.y - basePoint.y) * perpY;
-          const radiusY = Math.abs(dotProduct);
-
-          setPropertyInput((prev) => ({
-            ...prev,
-            radiusY: radiusY.toFixed(2),
-          }));
-        }
-        break;
-
-      case 'polygon':
-        // Calculate radius from coordinates
-        const polygonRadius = Math.hypot(
-          point.x - basePoint.x,
-          point.y - basePoint.y
-        );
-
-        setPropertyInput((prev) => ({
-          ...prev,
-          radius: polygonRadius.toFixed(2),
-        }));
-        break;
-
-      case 'arc':
-        if (step === 1) {
-          // Calculate radius from second point
-          const arcRadius = Math.hypot(
-            point.x - basePoint.x,
-            point.y - basePoint.y
-          );
-          // Calculate angle from second point
-          const arcAngle =
-            Math.atan2(point.y - basePoint.y, point.x - basePoint.x) *
-            (180 / Math.PI);
-
-          setPropertyInput((prev) => ({
-            ...prev,
-            radius: arcRadius.toFixed(2),
-            startAngle: '0',
-            endAngle: arcAngle.toFixed(1),
-          }));
-        }
-        break;
-    }
-  };
-
-  // Handle coordinate input change
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: string
-  ) => {
-    if (field === 'x' || field === 'y') {
-      setCoordinateInput((prev) => ({
-        ...prev,
-        [field]: e.target.value,
-      }));
-
-      // Try to update temp shape with new coordinates
-      const value = parseFloat(e.target.value);
-      if (!isNaN(value) && drawingPoints.length > 0) {
-        updateTempShapeFromCoordinates({
-          x: field === 'x' ? value : parseFloat(coordinateInput.x) || 0,
-          y: field === 'y' ? value : parseFloat(coordinateInput.y) || 0,
-        });
-      }
-    } else {
-      setPropertyInput((prev) => ({
-        ...prev,
-        [field]: e.target.value,
-      }));
-
-      // Handle special cases where one input should update another
-      if (field === 'radius' && e.target.value) {
-        // Update diameter when radius changes
-        const radiusValue = parseFloat(e.target.value);
-        if (!isNaN(radiusValue)) {
-          setPropertyInput((prev) => ({
-            ...prev,
-            diameter: (radiusValue * 2).toString(),
-          }));
-        }
-      } else if (field === 'diameter' && e.target.value) {
-        // Update radius when diameter changes
-        const diameterValue = parseFloat(e.target.value);
-        if (!isNaN(diameterValue)) {
-          setPropertyInput((prev) => ({
-            ...prev,
-            radius: (diameterValue / 2).toString(),
-          }));
-        }
-      }
-    }
-  };
-
   // Handle Enter key press
   const handleKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -309,214 +123,6 @@ export const ShapeInputPanel = ({
   // Handle property selection (when user types a property shortcut)
   const handlePropertySelection = (property: string) => {
     setActiveProperty(property);
-  };
-
-  // Update temp shape with current properties
-  // Enhance the updateTempShapeFromProperties function to also update coordinate display
-  const updateTempShapeFromProperties = () => {
-    if (drawingPoints.length === 0) return;
-
-    const basePoint = drawingPoints[0];
-
-    switch (selectedTool) {
-      case 'line':
-        if (propertyInput.length && propertyInput.direction && step === 1) {
-          const length = parseFloat(propertyInput.length);
-          const direction =
-            parseFloat(propertyInput.direction) * (Math.PI / 180);
-
-          if (!isNaN(length) && !isNaN(direction)) {
-            const secondPoint = {
-              x: basePoint.x + length * Math.cos(direction),
-              y: basePoint.y + length * Math.sin(direction),
-            };
-
-            // Update coordinate input to reflect property changes
-            setCoordinateInput({
-              x: secondPoint.x.toFixed(2),
-              y: secondPoint.y.toFixed(2),
-            });
-
-            setTempShape({
-              id: 'temp-shape',
-              type: 'line',
-              points: [basePoint, secondPoint],
-              properties: {},
-            });
-          }
-        }
-        break;
-
-      case 'rectangle':
-        if (propertyInput.width && propertyInput.height && step === 1) {
-          const width = parseFloat(propertyInput.width);
-          const height = parseFloat(propertyInput.height);
-
-          if (!isNaN(width) && !isNaN(height)) {
-            const secondPoint = {
-              x: basePoint.x + width,
-              y: basePoint.y + height,
-            };
-
-            // Update coordinate input to reflect property changes
-            setCoordinateInput({
-              x: secondPoint.x.toFixed(2),
-              y: secondPoint.y.toFixed(2),
-            });
-
-            setTempShape({
-              id: 'temp-shape',
-              type: 'rectangle',
-              points: [basePoint, secondPoint],
-              properties: {},
-            });
-          }
-        }
-        break;
-
-      case 'circle':
-        if ((propertyInput.radius || propertyInput.diameter) && step === 1) {
-          let radius;
-          if (propertyInput.radius) {
-            radius = parseFloat(propertyInput.radius);
-          } else {
-            radius = parseFloat(propertyInput.diameter) / 2;
-          }
-
-          if (!isNaN(radius)) {
-            // // Generate a point on the circle perimeter for coordinate display
-            // const angle = 0; // Default to right side of circle
-            // const circlePoint = {
-            //   x: basePoint.x + radius * Math.cos(angle),
-            //   y: basePoint.y + radius * Math.sin(angle),
-            // };
-
-            // // Update coordinate input to reflect property changes
-            // setCoordinateInput({
-            //   x: circlePoint.x.toFixed(2),
-            //   y: circlePoint.y.toFixed(2),
-            // });
-
-            setTempShape({
-              id: 'temp-shape',
-              type: 'circle',
-              points: [basePoint],
-              properties: { radius },
-            });
-          }
-        }
-        break;
-
-      case 'ellipse':
-        if (propertyInput.radiusX && propertyInput.radiusY && step === 1) {
-          const radiusX = parseFloat(propertyInput.radiusX);
-          const radiusY = parseFloat(propertyInput.radiusY);
-          const rotation =
-            parseFloat(propertyInput.rotation || '0') * (Math.PI / 180);
-
-          if (!isNaN(radiusX) && !isNaN(radiusY)) {
-            // Generate a point on the ellipse perimeter for coordinate display
-            const angle = rotation; // Use the rotation angle for the coordinate
-            const ellipsePoint = {
-              x: basePoint.x + radiusX * Math.cos(angle),
-              y: basePoint.y + radiusY * Math.sin(angle),
-            };
-
-            // Update coordinate input to reflect property changes
-            setCoordinateInput({
-              x: ellipsePoint.x.toFixed(2),
-              y: ellipsePoint.y.toFixed(2),
-            });
-
-            setTempShape({
-              id: 'temp-shape',
-              type: 'ellipse',
-              points: [basePoint],
-              properties: {
-                radiusX,
-                radiusY,
-                rotation,
-                isFullEllipse: true,
-              },
-            });
-          }
-        }
-        break;
-
-      case 'polygon':
-        if (propertyInput.radius && propertyInput.sides && step === 1) {
-          const radius = parseFloat(propertyInput.radius);
-          const sides = parseInt(propertyInput.sides);
-
-          if (!isNaN(radius) && !isNaN(sides)) {
-            // Generate a point on the polygon perimeter for coordinate display
-            const angle = 0; // Default to right side of polygon
-            const polygonPoint = {
-              x: basePoint.x + radius * Math.cos(angle),
-              y: basePoint.y + radius * Math.sin(angle),
-            };
-
-            // Update coordinate input to reflect property changes
-            setCoordinateInput({
-              x: polygonPoint.x.toFixed(2),
-              y: polygonPoint.y.toFixed(2),
-            });
-
-            setTempShape({
-              id: 'temp-shape',
-              type: 'polygon',
-              points: [basePoint],
-              properties: {
-                radius,
-                sides,
-              },
-            });
-          }
-        }
-        break;
-
-      case 'arc':
-        if (
-          propertyInput.radius &&
-          propertyInput.startAngle &&
-          propertyInput.endAngle &&
-          step === 1
-        ) {
-          const radius = parseFloat(propertyInput.radius);
-          const startAngle =
-            parseFloat(propertyInput.startAngle) * (Math.PI / 180);
-          const endAngle = parseFloat(propertyInput.endAngle) * (Math.PI / 180);
-
-          if (!isNaN(radius) && !isNaN(startAngle) && !isNaN(endAngle)) {
-            // Generate a point on the arc for coordinate display (use end angle)
-            const arcPoint = {
-              x: basePoint.x + radius * Math.cos(endAngle),
-              y: basePoint.y + radius * Math.sin(endAngle),
-            };
-
-            // Update coordinate input to reflect property changes
-            setCoordinateInput({
-              x: arcPoint.x.toFixed(2),
-              y: arcPoint.y.toFixed(2),
-            });
-
-            setTempShape({
-              id: 'temp-shape',
-              type: 'arc',
-              points: [basePoint],
-              properties: {
-                radius,
-                startAngle,
-                endAngle,
-              },
-            });
-          }
-        }
-        break;
-
-      default:
-        break;
-    }
   };
 
   // Update temp shape with cursor position (for live preview)
@@ -895,63 +501,6 @@ export const ShapeInputPanel = ({
     }
   };
 
-  // Process property-based shape completion
-  // Improve property input processing to update coordinates
-  const processPropertyInput = () => {
-    if (drawingPoints.length === 0 && selectedTool !== 'text') return;
-
-    const basePoint = drawingPoints[0] || { x: 0, y: 0 };
-
-    switch (selectedTool) {
-      case 'line':
-        if (propertyInput.length && step === 1) {
-          const length = parseFloat(propertyInput.length);
-          const direction = propertyInput.direction
-            ? parseFloat(propertyInput.direction) * (Math.PI / 180) // Convert degrees to radians
-            : 0; // Default direction is horizontal (0 degrees)
-
-          if (!isNaN(length) && !isNaN(direction)) {
-            const secondPoint = {
-              x: basePoint.x + length * Math.cos(direction),
-              y: basePoint.y + length * Math.sin(direction),
-            };
-
-            // Update coordinate display before completing shape
-            setCoordinateInput({
-              x: secondPoint.x.toFixed(2),
-              y: secondPoint.y.toFixed(2),
-            });
-
-            completeShape([basePoint, secondPoint]);
-            setStep(0);
-          }
-        }
-        break;
-
-      // Similar updates for other shape types...
-      // ... (rest of the function remains the same)
-    }
-
-    // Reset property inputs
-    setPropertyInput({
-      length: '',
-      width: '',
-      height: '',
-      radius: '',
-      diameter: '',
-      direction: '',
-      radiusX: '',
-      radiusY: '',
-      startAngle: '',
-      endAngle: '',
-      sides: propertyInput.sides || '6',
-      rotation: '',
-      tension: propertyInput.tension || '0.5',
-    });
-
-    setActiveProperty(null);
-  };
-
   // Generate prompt based on tool and step
   useEffect(() => {
     generatePrompt();
@@ -1110,6 +659,602 @@ export const ShapeInputPanel = ({
         return [];
       default:
         return [];
+    }
+  };
+
+  // Update the processPropertyInput function to handle all shape types and update coordinates
+  const processPropertyInput = () => {
+    if (drawingPoints.length === 0 && selectedTool !== 'text') return;
+
+    const basePoint = drawingPoints[0] || { x: 0, y: 0 };
+
+    switch (selectedTool) {
+      case 'line':
+        if (propertyInput.length && step === 1) {
+          const length = parseFloat(propertyInput.length);
+          const directionDeg = parseFloat(propertyInput.direction || '0');
+          const directionRad = directionDeg * (Math.PI / 180); // degrees to radians
+
+          if (!isNaN(length) && !isNaN(directionRad)) {
+            const secondPoint = {
+              x: basePoint.x + length * Math.cos(directionRad),
+              y: basePoint.y + length * Math.sin(directionRad),
+            };
+
+            // Update preview/coordinate UI
+            setCoordinateInput({
+              x: secondPoint.x.toFixed(2),
+              y: secondPoint.y.toFixed(2),
+            });
+
+            // Complete the line
+            completeShape([basePoint, secondPoint]);
+            setStep(0);
+          }
+        }
+        break;
+
+      case 'rectangle':
+        if (propertyInput.width && propertyInput.height && step === 1) {
+          const width = parseFloat(propertyInput.width);
+          const height = parseFloat(propertyInput.height);
+
+          if (!isNaN(width) && !isNaN(height)) {
+            const secondPoint = {
+              x: basePoint.x + width,
+              y: basePoint.y + height,
+            };
+
+            // Update coordinate display before completing shape
+            setCoordinateInput({
+              x: secondPoint.x.toFixed(2),
+              y: secondPoint.y.toFixed(2),
+            });
+
+            completeShape([basePoint, secondPoint]);
+            setStep(0);
+          }
+        }
+        break;
+
+      case 'circle':
+        if ((propertyInput.radius || propertyInput.diameter) && step === 1) {
+          let radius;
+          if (propertyInput.radius) {
+            radius = parseFloat(propertyInput.radius);
+          } else {
+            radius = parseFloat(propertyInput.diameter) / 2;
+          }
+
+          if (!isNaN(radius)) {
+            // Generate a point on the circle perimeter for coordinate display
+            const angle = 0; // Default to right side of circle
+            const circlePoint = {
+              x: basePoint.x + radius * Math.cos(angle),
+              y: basePoint.y + radius * Math.sin(angle),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: circlePoint.x.toFixed(2),
+              y: circlePoint.y.toFixed(2),
+            });
+
+            completeShape([basePoint], { radius });
+            setStep(0);
+          }
+        }
+        break;
+
+      case 'ellipse':
+        if (propertyInput.radiusX && propertyInput.radiusY && step === 1) {
+          const radiusX = parseFloat(propertyInput.radiusX);
+          const radiusY = parseFloat(propertyInput.radiusY);
+          const rotation =
+            parseFloat(propertyInput.rotation || '0') * (Math.PI / 180);
+
+          if (!isNaN(radiusX) && !isNaN(radiusY)) {
+            // Generate a point on the ellipse perimeter for coordinate display
+            const angle = rotation; // Use the rotation angle for the coordinate
+            const ellipsePoint = {
+              x: basePoint.x + radiusX * Math.cos(angle),
+              y: basePoint.y + radiusY * Math.sin(angle),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: ellipsePoint.x.toFixed(2),
+              y: ellipsePoint.y.toFixed(2),
+            });
+
+            completeShape([basePoint], {
+              radiusX,
+              radiusY,
+              rotation,
+              isFullEllipse: true,
+            });
+            setStep(0);
+          }
+        }
+        break;
+
+      case 'polygon':
+        if (propertyInput.radius && propertyInput.sides && step === 1) {
+          const radius = parseFloat(propertyInput.radius);
+          const sides = parseInt(propertyInput.sides);
+
+          if (!isNaN(radius) && !isNaN(sides)) {
+            // Generate a point on the polygon perimeter for coordinate display
+            const angle = 0; // Default to right side of polygon
+            const polygonPoint = {
+              x: basePoint.x + radius * Math.cos(angle),
+              y: basePoint.y + radius * Math.sin(angle),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: polygonPoint.x.toFixed(2),
+              y: polygonPoint.y.toFixed(2),
+            });
+
+            completeShape([basePoint], { radius, sides });
+            setStep(0);
+          }
+        }
+        break;
+
+      case 'arc':
+        if (
+          propertyInput.radius &&
+          propertyInput.startAngle &&
+          propertyInput.endAngle &&
+          step === 1
+        ) {
+          const radius = parseFloat(propertyInput.radius);
+          const startAngle =
+            parseFloat(propertyInput.startAngle) * (Math.PI / 180);
+          const endAngle = parseFloat(propertyInput.endAngle) * (Math.PI / 180);
+
+          if (!isNaN(radius) && !isNaN(startAngle) && !isNaN(endAngle)) {
+            // Generate a point on the arc for coordinate display (use end angle)
+            const arcPoint = {
+              x: basePoint.x + radius * Math.cos(endAngle),
+              y: basePoint.y + radius * Math.sin(endAngle),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: arcPoint.x.toFixed(2),
+              y: arcPoint.y.toFixed(2),
+            });
+
+            completeShape([basePoint], { radius, startAngle, endAngle });
+            setStep(0);
+          }
+        }
+        break;
+
+      case 'spline':
+        if (step >= 2 && propertyInput.tension) {
+          const tension = parseFloat(propertyInput.tension);
+          if (!isNaN(tension)) {
+            // For spline, just update the property without completing
+            setTempShape({
+              id: 'temp-shape',
+              type: 'spline',
+              points: drawingPoints,
+              properties: { tension },
+            });
+          }
+        }
+        break;
+
+      default:
+        break;
+    }
+
+    // Reset property inputs
+    setPropertyInput({
+      length: '',
+      width: '',
+      height: '',
+      radius: '',
+      diameter: '',
+      direction: '',
+      radiusX: '',
+      radiusY: '',
+      startAngle: '',
+      endAngle: '',
+      sides: propertyInput.sides || '6',
+      rotation: '',
+      tension: propertyInput.tension || '0.5',
+    });
+
+    setActiveProperty(null);
+  };
+
+  // Fix the updateTempShapeFromProperties function
+  const updateTempShapeFromProperties = () => {
+    if (drawingPoints.length === 0) return;
+
+    const basePoint = drawingPoints[0];
+
+    switch (selectedTool) {
+      case 'line':
+        if (propertyInput.length && propertyInput.direction && step === 1) {
+          const length = parseFloat(propertyInput.length);
+          const direction =
+            parseFloat(propertyInput.direction) * (Math.PI / 180);
+
+          if (!isNaN(length) && !isNaN(direction)) {
+            const secondPoint = {
+              x: basePoint.x + length * Math.cos(direction),
+              y: basePoint.y + length * Math.sin(direction),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: secondPoint.x.toFixed(2),
+              y: secondPoint.y.toFixed(2),
+            });
+
+            setTempShape({
+              id: 'temp-shape',
+              type: 'line',
+              points: [basePoint, secondPoint],
+              properties: {},
+            });
+          }
+        }
+        break;
+
+      case 'rectangle':
+        if (propertyInput.width && propertyInput.height && step === 1) {
+          const width = parseFloat(propertyInput.width);
+          const height = parseFloat(propertyInput.height);
+
+          if (!isNaN(width) && !isNaN(height)) {
+            const secondPoint = {
+              x: basePoint.x + width,
+              y: basePoint.y + height,
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: secondPoint.x.toFixed(2),
+              y: secondPoint.y.toFixed(2),
+            });
+
+            setTempShape({
+              id: 'temp-shape',
+              type: 'rectangle',
+              points: [basePoint, secondPoint],
+              properties: {},
+            });
+          }
+        }
+        break;
+
+      case 'circle':
+        if ((propertyInput.radius || propertyInput.diameter) && step === 1) {
+          let radius;
+          if (propertyInput.radius) {
+            radius = parseFloat(propertyInput.radius);
+          } else {
+            radius = parseFloat(propertyInput.diameter) / 2;
+          }
+
+          if (!isNaN(radius)) {
+            // Generate a point on the circle perimeter for coordinate display
+            const angle = 0; // Default to right side of circle
+            const circlePoint = {
+              x: basePoint.x + radius * Math.cos(angle),
+              y: basePoint.y + radius * Math.sin(angle),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: circlePoint.x.toFixed(2),
+              y: circlePoint.y.toFixed(2),
+            });
+
+            setTempShape({
+              id: 'temp-shape',
+              type: 'circle',
+              points: [basePoint],
+              properties: { radius },
+            });
+          }
+        }
+        break;
+
+      case 'ellipse':
+        if (propertyInput.radiusX && propertyInput.radiusY && step >= 1) {
+          const radiusX = parseFloat(propertyInput.radiusX);
+          const radiusY = parseFloat(propertyInput.radiusY);
+          const rotation =
+            parseFloat(propertyInput.rotation || '0') * (Math.PI / 180);
+
+          if (!isNaN(radiusX) && !isNaN(radiusY)) {
+            // Generate a point on the ellipse perimeter for coordinate display
+            const angle = rotation; // Use the rotation angle for the coordinate
+            const ellipsePoint = {
+              x: basePoint.x + radiusX * Math.cos(angle),
+              y: basePoint.y + radiusY * Math.sin(angle),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: ellipsePoint.x.toFixed(2),
+              y: ellipsePoint.y.toFixed(2),
+            });
+
+            setTempShape({
+              id: 'temp-shape',
+              type: 'ellipse',
+              points: [basePoint],
+              properties: {
+                radiusX,
+                radiusY,
+                rotation,
+                isFullEllipse: true,
+              },
+            });
+          }
+        }
+        break;
+
+      case 'polygon':
+        if (propertyInput.radius && propertyInput.sides && step === 1) {
+          const radius = parseFloat(propertyInput.radius);
+          const sides = parseInt(propertyInput.sides);
+
+          if (!isNaN(radius) && !isNaN(sides)) {
+            // Generate a point on the polygon perimeter for coordinate display
+            const angle = 0; // Default to right side of polygon
+            const polygonPoint = {
+              x: basePoint.x + radius * Math.cos(angle),
+              y: basePoint.y + radius * Math.sin(angle),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: polygonPoint.x.toFixed(2),
+              y: polygonPoint.y.toFixed(2),
+            });
+
+            setTempShape({
+              id: 'temp-shape',
+              type: 'polygon',
+              points: [basePoint],
+              properties: {
+                radius,
+                sides,
+              },
+            });
+          }
+        }
+        break;
+
+      case 'arc':
+        if (
+          propertyInput.radius &&
+          propertyInput.startAngle &&
+          propertyInput.endAngle &&
+          step === 1
+        ) {
+          const radius = parseFloat(propertyInput.radius);
+          const startAngle =
+            parseFloat(propertyInput.startAngle) * (Math.PI / 180);
+          const endAngle = parseFloat(propertyInput.endAngle) * (Math.PI / 180);
+
+          if (!isNaN(radius) && !isNaN(startAngle) && !isNaN(endAngle)) {
+            // Generate a point on the arc for coordinate display (use end angle)
+            const arcPoint = {
+              x: basePoint.x + radius * Math.cos(endAngle),
+              y: basePoint.y + radius * Math.sin(endAngle),
+            };
+
+            // Update coordinate input to reflect property changes
+            setCoordinateInput({
+              x: arcPoint.x.toFixed(2),
+              y: arcPoint.y.toFixed(2),
+            });
+
+            setTempShape({
+              id: 'temp-shape',
+              type: 'arc',
+              points: [basePoint],
+              properties: {
+                radius,
+                startAngle,
+                endAngle,
+              },
+            });
+          }
+        }
+        break;
+
+      default:
+        break;
+    }
+  };
+
+  // Fix handleInputChange to always update both coordinate and property inputs
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: string
+  ) => {
+    if (field === 'x' || field === 'y') {
+      setCoordinateInput((prev) => ({
+        ...prev,
+        [field]: e.target.value,
+      }));
+
+      // Try to update temp shape with new coordinates
+      const value = parseFloat(e.target.value);
+      if (!isNaN(value) && drawingPoints.length > 0) {
+        updateTempShapeFromCoordinates({
+          x: field === 'x' ? value : parseFloat(coordinateInput.x) || 0,
+          y: field === 'y' ? value : parseFloat(coordinateInput.y) || 0,
+        });
+      }
+    } else {
+      setPropertyInput((prev) => ({
+        ...prev,
+        [field]: e.target.value,
+      }));
+
+      // Handle special cases where one input should update another
+      if (field === 'radius' && e.target.value) {
+        // Update diameter when radius changes
+        const radiusValue = parseFloat(e.target.value);
+        if (!isNaN(radiusValue)) {
+          setPropertyInput((prev) => ({
+            ...prev,
+            diameter: (radiusValue * 2).toFixed(2),
+          }));
+        }
+      } else if (field === 'diameter' && e.target.value) {
+        // Update radius when diameter changes
+        const diameterValue = parseFloat(e.target.value);
+        if (!isNaN(diameterValue)) {
+          setPropertyInput((prev) => ({
+            ...prev,
+            radius: (diameterValue / 2).toFixed(2),
+          }));
+        }
+      }
+
+      // Immediately try to update the temp shape preview
+      if (drawingPoints.length > 0) {
+        // Small delay to allow the state to update
+        setTimeout(() => updateTempShapeFromProperties(), 0);
+      }
+    }
+  };
+
+  // Enhanced function to update property inputs from coordinates
+  const updatePropertyInputsFromCoordinates = () => {
+    if (drawingPoints.length === 0) return;
+    const basePoint = drawingPoints[0];
+
+    // Parse current coordinate input
+    const x = parseFloat(coordinateInput.x);
+    const y = parseFloat(coordinateInput.y);
+    if (isNaN(x) || isNaN(y)) return;
+
+    const point = { x, y };
+
+    switch (selectedTool) {
+      case 'line':
+        // Calculate length and direction from coordinates
+        const dx = point.x - basePoint.x;
+        const dy = point.y - basePoint.y;
+        const length = Math.hypot(dx, dy);
+        const direction = Math.atan2(dy, dx) * (180 / Math.PI); // Convert to degrees
+
+        setPropertyInput((prev) => ({
+          ...prev,
+          length: length.toFixed(2),
+          direction: direction.toFixed(1),
+        }));
+        break;
+
+      case 'rectangle':
+        // Calculate width and height from coordinates
+        const width = Math.abs(point.x - basePoint.x);
+        const height = Math.abs(point.y - basePoint.y);
+
+        setPropertyInput((prev) => ({
+          ...prev,
+          width: width.toFixed(2),
+          height: height.toFixed(2),
+        }));
+        break;
+
+      case 'circle':
+        // Calculate radius from coordinates
+        const radius = Math.hypot(point.x - basePoint.x, point.y - basePoint.y);
+
+        setPropertyInput((prev) => ({
+          ...prev,
+          radius: radius.toFixed(2),
+          diameter: (radius * 2).toFixed(2),
+        }));
+        break;
+
+      case 'ellipse':
+        if (step === 1) {
+          // First axis
+          const radiusX = Math.hypot(
+            point.x - basePoint.x,
+            point.y - basePoint.y
+          );
+          const angle =
+            Math.atan2(point.y - basePoint.y, point.x - basePoint.x) *
+            (180 / Math.PI);
+
+          setPropertyInput((prev) => ({
+            ...prev,
+            radiusX: radiusX.toFixed(2),
+            rotation: angle.toFixed(1),
+          }));
+        } else if (step === 2 && drawingPoints.length >= 2) {
+          // Second axis
+          const dx = drawingPoints[1].x - basePoint.x;
+          const dy = drawingPoints[1].y - basePoint.y;
+          const angle = Math.atan2(dy, dx);
+
+          // Calculate perpendicular vector
+          const perpX = -Math.sin(angle);
+          const perpY = Math.cos(angle);
+
+          // Project point onto perpendicular vector
+          const dotProduct =
+            (point.x - basePoint.x) * perpX + (point.y - basePoint.y) * perpY;
+          const radiusY = Math.abs(dotProduct);
+
+          setPropertyInput((prev) => ({
+            ...prev,
+            radiusY: radiusY.toFixed(2),
+          }));
+        }
+        break;
+
+      case 'polygon':
+        // Calculate radius from coordinates
+        const polygonRadius = Math.hypot(
+          point.x - basePoint.x,
+          point.y - basePoint.y
+        );
+
+        setPropertyInput((prev) => ({
+          ...prev,
+          radius: polygonRadius.toFixed(2),
+        }));
+        break;
+
+      case 'arc':
+        if (step === 1) {
+          // Calculate radius from second point
+          const arcRadius = Math.hypot(
+            point.x - basePoint.x,
+            point.y - basePoint.y
+          );
+          // Calculate angle from second point
+          const arcAngle =
+            Math.atan2(point.y - basePoint.y, point.x - basePoint.x) *
+            (180 / Math.PI);
+
+          setPropertyInput((prev) => ({
+            ...prev,
+            radius: arcRadius.toFixed(2),
+            startAngle: '0',
+            endAngle: arcAngle.toFixed(1),
+          }));
+        }
+        break;
     }
   };
 
