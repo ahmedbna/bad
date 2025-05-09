@@ -54,12 +54,12 @@ import {
 import { Point } from '@/types';
 import { StatusBar } from './status-bar';
 import { Commands } from './commands';
+import { ShapeInputPanel } from './shape-input-panel';
 
 type Props = {
   selectedTool: DrawingTool;
   selectedShapes: string[];
   gridSize: number;
-  setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
   setScale: React.Dispatch<React.SetStateAction<number>>;
   snapSettings: {
     enabled: boolean;
@@ -92,13 +92,13 @@ type Props = {
   selectedCommand: Command | null;
   setSelectedCommand: (tool: Command) => void;
   handleCancelDrawing: () => void;
+  setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
 };
 
 export const Tools = ({
   gridSize,
   selectedTool,
   setSelectedTool,
-  setSelectedShapes,
   selectedShapes,
   setGridSize,
   setScale,
@@ -119,44 +119,44 @@ export const Tools = ({
   selectedCommand,
   setSelectedCommand,
   handleCancelDrawing,
+  setSelectedTab,
 }: Props) => {
   const isSnapModeActive = (mode: SnapMode): boolean => {
     return snapSettings.modes.has(mode);
   };
 
   return (
-    <div className='h-full flex flex-col'>
-      <div className='h-full flex-grow overflow-y-auto'>
-        <h2 className='text-md font-bold text-muted-foreground mb-1'>Draw</h2>
-        <div className='grid grid-cols-4 gap-2'>
-          <Button
-            title='Select'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('select');
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'select' ? 'default' : 'outline'}
-          >
-            <LucideBoxSelect size={16} />
-            <span className='text-[10px]'>Select</span>
-          </Button>
+    <div className='h-full overflow-y-auto'>
+      <h2 className='text-md font-bold text-muted-foreground mb-1'>Draw</h2>
+      <div className='grid grid-cols-4 gap-2'>
+        <Button
+          title='Select'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('select');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'select' ? 'default' : 'outline'}
+        >
+          <LucideBoxSelect size={16} />
+          <span className='text-[10px]'>Select</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Pan'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('pan');
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'pan' ? 'default' : 'outline'}
-          >
-            <Hand size={16} />
-            <span className='text-[10px]'>Pan</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Pan'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('pan');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'pan' ? 'default' : 'outline'}
+        >
+          <Hand size={16} />
+          <span className='text-[10px]'>Pan</span>
+        </Button>
 
-          {/* <Button
+        {/* <Button
         size='sm'
         variant='outline'
         className='flex flex-col items-center justify-center h-12'
@@ -174,152 +174,161 @@ export const Tools = ({
         <ZoomOut size={16} />
       </Button> */}
 
-          <Button
-            size='sm'
-            title='Line'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('line');
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'line' ? 'default' : 'outline'}
-          >
-            <Slash size={16} className='rotate-45' />
-            <span className='text-[10px]'>Line</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Line'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('line');
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'line' ? 'default' : 'outline'}
+        >
+          <Slash size={16} className='rotate-45' />
+          <span className='text-[10px]'>Line</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Rectangle'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('rectangle');
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'rectangle' ? 'default' : 'outline'}
-          >
-            <Square size={16} />
-            <span className='text-[10px]'>Rectangle</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Rectangle'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('rectangle');
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'rectangle' ? 'default' : 'outline'}
+        >
+          <Square size={16} />
+          <span className='text-[10px]'>Rectangle</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Circle'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('circle');
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'circle' ? 'default' : 'outline'}
-          >
-            <Circle size={16} />
-            <span className='text-[10px]'>Circle</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Circle'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('circle');
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'circle' ? 'default' : 'outline'}
+        >
+          <Circle size={16} />
+          <span className='text-[10px]'>Circle</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Arc'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('arc');
-              setShowArcMode(true);
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'arc' ? 'default' : 'outline'}
-          >
-            <Spline size={16} />
-            <span className='text-[10px]'>Arc</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Arc'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('arc');
+            setShowArcMode(true);
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'arc' ? 'default' : 'outline'}
+        >
+          <Spline size={16} />
+          <span className='text-[10px]'>Arc</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Ellipse'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('ellipse');
-              setShowEllipseDialog(true);
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'ellipse' ? 'default' : 'outline'}
-          >
-            <Egg size={16} />
-            <span className='text-[10px]'>Ellipse</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Ellipse'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('ellipse');
+            setShowEllipseDialog(true);
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'ellipse' ? 'default' : 'outline'}
+        >
+          <Egg size={16} />
+          <span className='text-[10px]'>Ellipse</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Polygon'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('polygon');
-              setShowPolygonDialog(true);
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'polygon' ? 'default' : 'outline'}
-          >
-            <Hexagon size={16} />
-            <span className='text-[10px]'>Polygon</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Polygon'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('polygon');
+            setShowPolygonDialog(true);
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'polygon' ? 'default' : 'outline'}
+        >
+          <Hexagon size={16} />
+          <span className='text-[10px]'>Polygon</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Polyline'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('polyline');
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'polyline' ? 'default' : 'outline'}
-          >
-            <Slash size={16} />
-            <span className='text-[10px]'>Polyline</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Polyline'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('polyline');
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'polyline' ? 'default' : 'outline'}
+        >
+          <Slash size={16} />
+          <span className='text-[10px]'>Polyline</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Spline'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('spline');
-              setShowSplineDialog(true);
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'spline' ? 'default' : 'outline'}
-          >
-            <PenTool size={16} />
-            <span className='text-[10px]'>Spline</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Spline'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('spline');
+            setShowSplineDialog(true);
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'spline' ? 'default' : 'outline'}
+        >
+          <PenTool size={16} />
+          <span className='text-[10px]'>Spline</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Text'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('text');
-              setShowTextDialog(true);
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'text' ? 'default' : 'outline'}
-          >
-            <Type size={16} />
-            <span className='text-[10px]'>Text</span>
-          </Button>
+        <Button
+          size='sm'
+          title='Text'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('text');
+            setShowTextDialog(true);
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'text' ? 'default' : 'outline'}
+        >
+          <Type size={16} />
+          <span className='text-[10px]'>Text</span>
+        </Button>
 
-          <Button
-            size='sm'
-            title='Dimension'
-            onClick={() => {
-              handleCancelDrawing();
-              setSelectedTool('dimension');
-              setShowDimensionDialog(true);
-            }}
-            className='flex flex-col items-center justify-center h-12'
-            variant={selectedTool === 'dimension' ? 'default' : 'outline'}
-          >
-            <Ruler size={16} />
-            <span className='text-[10px]'>Dimension</span>
-          </Button>
-        </div>
+        <Button
+          size='sm'
+          title='Dimension'
+          onClick={() => {
+            handleCancelDrawing();
+            setSelectedTool('dimension');
+            setShowDimensionDialog(true);
+            setSelectedTab('props');
+          }}
+          className='flex flex-col items-center justify-center h-12'
+          variant={selectedTool === 'dimension' ? 'default' : 'outline'}
+        >
+          <Ruler size={16} />
+          <span className='text-[10px]'>Dimension</span>
+        </Button>
       </div>
 
       <Separator className='my-4' />

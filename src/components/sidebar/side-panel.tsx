@@ -1,33 +1,24 @@
 'use client';
 
 import { Command, DrawingTool } from '@/constants';
-import { CoordinatesInput } from './coordinates-input';
-import { Properties } from './properties';
-import { SelectedProperties } from './selected-properties';
 import { Property, Point } from '@/types';
-import { Shape } from '@/types';
 import { SnapMode } from '../snap/useSnapping';
-import { canvasToWorld } from '@/utils/canvasToWorld';
 import { Tools } from './tools';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ShapeInputPanel } from './shape-input-panel';
 
 type Props = {
   selectedTool: DrawingTool;
   drawingPoints: Point[];
   propertyInput: Property;
-  shapes: Shape[];
   mousePosition: Point | null;
   scale: number;
   offset: Point;
   selectedShapes: string[];
   coordinateInput: { x: string; y: string };
-  tempShape: Shape | null;
-  setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
   setPropertyInput: React.Dispatch<React.SetStateAction<Property>>;
   gridSize: number;
-  setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
   setScale: React.Dispatch<React.SetStateAction<number>>;
   snapSettings: {
     enabled: boolean;
@@ -61,20 +52,18 @@ type Props = {
   setShowDimensionDialog: React.Dispatch<React.SetStateAction<boolean>>;
   selectedCommand: Command | null;
   setSelectedCommand: (tool: Command) => void;
+  selectedTab: string;
+  setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
 };
 
 export const SidePanel = ({
   selectedTool,
   drawingPoints,
   coordinateInput,
-  tempShape,
-  setDrawingPoints,
-  setTempShape,
   setCoordinateInput,
   setPropertyInput,
   propertyInput,
   selectedShapes,
-  shapes,
   mousePosition,
   scale,
   offset,
@@ -82,7 +71,6 @@ export const SidePanel = ({
   completeShape,
   gridSize,
   setSelectedTool,
-  setSelectedShapes,
   setGridSize,
   setScale,
   handleDeleteShape,
@@ -98,6 +86,8 @@ export const SidePanel = ({
   setShowDimensionDialog,
   setSelectedCommand,
   selectedCommand,
+  selectedTab,
+  setSelectedTab,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -110,10 +100,15 @@ export const SidePanel = ({
       </div>
 
       <div className='p-2'>
-        <Tabs defaultValue='tools' className='w-full'>
+        <Tabs
+          defaultValue={selectedTab}
+          value={selectedTab}
+          onValueChange={setSelectedTab}
+          className='w-full'
+        >
           <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='tools'>Tools</TabsTrigger>
-            <TabsTrigger value='properties'>Props</TabsTrigger>
+            <TabsTrigger value='props'>Props</TabsTrigger>
             <TabsTrigger value='ai'>AI</TabsTrigger>
           </TabsList>
           <TabsContent value='tools'>
@@ -121,7 +116,6 @@ export const SidePanel = ({
               gridSize={gridSize}
               selectedTool={selectedTool}
               setSelectedTool={setSelectedTool}
-              setSelectedShapes={setSelectedShapes}
               selectedShapes={selectedShapes}
               setGridSize={setGridSize}
               setScale={setScale}
@@ -142,33 +136,22 @@ export const SidePanel = ({
               selectedCommand={selectedCommand}
               setSelectedCommand={setSelectedCommand}
               handleCancelDrawing={handleCancelDrawing}
+              setSelectedTab={setSelectedTab}
             />
           </TabsContent>
-          <TabsContent value='properties'>
-            <CoordinatesInput
+          <TabsContent value='props'>
+            <h2 className='text-md font-bold text-muted-foreground mb-1'>
+              Properties
+            </h2>
+            <ShapeInputPanel
+              selectedTool={selectedTool}
+              drawingPoints={drawingPoints}
               coordinateInput={coordinateInput}
-              selectedTool={selectedTool}
-              tempShape={tempShape}
-              drawingPoints={drawingPoints}
-              setDrawingPoints={setDrawingPoints}
-              setTempShape={setTempShape}
-              setCoordinateInput={setCoordinateInput}
-              completeShape={completeShape}
-            />
-
-            <Properties
-              selectedTool={selectedTool}
-              drawingPoints={drawingPoints}
               propertyInput={propertyInput}
+              setCoordinateInput={setCoordinateInput}
               setPropertyInput={setPropertyInput}
-              handleCancelDrawing={handleCancelDrawing}
               completeShape={completeShape}
-            />
-
-            <SelectedProperties
-              selectedTool={selectedTool}
-              selectedShapes={selectedShapes}
-              shapes={shapes}
+              handleCancelDrawing={handleCancelDrawing}
             />
           </TabsContent>
           <TabsContent value='ai'>
