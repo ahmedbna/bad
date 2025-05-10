@@ -106,6 +106,8 @@ export const AutoCADClone = () => {
     handleEditingClick,
     statusMessage,
     commandBuffer,
+    handleUndo,
+    handleRedo,
   } = useEditing(shapes, setShapes, scale, offset, selectedShapes);
 
   // Dialog states
@@ -439,22 +441,22 @@ export const AutoCADClone = () => {
       }
 
       // Handle common shortcuts
-      // if (e.ctrlKey) {
-      //   if (e.key === 'z') {
-      //     e.preventDefault();
-      //     handleUndo();
-      //     return;
-      //   } else if (e.key === 'y') {
-      //     e.preventDefault();
-      //     handleRedo();
-      //     return;
-      //   } else if (e.key === 'a') {
-      //     e.preventDefault();
-      //     // Select all shapes
-      //     setSelectedShapes([...shapes]);
-      //     return;
-      //   }
-      // }
+      if (e.ctrlKey) {
+        if (e.key === 'z') {
+          e.preventDefault();
+          handleUndo();
+          return;
+        } else if (e.key === 'y') {
+          e.preventDefault();
+          handleRedo();
+          return;
+        } else if (e.key === 'a') {
+          e.preventDefault();
+          // Select all shapes
+          setSelectedShapes([...shapes]);
+          return;
+        }
+      }
 
       // Only process shortcut commands when not in active operation
       if (editingState.isActive || drawingPoints.length > 0) return;
@@ -486,13 +488,8 @@ export const AutoCADClone = () => {
           cp: 'copy',
           ro: 'rotate',
           mi: 'mirror',
-          tr: 'trim',
-          ex: 'extend',
           f: 'fillet',
           o: 'offset',
-          j: 'join',
-          cha: 'chamfer',
-          s: 'stretch',
         };
 
         // Check for drawing tool match
@@ -525,11 +522,11 @@ export const AutoCADClone = () => {
         }
       } else if (e.key === 'Enter' && keyBuffer.current) {
         // Enter key should execute the current command if any
-        // if (keyBuffer.current === 'undo') {
-        //   handleUndo();
-        // } else if (keyBuffer.current === 'redo') {
-        //   handleRedo();
-        // }
+        if (keyBuffer.current === 'undo') {
+          handleUndo();
+        } else if (keyBuffer.current === 'redo') {
+          handleRedo();
+        }
         keyBuffer.current = '';
       }
     };
@@ -551,8 +548,8 @@ export const AutoCADClone = () => {
     setTempShape,
     setSelectedShapes,
     shapes,
-    // handleUndo,
-    // handleRedo,
+    handleUndo,
+    handleRedo,
   ]);
 
   return (

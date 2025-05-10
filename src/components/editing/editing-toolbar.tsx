@@ -7,12 +7,6 @@ import {
   RotateCcw,
   CopyPlus,
   FlipHorizontal,
-  Maximize,
-  Scissors,
-  ArrowRight,
-  Combine,
-  CornerDownRight,
-  CornerUpRight,
   XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,8 +17,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Separator } from '@/components/ui/separator';
 import { EditingTool, EditingState, EditingPhase } from './constants';
+import { Label } from '@/components/ui/label';
 
 // Import from editingToolsData from constants
 const editingToolsData = {
@@ -63,48 +57,6 @@ const editingToolsData = {
     description: 'Create mirror copies of objects across a line',
     phases: ['select', 'base', 'target'],
   },
-  stretch: {
-    icon: Maximize,
-    label: 'Stretch',
-    shortcut: 'S',
-    description: 'Stretch objects by moving points',
-    phases: ['select', 'base', 'target'],
-  },
-  trim: {
-    icon: Scissors,
-    label: 'Trim',
-    shortcut: 'TR',
-    description: 'Trim objects at intersections',
-    phases: ['select', 'target'],
-  },
-  extend: {
-    icon: ArrowRight,
-    label: 'Extend',
-    shortcut: 'EX',
-    description: 'Extend objects to meet other objects',
-    phases: ['select', 'target'],
-  },
-  join: {
-    icon: Combine,
-    label: 'Join',
-    shortcut: 'J',
-    description: 'Join collinear lines or arcs',
-    phases: ['select', 'select'],
-  },
-  chamfer: {
-    icon: CornerDownRight,
-    label: 'Chamfer',
-    shortcut: 'CHA',
-    description: 'Create beveled corners between lines',
-    phases: ['parameter', 'parameter', 'select', 'select'],
-  },
-  fillet: {
-    icon: CornerUpRight,
-    label: 'Fillet',
-    shortcut: 'F',
-    description: 'Create rounded corners between lines',
-    phases: ['parameter', 'select', 'select'],
-  },
 };
 
 type Props = {
@@ -121,7 +73,7 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
       tool,
       basePoint: null,
       selectedIds: [],
-      phase: editingToolsData[tool].phases[0] as EditingPhase,
+      phase: editingToolsData[tool].phases[0],
       parameters: {},
     });
   };
@@ -192,49 +144,6 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
             ? 'Specify first point of mirror line'
             : 'Specify second point of mirror line';
 
-      case 'stretch':
-        return phase === 'select'
-          ? 'Select objects to stretch using a crossing window'
-          : phase === 'base'
-            ? 'Specify base point'
-            : 'Specify target point';
-
-      case 'trim':
-        return phase === 'select'
-          ? 'Select cutting edges'
-          : 'Select objects to trim';
-
-      case 'extend':
-        return phase === 'select'
-          ? 'Select boundary edges'
-          : 'Select objects to extend';
-
-      case 'join':
-        return phase === 'select'
-          ? 'Select first object'
-          : 'Select second object to join';
-
-      case 'chamfer':
-        if (phase === 'parameter' && !editingState.parameters.distance1) {
-          return 'Specify first chamfer distance';
-        } else if (
-          phase === 'parameter' &&
-          !editingState.parameters.distance2
-        ) {
-          return 'Specify second chamfer distance';
-        } else if (editingState.selectedIds.length === 0) {
-          return 'Select first line';
-        } else {
-          return 'Select second line';
-        }
-
-      case 'fillet':
-        return phase === 'parameter'
-          ? 'Specify fillet radius'
-          : editingState.selectedIds.length === 0
-            ? 'Select first line'
-            : 'Select second line';
-
       default:
         return 'Select an operation';
     }
@@ -250,7 +159,7 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
         if (editingState.phase === 'parameter') {
           return (
             <div className='flex items-center gap-2'>
-              <label className='text-sm'>Angle (degrees):</label>
+              <Label className='text-sm'>Angle (degrees):</Label>
               <Input
                 type='number'
                 className='w-24'
@@ -274,7 +183,7 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
         if (editingState.phase === 'parameter') {
           return (
             <div className='flex items-center gap-2'>
-              <label className='text-sm'>Distance:</label>
+              <Label className='text-sm'>Distance:</Label>
               <Input
                 type='number'
                 className='w-24'
@@ -296,60 +205,6 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
         }
         return null;
 
-      case 'chamfer':
-        if (editingState.phase === 'parameter') {
-          if (!editingState.parameters.distance1) {
-            return (
-              <div className='flex items-center gap-2'>
-                <label className='text-sm'>First distance:</label>
-                <Input
-                  type='number'
-                  className='w-24'
-                  value={editingState.parameters.distance1 || ''}
-                  onChange={(e) =>
-                    handleParameterChange('distance1', e.target.value)
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      setEditingState({
-                        ...editingState,
-                        parameters: {
-                          ...editingState.parameters,
-                          distance1: parseFloat(e.target.value) || 0,
-                        },
-                      });
-                    }
-                  }}
-                />
-              </div>
-            );
-          } else {
-            return (
-              <div className='flex items-center gap-2'>
-                <label className='text-sm'>Second distance:</label>
-                <Input
-                  type='number'
-                  className='w-24'
-                  value={editingState.parameters.distance2 || ''}
-                  onChange={(e) =>
-                    handleParameterChange('distance2', e.target.value)
-                  }
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      setEditingState({
-                        ...editingState,
-                        phase: 'select',
-                      });
-                    }
-                  }}
-                />
-              </div>
-            );
-          }
-        }
-        return null;
-
-      case 'fillet':
         if (editingState.phase === 'parameter') {
           return (
             <div className='flex items-center gap-2'>

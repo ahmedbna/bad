@@ -114,20 +114,6 @@ export function useEditing(
                 ? point
                 : prev.basePoint,
             }));
-
-            // Special case for tools that need to execute after selections
-            if (
-              (editingState.tool === 'join' && newSelectedIds.length === 2) ||
-              (editingState.tool === 'chamfer' &&
-                newSelectedIds.length === 2 &&
-                editingState.parameters.distance1 !== undefined &&
-                editingState.parameters.distance2 !== undefined) ||
-              (editingState.tool === 'fillet' &&
-                newSelectedIds.length === 2 &&
-                editingState.parameters.radius !== undefined)
-            ) {
-              executeOperation(point);
-            }
           }
           break;
 
@@ -154,12 +140,6 @@ export function useEditing(
             const side =
               point.x > (editingState.basePoint?.x || 0) ? 'right' : 'left';
             executeOperation(point, undefined, { side });
-          } else if (
-            editingState.tool === 'trim' ||
-            editingState.tool === 'extend'
-          ) {
-            // Trim and extend need the target point to identify what to trim/extend
-            executeOperation(point);
           } else {
             // Tools like move, copy, rotate need the target point
             executeOperation(undefined, point);
@@ -237,9 +217,7 @@ export function useEditing(
 
       // Keep tool active for continuous operations (AutoCAD-like behavior)
       // This allows for multiple edits with the same tool
-      if (
-        ['copy', 'move', 'trim', 'extend', 'offset'].includes(editingState.tool)
-      ) {
+      if (['copy', 'move', 'offset'].includes(editingState.tool)) {
         // Reset phase but keep the tool active
         const initialPhase =
           editingToolsData[editingState.tool as keyof typeof editingToolsData]
@@ -286,11 +264,7 @@ export function useEditing(
         // Here we'll set defaults for demonstration
         let initialParameters: EditingState['parameters'] = {};
 
-        if (tool === 'chamfer') {
-          initialParameters = { distance1: 10, distance2: 10 };
-        } else if (tool === 'fillet') {
-          initialParameters = { radius: 10 };
-        } else if (tool === 'offset') {
+        if (tool === 'offset') {
           initialParameters = { distance: 10 };
         }
 
@@ -328,26 +302,7 @@ export function useEditing(
         editingToolsData[currentTool as keyof typeof editingToolsData];
       if (!toolData) return prevState;
 
-      const currentPhaseIndex = toolData.phases.indexOf(prevState.phase);
       let nextPhase = prevState.phase;
-
-      // For tools with multiple parameters, check if we should advance the phase
-      if (
-        (currentTool === 'chamfer' &&
-          paramName === 'distance1' &&
-          currentPhaseIndex === 0) ||
-        (currentTool === 'fillet' &&
-          paramName === 'radius' &&
-          currentPhaseIndex === 0)
-      ) {
-        // Move to next phase if available
-        if (
-          currentPhaseIndex >= 0 &&
-          currentPhaseIndex < toolData.phases.length - 1
-        ) {
-          nextPhase = toolData.phases[currentPhaseIndex + 1] as EditingPhase;
-        }
-      }
 
       return {
         ...prevState,
@@ -469,16 +424,6 @@ export function useEditing(
             break;
           case 'offset':
             updateParameter('distance', value);
-            break;
-          case 'chamfer':
-            if (!editingState.parameters.distance1) {
-              updateParameter('distance1', value);
-            } else {
-              updateParameter('distance2', value);
-            }
-            break;
-          case 'fillet':
-            updateParameter('radius', value);
             break;
           default:
             break;
