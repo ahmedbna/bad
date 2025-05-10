@@ -34,7 +34,11 @@ import {
   editingToolsData,
 } from '@/components/editing/editing-toolbar';
 import { useEditing } from '@/components/editing/useEditing';
-import { EditingPhase, EditingTool } from './editing/constants';
+import {
+  createInitialEditingState,
+  EditingPhase,
+  EditingTool,
+} from './editing/constants';
 import { renderEditingVisuals } from './editing/render-editing';
 import { handleSelection } from './select/handleSelection';
 
@@ -148,7 +152,7 @@ export const AutoCADClone = () => {
   const [mousePosition, setMousePosition] = useState<Point | null>(null);
 
   const [polarSettings, setPolarSettings] = useState({
-    enabled: true,
+    enabled: false,
     angleIncrement: 45, // Default 45 degrees
     angles: [0, 45, 90, 135, 180, 225, 270, 315], // Default angles
     snapThreshold: 100, // Snap threshold in pixels

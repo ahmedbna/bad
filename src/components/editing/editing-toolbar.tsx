@@ -64,14 +64,9 @@ export const editingToolsData = {
 type Props = {
   editingState: EditingState;
   setEditingState: (state: EditingState) => void;
-  setSelectedTool: (tool: DrawingTool) => void;
 };
 
-export const EditingToolbar = ({
-  editingState,
-  setEditingState,
-  setSelectedTool,
-}: Props) => {
+export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
   const [showToolbar, setShowToolbar] = useState(true);
 
   const handleToolClick = (tool: EditingTool) => {
@@ -83,7 +78,6 @@ export const EditingToolbar = ({
       parameters: {},
       phase: editingToolsData[tool].phases[0] as EditingPhase,
     });
-    setSelectedTool('select');
   };
 
   const handleCancel = () => {

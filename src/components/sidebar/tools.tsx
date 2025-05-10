@@ -353,7 +353,6 @@ export const Tools = ({
       <EditingToolbar
         editingState={editingState}
         setEditingState={setEditingState}
-        setSelectedTool={setSelectedTool}
       />
 
       {/* Show status message when in editing mode */}
