@@ -3,7 +3,7 @@ import {
   angleFromPoints,
   calculateDistance,
   intersectShapes,
-} from './calculations';
+} from '../../utils/calculations';
 
 // Deep clone a shape
 export function cloneShape(shape: Shape): Shape {
