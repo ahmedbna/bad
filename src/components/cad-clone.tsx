@@ -450,11 +450,6 @@ export const AutoCADClone = () => {
           e.preventDefault();
           handleRedo();
           return;
-        } else if (e.key === 'a') {
-          e.preventDefault();
-          // Select all shapes
-          setSelectedShapes([...shapes]);
-          return;
         }
       }
 
@@ -482,19 +477,18 @@ export const AutoCADClone = () => {
           sp: 'spline',
         };
 
-        // Check editing tool shortcuts from the editingToolsData
+        // Check editing tool shortcuts from the editing Tools Data
         const editingShortcuts: Record<string, EditingTool> = {
           m: 'move',
           cp: 'copy',
           ro: 'rotate',
           mi: 'mirror',
-          f: 'fillet',
           o: 'offset',
         };
 
         // Check for drawing tool match
         if (drawingShortcuts[keyBuffer.current]) {
-          setSelectedTool(drawingShortcuts[keyBuffer.current]);
+          setSelectedTool(drawingShortcuts[keyBuffer.current] as DrawingTool);
           // Deactivate any editing tool
           if (editingState.isActive) {
             setEditingState({

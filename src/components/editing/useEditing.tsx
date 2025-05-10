@@ -7,22 +7,22 @@ import {
   EditingState,
   EditingTool,
   createInitialEditingState,
-  editingToolsData,
   getEditingToolMessage,
 } from './constants';
 import { executeEditingOperation } from './editing-operations';
 import { worldToCanvas } from '@/utils/worldToCanvas';
+import { editingToolsData } from './editing-toolbar';
 
 export function useEditing(
   shapes: Shape[],
   setShapes: (shapes: Shape[]) => void,
   scale: number,
   offset: { x: number; y: number },
-  selectedShapesIds: string[]
+  selectedShapeIds: string[]
 ) {
   // State for managing the current editing operation
   const [editingState, setEditingState] = useState<EditingState>(
-    createInitialEditingState() as EditingState
+    createInitialEditingState()
   );
   const [statusMessage, setStatusMessage] = useState<string>('');
 
@@ -87,14 +87,15 @@ export function useEditing(
 
       switch (editingState.phase) {
         case 'select':
-          // Use the selectedShapesIds provided from the parent component
-          if (selectedShapesIds.length > 0) {
-            const newSelectedIds = [...selectedShapesIds];
-            const toolData =
-              editingToolsData[
-                editingState.tool as keyof typeof editingToolsData
-              ];
+          // Use the selectedShapeIds provided from the parent component
+          if (selectedShapeIds.length > 0) {
+            // For offset tool, only one shape can be selected at a time
+            if (editingState.tool === 'offset' && selectedShapeIds.length > 1) {
+              setStatusMessage('Please select only one object for offset');
+              return;
+            }
 
+            const toolData = editingToolsData[editingState.tool];
             if (!toolData) return;
 
             const currentPhaseIndex = toolData.phases.indexOf('select');
@@ -104,51 +105,50 @@ export function useEditing(
                 ? toolData.phases[currentPhaseIndex + 1]
                 : 'select';
 
-            // Update state based on the tool requirements
-            setEditingState((prev: EditingState) => ({
+            // Update state to move to the next phase
+            setEditingState((prev) => ({
               ...prev,
-              selectedIds: newSelectedIds,
+              selectedIds: selectedShapeIds,
               phase: nextPhase as EditingPhase,
-              // For tools like offset that need a base point
-              basePoint: ['offset'].includes(editingState.tool as string)
-                ? point
-                : prev.basePoint,
             }));
+          } else {
+            setStatusMessage('Please select at least one object');
           }
           break;
 
         case 'base':
-          // Set base point for operations like move, copy, rotate
+          // Set base point for operations like move, copy, rotate, mirror
+          const toolData = editingToolsData[editingState.tool];
+          if (!toolData) return;
+
           const nextPhaseAfterBase =
-            editingToolsData[editingState.tool as keyof typeof editingToolsData]
-              ?.phases?.[
-              editingToolsData[
-                editingState.tool as keyof typeof editingToolsData
-              ]?.phases?.indexOf('base') + 1
-            ] || 'target';
+            toolData.phases[toolData.phases.indexOf('base') + 1] || 'target';
 
           setEditingState({
             ...editingState,
             basePoint: point,
-            phase: nextPhaseAfterBase as 'target',
+            phase: nextPhaseAfterBase as EditingPhase,
           });
           break;
 
         case 'target':
-          // Set target point and execute the operation
+          // Execute the operation with the target point
           if (editingState.tool === 'offset') {
+            // For offset, determine which side to offset to
             const side =
               point.x > (editingState.basePoint?.x || 0) ? 'right' : 'left';
             executeOperation(point, undefined, { side });
+          } else if (editingState.tool === 'mirror') {
+            // For mirror, we need two points to define the mirror line
+            executeOperation(point);
           } else {
-            // Tools like move, copy, rotate need the target point
-            executeOperation(undefined, point);
+            // For move, copy, rotate - just need the target point
+            executeOperation(point);
           }
           break;
 
         case 'parameter':
-          // In a real implementation, this would typically use a numeric input dialog
-          // For now, we'll use mouse position as a simplification
+          // In parameter phase, we need to collect specific parameters
           if (editingState.tool === 'rotate') {
             // Calculate angle based on basePoint and current point
             if (editingState.basePoint) {
@@ -156,30 +156,15 @@ export function useEditing(
               const dy = point.y - editingState.basePoint.y;
               const angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-              setEditingState((prev) => ({
-                ...prev,
+              setEditingState({
+                ...editingState,
                 parameters: {
-                  ...prev.parameters,
+                  ...editingState.parameters,
                   angle,
                 },
                 phase: 'target',
-              }));
+              });
             }
-          } else {
-            // For other parameter-based tools, move to next phase
-            const nextPhaseAfterParameter =
-              editingToolsData[
-                editingState.tool as keyof typeof editingToolsData
-              ]?.phases?.[
-                editingToolsData[
-                  editingState.tool as keyof typeof editingToolsData
-                ]?.phases?.indexOf('parameter') + 1
-              ] || 'select';
-
-            setEditingState((prev) => ({
-              ...prev,
-              phase: nextPhaseAfterParameter as EditingPhase,
-            }));
           }
           break;
 
@@ -187,7 +172,7 @@ export function useEditing(
           break;
       }
     },
-    [editingState, selectedShapesIds, scale, offset]
+    [editingState, selectedShapeIds, scale, offset]
   );
 
   // Execute the current editing operation
@@ -195,77 +180,78 @@ export function useEditing(
     (targetPoint?: Point, secondaryPoint?: Point, additionalParams?: any) => {
       if (!editingState.isActive || !editingState.tool) return;
 
+      // Determine which IDs to use - either from editing state or selected shapes
+      const idsToUse =
+        editingState.selectedIds.length > 0
+          ? editingState.selectedIds
+          : selectedShapeIds;
+
       // Save current state to history before executing operation
       addToHistory([...shapes]);
 
       const newShapes = executeEditingOperation(
-        editingState.tool as any,
+        editingState.tool,
         shapes,
-        editingState.selectedIds.length > 0
-          ? editingState.selectedIds
-          : selectedShapesIds,
+        idsToUse,
         {
           ...editingState.parameters,
           ...additionalParams,
         },
         editingState.basePoint || undefined,
-        targetPoint,
-        secondaryPoint
+        targetPoint
       );
 
       setShapes(newShapes);
 
-      // Keep tool active for continuous operations (AutoCAD-like behavior)
-      // This allows for multiple edits with the same tool
-      if (['copy', 'move', 'offset'].includes(editingState.tool)) {
-        // Reset phase but keep the tool active
+      // Reset the state or keep the tool active based on operation type
+      if (['copy', 'offset'].includes(editingState.tool)) {
+        // For 'copy' and 'offset', keep the tool active for continuous operations
         const initialPhase =
-          editingToolsData[editingState.tool as keyof typeof editingToolsData]
-            ?.phases?.[0] || 'select';
-        setEditingState((prev) => ({
-          ...prev,
+          editingToolsData[editingState.tool]?.phases?.[0] || 'select';
+        setEditingState({
+          ...editingState,
           selectedIds: [],
           basePoint: null,
           phase: initialPhase as EditingPhase,
           parameters: {}, // Reset parameters for next operation
-        }));
+        });
       } else {
-        // For other tools, reset to initial state after operation
-        setEditingState(createInitialEditingState() as EditingState);
+        // For other tools (move, rotate, mirror), reset to initial state
+        setEditingState(createInitialEditingState());
       }
     },
-    [editingState, shapes, setShapes, selectedShapesIds, addToHistory]
+    [editingState, shapes, setShapes, selectedShapeIds, addToHistory]
   );
 
   // Set the editing tool
   const setEditingTool = useCallback(
     (tool: EditingTool | null) => {
       if (!tool) {
-        setEditingState(createInitialEditingState() as EditingState);
+        setEditingState(createInitialEditingState());
         return;
       }
 
-      // Use type assertion to help TypeScript understand that the tool is a valid key
-      const toolData = editingToolsData[tool as keyof typeof editingToolsData];
+      const toolData = editingToolsData[tool];
       if (!toolData) return;
 
       // Special handling for undo/redo
-      if (tool === 'undo') {
-        handleUndo();
-        return;
-      } else if (tool === 'redo') {
-        handleRedo();
-        return;
-      }
+      // if (tool === 'undo') {
+      //   handleUndo();
+      //   return;
+      // } else if (tool === 'redo') {
+      //   handleRedo();
+      //   return;
+      // }
 
       // Handle parameter input for tools that need initial parameters
       if (toolData.phases[0] === 'parameter') {
-        // For real implementation, prompt user for parameter values
-        // Here we'll set defaults for demonstration
-        let initialParameters: EditingState['parameters'] = {};
+        // Set default parameters for tools that need them upfront
+        let initialParameters = {};
 
         if (tool === 'offset') {
           initialParameters = { distance: 10 };
+        } else if (tool === 'rotate') {
+          initialParameters = { angle: 90 };
         }
 
         setEditingState({
@@ -273,9 +259,9 @@ export function useEditing(
           tool,
           basePoint: null,
           selectedIds: [],
-          phase: toolData.phases[0],
+          phase: toolData.phases[0] as EditingPhase,
           parameters: initialParameters,
-        } as EditingState);
+        });
       } else {
         // Standard tool activation
         setEditingState({
@@ -283,9 +269,9 @@ export function useEditing(
           tool,
           basePoint: null,
           selectedIds: [],
-          phase: toolData.phases[0],
+          phase: toolData.phases[0] as EditingPhase,
           parameters: {},
-        } as EditingState);
+        });
       }
     },
     [handleUndo, handleRedo]
@@ -293,20 +279,23 @@ export function useEditing(
 
   // Update parameter for current editing operation
   const updateParameter = useCallback((paramName: string, value: number) => {
-    setEditingState((prevState: EditingState) => {
-      // Check if we need to move to the next phase
+    setEditingState((prevState) => {
       const currentTool = prevState.tool;
       if (!currentTool) return prevState;
 
-      const toolData =
-        editingToolsData[currentTool as keyof typeof editingToolsData];
+      const toolData = editingToolsData[currentTool];
       if (!toolData) return prevState;
 
-      let nextPhase = prevState.phase;
+      // Find next phase after parameter input
+      const currentPhaseIndex = toolData.phases.indexOf('parameter');
+      const nextPhase =
+        currentPhaseIndex >= 0 && currentPhaseIndex < toolData.phases.length - 1
+          ? toolData.phases[currentPhaseIndex + 1]
+          : prevState.phase;
 
       return {
         ...prevState,
-        phase: nextPhase,
+        phase: nextPhase as EditingPhase,
         parameters: {
           ...prevState.parameters,
           [paramName]: value,
@@ -329,17 +318,17 @@ export function useEditing(
     setStatusMessage(message);
   }, [editingState.isActive, editingState.tool, editingState.phase]);
 
-  // Handle keyboard shortcuts for editing operations - AutoCAD style command line
+  // Handle keyboard shortcuts for editing operations
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Handle Escape to cancel current operation
       if (e.key === 'Escape' && editingState.isActive) {
-        setEditingState(createInitialEditingState() as EditingState);
+        setEditingState(createInitialEditingState());
         keyBuffer.current = '';
         return;
       }
 
-      // Handle command combinations (Ctrl+Z for undo, Ctrl+Y for redo)
+      // Handle common shortcuts
       if (e.ctrlKey) {
         if (e.key === 'z') {
           e.preventDefault();
@@ -349,11 +338,22 @@ export function useEditing(
           e.preventDefault();
           handleRedo();
           return;
+        } else if (e.key === 'c' && !editingState.isActive) {
+          e.preventDefault();
+          setEditingTool('copy');
+          return;
+        } else if (e.key === 'm' && !editingState.isActive) {
+          e.preventDefault();
+          setEditingTool('move');
+          return;
+        } else if (e.key === 'r' && !editingState.isActive) {
+          e.preventDefault();
+          setEditingTool('rotate');
+          return;
         }
       }
 
-      // Only process shortcuts when not in an active operation
-      // or when the operation is waiting for parameter input
+      // Only process command input when not in an active operation
       if (editingState.isActive && editingState.phase !== 'parameter') return;
 
       // Track typed keys for AutoCAD-like command input
@@ -383,7 +383,6 @@ export function useEditing(
         }
       } else if (e.key === 'Enter' && keyBuffer.current) {
         // Enter key should execute the current command if any
-        // This is similar to AutoCAD's command line behavior
         const matchedTool = Object.entries(editingToolsData).find(
           ([tool, _]) => tool.toLowerCase() === keyBuffer.current
         );
@@ -412,7 +411,7 @@ export function useEditing(
     handleRedo,
   ]);
 
-  // Provides numeric input handling (similar to AutoCAD's command line)
+  // Handle numeric input for parameters
   const handleNumericInput = useCallback(
     (value: number) => {
       if (!editingState.isActive || !editingState.tool) return;
@@ -442,7 +441,7 @@ export function useEditing(
     handleEditingClick,
     executeOperation,
     handleNumericInput,
-    commandBuffer: keyBuffer.current, // Expose the command buffer for UI
+    commandBuffer: keyBuffer.current,
     handleUndo,
     handleRedo,
   };

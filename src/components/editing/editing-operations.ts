@@ -8,12 +8,16 @@ export function executeEditingOperation(
   selectedIds: string[],
   parameters: any,
   basePoint?: Point,
-  targetPoint?: Point,
-  secondaryPoint?: Point
+  targetPoint?: Point
 ): Shape[] {
+  // Return original shapes if no selection or required points are missing
+  if (!selectedIds.length) return shapes;
+
   const selectedShapes = shapes.filter((shape) =>
     selectedIds.includes(shape.id)
   );
+
+  if (selectedShapes.length === 0) return shapes;
 
   switch (operation) {
     case 'copy': {
@@ -22,9 +26,11 @@ export function executeEditingOperation(
       const dx = targetPoint.x - basePoint.x;
       const dy = targetPoint.y - basePoint.y;
 
+      // Create deep copies of the selected shapes with new IDs
       const newShapes: Shape[] = selectedShapes.map((shape) =>
         translateShape(shape, dx, dy)
       );
+
       return [...shapes, ...newShapes];
     }
 
@@ -34,36 +40,46 @@ export function executeEditingOperation(
       const dx = targetPoint.x - basePoint.x;
       const dy = targetPoint.y - basePoint.y;
 
+      // Move the selected shapes to the new position
       return shapes.map((shape) => {
         if (selectedIds.includes(shape.id)) {
-          return translateShape(shape, dx, dy);
+          return translateShape(shape, dx, dy, false); // Don't create new IDs when moving
         }
         return shape;
       });
     }
 
     case 'rotate': {
-      if (!basePoint || !parameters.angle) return shapes;
+      if (!basePoint) return shapes;
 
-      const angle = parameters.angle * (Math.PI / 180); // convert to radians
+      // Use provided angle or calculate from points
+      let angle = parameters.angle || 0;
+      if (targetPoint && !parameters.angle) {
+        // Calculate angle from base point to target point
+        const dx = targetPoint.x - basePoint.x;
+        const dy = targetPoint.y - basePoint.y;
+        angle = Math.atan2(dy, dx) * (180 / Math.PI);
+      }
 
+      // Convert degrees to radians
+      const radians = angle * (Math.PI / 180);
+
+      // Rotate the selected shapes
       return shapes.map((shape) => {
         if (selectedIds.includes(shape.id)) {
-          return rotateShape(shape, basePoint, angle);
+          return rotateShape(shape, basePoint, radians, false); // Don't create new IDs when rotating in place
         }
         return shape;
       });
     }
 
     case 'mirror': {
-      if (!basePoint || !secondaryPoint) return shapes;
+      if (!basePoint || !targetPoint) return shapes;
 
-      const newShapes: Shape[] = [];
-
-      selectedShapes.forEach((shape) => {
-        const mirroredShape = mirrorShape(shape, basePoint, secondaryPoint);
-        newShapes.push(mirroredShape);
-      });
+      // Create mirrored copies of the selected shapes
+      const newShapes: Shape[] = selectedShapes.map((shape) =>
+        mirrorShape(shape, basePoint, targetPoint)
+      );
 
       return [...shapes, ...newShapes];
     }
@@ -72,9 +88,15 @@ export function executeEditingOperation(
       if (!parameters.distance || selectedIds.length !== 1) return shapes;
 
       const shapeToOffset = shapes.find((shape) => shape.id === selectedIds[0]);
-      if (!shapeToOffset || !targetPoint) return shapes;
+      if (!shapeToOffset) return shapes;
 
-      const side = parameters.side || 'left';
+      // Determine side based on parameters or target point relative to base point
+      let side = parameters.side || 'right';
+      if (targetPoint && basePoint) {
+        // Calculate which side of the shape to offset to based on target point
+        side = determineSide(shapeToOffset, basePoint, targetPoint);
+      }
+
       const offsetedShape: Shape = offsetShape(
         shapeToOffset,
         parameters.distance,
@@ -89,6 +111,39 @@ export function executeEditingOperation(
   }
 }
 
+// Helper function to determine which side to offset to
+function determineSide(
+  shape: Shape,
+  basePoint: Point,
+  targetPoint: Point
+): 'left' | 'right' {
+  // For line shapes, determine side based on which side of the line the target point is on
+  if (shape.type === 'line' && shape.points.length >= 2) {
+    const p1 = shape.points[0];
+    const p2 = shape.points[1];
+
+    // Calculate vector from p1 to p2
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+
+    // Calculate normal vector (perpendicular to line)
+    const nx = -dy;
+    const ny = dx;
+
+    // Calculate vector from p1 to target
+    const tx = targetPoint.x - p1.x;
+    const ty = targetPoint.y - p1.y;
+
+    // Dot product to determine side
+    const dotProduct = nx * tx + ny * ty;
+
+    return dotProduct > 0 ? 'right' : 'left';
+  }
+
+  // For other shapes, use simple left/right determination
+  return targetPoint.x > basePoint.x ? 'right' : 'left';
+}
+
 // Deep clone a shape
 export function cloneShape(shape: Shape): Shape {
   return {
@@ -100,18 +155,35 @@ export function cloneShape(shape: Shape): Shape {
 }
 
 // Translate a shape by dx, dy
-export function translateShape(shape: Shape, dx: number, dy: number): Shape {
-  const newShape = cloneShape(shape);
+export function translateShape(
+  shape: Shape,
+  dx: number,
+  dy: number,
+  createNewId: boolean = true
+): Shape {
+  const newShape = createNewId
+    ? cloneShape(shape)
+    : { ...shape, points: [...shape.points.map((p) => ({ ...p }))] };
+
   newShape.points = newShape.points.map((point) => ({
     x: point.x + dx,
     y: point.y + dy,
   }));
+
   return newShape;
 }
 
 // Rotate a shape around a point
-export function rotateShape(shape: Shape, center: Point, angle: number): Shape {
-  const newShape = cloneShape(shape);
+export function rotateShape(
+  shape: Shape,
+  center: Point,
+  angle: number,
+  createNewId: boolean = true
+): Shape {
+  const newShape = createNewId
+    ? cloneShape(shape)
+    : { ...shape, points: [...shape.points.map((p) => ({ ...p }))] };
+
   newShape.points = newShape.points.map((point) => {
     // Translate point to origin
     const x = point.x - center.x;
@@ -129,6 +201,7 @@ export function rotateShape(shape: Shape, center: Point, angle: number): Shape {
       y: newY + center.y,
     };
   });
+
   return newShape;
 }
 
@@ -208,7 +281,9 @@ export function offsetShape(
 
       // Apply offset based on side
       const newRadius =
-        side === 'outer' ? radius + distance : Math.max(radius - distance, 0.1);
+        side === 'outer' || side === 'right'
+          ? radius + distance
+          : Math.max(radius - distance, 0.1);
 
       // Create a new arc with the modified radius
       return {
@@ -231,6 +306,43 @@ export function offsetShape(
           endAngle,
         },
       };
+
+    case 'circle':
+      // For circles, just need to modify the radius
+      if (shape.points.length < 2) return shape;
+
+      const circleCenter = shape.points[0];
+      const circleRadius = calculateDistance(circleCenter, shape.points[1]);
+
+      // Apply offset based on side
+      const newCircleRadius =
+        side === 'outer' || side === 'right'
+          ? circleRadius + distance
+          : Math.max(circleRadius - distance, 0.1);
+
+      newShape.points = [
+        { ...circleCenter },
+        {
+          x: circleCenter.x + newCircleRadius,
+          y: circleCenter.y,
+        },
+      ];
+
+      if (shape.properties) {
+        newShape.properties = {
+          ...newShape.properties,
+          radius: newCircleRadius,
+        };
+      }
+
+      return newShape;
+
+    case 'polyline':
+    case 'polygon':
+      // For polylines and polygons, offset each segment
+      // This is complex and would need a more robust implementation
+      // Not fully implemented here
+      return shape;
 
     default:
       return shape;

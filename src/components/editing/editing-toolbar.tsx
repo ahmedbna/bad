@@ -8,6 +8,8 @@ import {
   CopyPlus,
   FlipHorizontal,
   XCircle,
+  Undo,
+  Redo,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,8 +22,7 @@ import {
 import { EditingTool, EditingState, EditingPhase } from './constants';
 import { Label } from '@/components/ui/label';
 
-// Import from editingToolsData from constants
-const editingToolsData = {
+export const editingToolsData = {
   copy: {
     icon: Copy,
     label: 'Copy',
@@ -73,8 +74,8 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
       tool,
       basePoint: null,
       selectedIds: [],
-      phase: editingToolsData[tool].phases[0],
       parameters: {},
+      phase: editingToolsData[tool].phases[0] as EditingPhase,
     });
   };
 
@@ -89,7 +90,7 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
     });
   };
 
-  const handleParameterChange = (param, value) => {
+  const handleParameterChange = (param: any, value: any) => {
     setEditingState({
       ...editingState,
       parameters: {
