@@ -28,6 +28,10 @@ import { TextDialog } from './dialogs/text-dialog';
 import { DimensionDialog } from './dialogs/dimension-dialog';
 import { PolarTrackingDialog } from './dialogs/polar-tracking-dialog';
 import { drawPolarTrackingLines } from './polar/polar-tracking';
+import { EditingToolbar } from '@/components/editing/editing-toolbar';
+import { useEditing } from '@/components/editing/useEditing';
+import { EditingTool } from './editing/constants';
+import { renderEditingVisuals } from './editing/render-editing';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -94,6 +98,15 @@ export const AutoCADClone = () => {
     scale,
     offset,
   });
+
+  const {
+    editingState,
+    setEditingState,
+    setEditingTool,
+    handleEditingClick,
+    statusMessage,
+    commandBuffer,
+  } = useEditing(shapes, setShapes, scale, offset, selectedShapes);
 
   // Dialog states
   const [showPolygonDialog, setShowPolygonDialog] = useState(false);
@@ -254,6 +267,10 @@ export const AutoCADClone = () => {
       renderSnapIndicator(ctx, activeSnapResult, scale, offset);
     }
 
+    if (editingState.isActive) {
+      renderEditingVisuals(ctx, editingState, scale, offset);
+    }
+
     if (
       drawingPoints &&
       drawingPoints.length > 0 &&
@@ -382,6 +399,162 @@ export const AutoCADClone = () => {
     }));
   };
 
+  // Inside your component
+  const keyBuffer = useRef<string>('');
+  const keyBufferTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle keyboard shortcuts for both drawing and editing tools
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input field
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      // Handle Escape to cancel current operation
+      if (e.key === 'Escape') {
+        if (editingState.isActive) {
+          // Cancel editing operation
+          setEditingState({
+            isActive: false,
+            tool: null,
+            basePoint: null,
+            selectedIds: [],
+            phase: 'select',
+            parameters: {},
+          });
+        } else if (drawingPoints.length > 0) {
+          // Cancel current drawing
+          setDrawingPoints([]);
+          setTempShape(null);
+        } else {
+          // Deselect selected shapes
+          setSelectedShapes([]);
+        }
+        keyBuffer.current = '';
+        return;
+      }
+
+      // Handle common shortcuts
+      // if (e.ctrlKey) {
+      //   if (e.key === 'z') {
+      //     e.preventDefault();
+      //     handleUndo();
+      //     return;
+      //   } else if (e.key === 'y') {
+      //     e.preventDefault();
+      //     handleRedo();
+      //     return;
+      //   } else if (e.key === 'a') {
+      //     e.preventDefault();
+      //     // Select all shapes
+      //     setSelectedShapes([...shapes]);
+      //     return;
+      //   }
+      // }
+
+      // Only process shortcut commands when not in active operation
+      if (editingState.isActive || drawingPoints.length > 0) return;
+
+      // Track typed keys for AutoCAD-like command input
+      if (e.key.length === 1 && e.key.match(/[a-z0-9]/i)) {
+        // Clear any pending timeout
+        if (keyBufferTimeoutRef.current) {
+          clearTimeout(keyBufferTimeoutRef.current);
+        }
+
+        // Add key to buffer
+        keyBuffer.current += e.key.toLowerCase();
+
+        // Check for drawing tool shortcuts
+        const drawingShortcuts: Record<string, string> = {
+          l: 'line',
+          c: 'circle',
+          a: 'arc',
+          r: 'rectangle',
+          p: 'polygon',
+          t: 'text',
+          sp: 'spline',
+        };
+
+        // Check editing tool shortcuts from the editingToolsData
+        const editingShortcuts: Record<string, EditingTool> = {
+          m: 'move',
+          cp: 'copy',
+          ro: 'rotate',
+          mi: 'mirror',
+          tr: 'trim',
+          ex: 'extend',
+          f: 'fillet',
+          o: 'offset',
+          j: 'join',
+          cha: 'chamfer',
+          s: 'stretch',
+        };
+
+        // Check for drawing tool match
+        if (drawingShortcuts[keyBuffer.current]) {
+          setSelectedTool(drawingShortcuts[keyBuffer.current]);
+          // Deactivate any editing tool
+          if (editingState.isActive) {
+            setEditingState({
+              isActive: false,
+              tool: null,
+              basePoint: null,
+              selectedIds: [],
+              phase: 'select',
+              parameters: {},
+            });
+          }
+          keyBuffer.current = '';
+        }
+        // Check for editing tool match
+        else if (editingShortcuts[keyBuffer.current]) {
+          setEditingTool(editingShortcuts[keyBuffer.current]);
+          // Deactivate any drawing tool
+          setSelectedTool('select');
+          keyBuffer.current = '';
+        } else {
+          // Set timeout to clear buffer after 1 second
+          keyBufferTimeoutRef.current = setTimeout(() => {
+            keyBuffer.current = '';
+          }, 1000);
+        }
+      } else if (e.key === 'Enter' && keyBuffer.current) {
+        // Enter key should execute the current command if any
+        // if (keyBuffer.current === 'undo') {
+        //   handleUndo();
+        // } else if (keyBuffer.current === 'redo') {
+        //   handleRedo();
+        // }
+        keyBuffer.current = '';
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (keyBufferTimeoutRef.current) {
+        clearTimeout(keyBufferTimeoutRef.current);
+      }
+    };
+  }, [
+    editingState.isActive,
+    drawingPoints.length,
+    setEditingState,
+    setEditingTool,
+    setSelectedTool,
+    setDrawingPoints,
+    setTempShape,
+    setSelectedShapes,
+    shapes,
+    // handleUndo,
+    // handleRedo,
+  ]);
+
   return (
     <div className='flex flex-col h-screen'>
       <div className='flex flex-1 overflow-hidden'>
@@ -417,6 +590,10 @@ export const AutoCADClone = () => {
           setTempShape={setTempShape}
           polarSettings={polarSettings}
           setShowPolarDialog={setShowPolarDialog}
+          editingState={editingState}
+          setEditingState={setEditingState}
+          statusMessage={statusMessage}
+          commandBuffer={commandBuffer}
         />
 
         {/* Drawing canvas */}
@@ -429,60 +606,71 @@ export const AutoCADClone = () => {
             onWheel={(e) =>
               handleWheel({ e, scale, offset, setScale, setOffset })
             }
-            onClick={(e) =>
-              handleCanvasClick({
-                e,
-                selectedTool,
-                scale,
-                offset,
-                drawingPoints,
-                setDrawingPoints,
-                setTempShape,
-                tempShape,
-                ellipseParams,
-                splineTension,
-                polygonSides,
-                completeShape,
-                shapes,
-                setSelectedShapes,
-                arcMode,
-                snapEnabled: snapSettings.enabled,
-                activeSnapResult,
-                textParams,
-                dimensionParams,
-              })
-            }
-            onDoubleClick={(e) =>
-              handleCanvasDoubleClick({
-                e,
-                selectedTool,
-                drawingPoints,
-                splineTension,
-                completeShape,
-                scale,
-                offset,
-                shapes,
-                setShowTextDialog,
-                setTextParams,
-                setEditingTextId,
-              })
-            }
-            onMouseDown={(e) =>
-              handleMouseDown({
-                e,
-                selectedTool,
-                scale,
-                offset,
-                drawingPoints,
-                setIsDragging,
-                setDragStart,
-                setDrawingPoints,
-                setTempShape,
-                setAreaSelection,
-                snapEnabled: snapSettings.enabled,
-                activeSnapResult,
-              })
-            }
+            onClick={(e) => {
+              // Handle editing clicks if editing mode is active
+              if (editingState.isActive) {
+                handleEditingClick(e);
+              } else {
+                handleCanvasClick({
+                  e,
+                  selectedTool,
+                  scale,
+                  offset,
+                  drawingPoints,
+                  setDrawingPoints,
+                  setTempShape,
+                  tempShape,
+                  ellipseParams,
+                  splineTension,
+                  polygonSides,
+                  completeShape,
+                  shapes,
+                  setSelectedShapes,
+                  arcMode,
+                  snapEnabled: snapSettings.enabled,
+                  activeSnapResult,
+                  textParams,
+                  dimensionParams,
+                });
+              }
+            }}
+            onDoubleClick={(e) => {
+              // Only handle double click when not in editing mode
+              if (!editingState.isActive) {
+                handleCanvasDoubleClick({
+                  e,
+                  selectedTool,
+                  drawingPoints,
+                  splineTension,
+                  completeShape,
+                  scale,
+                  offset,
+                  shapes,
+                  setShowTextDialog,
+                  setTextParams,
+                  setEditingTextId,
+                });
+              }
+            }}
+            onMouseDown={(e) => {
+              // Only handle mouse down when not in editing mode
+              if (!editingState.isActive) {
+                handleMouseDown({
+                  e,
+                  selectedTool,
+                  scale,
+                  offset,
+                  drawingPoints,
+                  setIsDragging,
+                  setDragStart,
+                  setDrawingPoints,
+                  setTempShape,
+                  setAreaSelection,
+                  snapEnabled: snapSettings.enabled,
+                  activeSnapResult,
+                });
+              }
+            }}
             onMouseMove={(e) =>
               handleMouseMove({
                 e,
@@ -512,22 +700,26 @@ export const AutoCADClone = () => {
                 polarSettings,
               })
             }
-            onMouseUp={(e) =>
-              handleMouseUp({
-                e,
-                areaSelection,
-                shapes,
-                setAreaSelection,
-                setSelectedShapes,
-                setIsDragging,
-              })
-            }
+            onMouseUp={(e) => {
+              // Handle mouse up differently in editing mode
+              if (!editingState.isActive) {
+                handleMouseUp({
+                  e,
+                  areaSelection,
+                  shapes,
+                  setAreaSelection,
+                  setSelectedShapes,
+                  setIsDragging,
+                });
+              } else {
+                setIsDragging(false);
+              }
+            }}
             onMouseLeave={() => {
               setIsDragging(false);
               clearSnap();
             }}
-            className='cursor-crosshair bg-muted'
-            // className='cursor-crosshair bg-muted rounded-xl border shadow-sm'
+            className={`cursor-${editingState.isActive ? 'pointer' : 'crosshair'} bg-muted`}
           />
         </div>
       </div>

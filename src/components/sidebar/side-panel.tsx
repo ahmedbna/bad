@@ -11,6 +11,7 @@ import { Switch } from '../ui/switch';
 import { Button } from '../ui/button';
 import { EditingToolbar } from '../editing/editing-toolbar';
 import { useState } from 'react';
+import { EditingState } from '../editing/constants';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -56,6 +57,10 @@ type Props = {
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
   polarSettings: PolarSettings;
   setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  editingState: EditingState;
+  setEditingState: React.Dispatch<React.SetStateAction<EditingState>>;
+  statusMessage: string;
+  commandBuffer: string;
 };
 
 export const SidePanel = ({
@@ -90,24 +95,11 @@ export const SidePanel = ({
   setTempShape,
   polarSettings,
   setShowPolarDialog,
+  editingState,
+  setEditingState,
+  statusMessage,
+  commandBuffer,
 }: Props) => {
-  const [editingState, setEditingState] = useState({
-    isActive: false,
-    tool: null,
-    basePoint: null,
-    selectedIds: [],
-    phase: 'select',
-    parameters: {
-      angle: 0,
-      distance: 0,
-      radius: 0,
-      length: 0,
-      distance1: 0,
-      distance2: 0,
-      side: 'left',
-    },
-  });
-
   return (
     <div className='w-64 h-full flex flex-col border-r'>
       <div className='w-full border-b'>
@@ -117,11 +109,6 @@ export const SidePanel = ({
           <ModeToggle variant='ghost' />
         </div>
       </div>
-
-      <EditingToolbar
-        editingState={editingState}
-        setEditingState={setEditingState}
-      />
 
       <div className='p-2'>
         <Tabs
@@ -163,6 +150,10 @@ export const SidePanel = ({
               setSelectedTab={setSelectedTab}
               polarSettings={polarSettings}
               setShowPolarDialog={setShowPolarDialog}
+              editingState={editingState}
+              setEditingState={setEditingState}
+              statusMessage={statusMessage}
+              commandBuffer={commandBuffer}
             />
           </TabsContent>
           <TabsContent value='props'>

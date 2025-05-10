@@ -57,6 +57,8 @@ import { StatusBar } from './status-bar';
 import { Commands } from './commands';
 import { ShapeInputPanel } from './shape-input-panel';
 import { Switch } from '../ui/switch';
+import { EditingState } from '../editing/constants';
+import { EditingToolbar } from '../editing/editing-toolbar';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -97,6 +99,10 @@ type Props = {
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
   polarSettings: PolarSettings;
   setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  editingState: EditingState;
+  setEditingState: React.Dispatch<React.SetStateAction<EditingState>>;
+  statusMessage: string;
+  commandBuffer: string;
 };
 
 export const Tools = ({
@@ -126,6 +132,10 @@ export const Tools = ({
   setSelectedTab,
   polarSettings,
   setShowPolarDialog,
+  editingState,
+  setEditingState,
+  statusMessage,
+  commandBuffer,
 }: Props) => {
   const isSnapModeActive = (mode: SnapMode): boolean => {
     return snapSettings.modes.has(mode);
@@ -339,13 +349,91 @@ export const Tools = ({
 
       <Separator className='my-4' />
 
-      <h2 className='text-md font-bold text-muted-foreground mb-1'>Modify</h2>
+      {/* Add the editing toolbar component above the canvas */}
+      <EditingToolbar
+        editingState={editingState}
+        setEditingState={setEditingState}
+      />
+
+      {/* Show status message when in editing mode */}
+      {editingState.isActive && (
+        <div className='absolute top-4 left-1/2 transform -translate-x-1/2 bg-background px-4 py-2 rounded-md shadow-md z-10 border'>
+          <p className='text-sm font-medium'>{statusMessage}</p>
+          {commandBuffer && (
+            <p className='text-xs text-muted-foreground'>{commandBuffer}</p>
+          )}
+        </div>
+      )}
+
+      {/* Add a command line input for numeric values during editing */}
+      {editingState.isActive && editingState.phase === 'parameter' && (
+        <div className='border-t p-2 flex items-center'>
+          <span className='text-sm font-medium mr-2'>Command:</span>
+          <input
+            type='text'
+            className='px-2 py-1 border rounded flex-1'
+            placeholder='Enter value...'
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const value = parseFloat(e.currentTarget.value);
+                if (!isNaN(value)) {
+                  // Update parameter and move to next phase
+                  if (editingState.tool === 'rotate') {
+                    setEditingState({
+                      ...editingState,
+                      parameters: { ...editingState.parameters, angle: value },
+                      phase: 'target',
+                    });
+                  } else if (editingState.tool === 'offset') {
+                    setEditingState({
+                      ...editingState,
+                      parameters: {
+                        ...editingState.parameters,
+                        distance: value,
+                      },
+                      phase: 'select',
+                    });
+                  } else if (editingState.tool === 'chamfer') {
+                    if (!editingState.parameters.distance1) {
+                      setEditingState({
+                        ...editingState,
+                        parameters: {
+                          ...editingState.parameters,
+                          distance1: value,
+                        },
+                      });
+                    } else {
+                      setEditingState({
+                        ...editingState,
+                        parameters: {
+                          ...editingState.parameters,
+                          distance2: value,
+                        },
+                        phase: 'select',
+                      });
+                    }
+                  } else if (editingState.tool === 'fillet') {
+                    setEditingState({
+                      ...editingState,
+                      parameters: { ...editingState.parameters, radius: value },
+                      phase: 'select',
+                    });
+                  }
+                  e.currentTarget.value = '';
+                }
+              }
+            }}
+          />
+        </div>
+      )}
+
+      {/* <h2 className='text-md font-bold text-muted-foreground mb-1'>Modify</h2>
       <Commands
         selectedShapes={selectedShapes}
         selectedCommand={selectedCommand}
         setSelectedCommand={setSelectedCommand}
         handleDeleteShape={handleDeleteShape}
-      />
+      /> */}
 
       <Separator className='my-4' />
 
