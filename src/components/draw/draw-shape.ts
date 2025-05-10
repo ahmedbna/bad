@@ -1,6 +1,7 @@
 import { DimensionParams, Point, ShapeProperties, TextParams } from '@/types';
 import { Shape } from '@/types';
 import { worldToCanvas } from '@/utils/worldToCanvas';
+import { EditingState } from '@/components/editing/constants';
 
 type Props = {
   ctx: CanvasRenderingContext2D;
@@ -9,6 +10,7 @@ type Props = {
   shape: Shape;
   isSelected: boolean;
   isTemporary: boolean;
+  editingState: EditingState;
 };
 
 // Draw shape
@@ -19,15 +21,52 @@ export const drawShape = ({
   scale,
   offset,
   isTemporary = false,
+  editingState,
 }: Props) => {
-  ctx.strokeStyle = isSelected ? '#2563eb' : isTemporary ? '#9ca3af' : '#000';
-  ctx.lineWidth = isSelected ? 2 : 1;
+  // Set styles based on selection and editing state
+  const isEditingSelected =
+    editingState.isActive && editingState.selectedIds.includes(shape.id);
+
+  // Regular selection style
+  // if (isSelected && !editingState.isActive) {
+  //   ctx.strokeStyle = '#2563eb'; // Blue for regular selection
+  //   ctx.lineWidth = ((shape.strokeWidth || 1) * 1.5) / scale;
+  // }
+
+  ctx.strokeStyle =
+    isSelected && !editingState.isActive
+      ? '#2563eb'
+      : isTemporary
+        ? '#9ca3af'
+        : '#000';
+  ctx.lineWidth = isSelected && !editingState.isActive ? 2 : 1;
 
   // Add a fill color with transparency for temporary shapes to improve visual feedback
   if (isTemporary) {
     ctx.fillStyle = 'rgba(156, 163, 175, 0.1)';
   } else {
     ctx.fillStyle = isSelected ? 'rgba(37, 99, 235, 0.1)' : 'rgba(0, 0, 0, 0)';
+  }
+
+  // Editing selection style - different for different editing operations
+  if (isEditingSelected) {
+    switch (editingState.tool) {
+      case 'move':
+      case 'copy':
+        ctx.strokeStyle = '#9333ea'; // Purple for move/copy
+        break;
+      case 'rotate':
+        ctx.strokeStyle = '#ea580c'; // Orange for rotate
+        break;
+      case 'mirror':
+        ctx.strokeStyle = '#16a34a'; // Green for mirror
+        break;
+      case 'offset':
+        ctx.strokeStyle = '#dc2626'; // Red for offset
+        break;
+      default:
+        ctx.strokeStyle = '#2563eb'; // Default blue
+    }
   }
 
   switch (shape.type) {

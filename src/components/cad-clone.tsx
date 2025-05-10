@@ -16,6 +16,7 @@ import { handleMouseDown } from './events/handleMouseDown';
 import {
   renderAreaSelection,
   createInitialAreaSelectionState,
+  startAreaSelection,
 } from './select/handleAreaSelection';
 import { handleMouseUp } from './events/handleMouseUp';
 import { ArcModeDialog } from '@/components/dialogs/arc-mode-dialog';
@@ -32,6 +33,7 @@ import { EditingToolbar } from '@/components/editing/editing-toolbar';
 import { useEditing } from '@/components/editing/useEditing';
 import { EditingTool } from './editing/constants';
 import { renderEditingVisuals } from './editing/render-editing';
+import { handleSelection } from './select/handleSelection';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -246,6 +248,7 @@ export const AutoCADClone = () => {
         shape,
         isSelected,
         isTemporary: false,
+        editingState,
       });
     });
 
@@ -258,6 +261,7 @@ export const AutoCADClone = () => {
         shape: tempShape,
         isSelected: false,
         isTemporary: true,
+        editingState,
       });
     }
 
@@ -269,9 +273,7 @@ export const AutoCADClone = () => {
       renderSnapIndicator(ctx, activeSnapResult, scale, offset);
     }
 
-    if (editingState.isActive) {
-      renderEditingVisuals(ctx, editingState, scale, offset);
-    }
+    renderEditingVisuals(ctx, editingState, scale, offset);
 
     if (
       drawingPoints &&
@@ -601,6 +603,14 @@ export const AutoCADClone = () => {
               // Handle editing clicks if editing mode is active
               if (editingState.isActive) {
                 handleEditingClick(e);
+
+                handleSelection({
+                  e,
+                  scale,
+                  offset,
+                  shapes,
+                  setSelectedShapes,
+                });
               } else {
                 handleCanvasClick({
                   e,
@@ -660,6 +670,8 @@ export const AutoCADClone = () => {
                   snapEnabled: snapSettings.enabled,
                   activeSnapResult,
                 });
+              } else {
+                startAreaSelection(e, scale, offset, setAreaSelection);
               }
             }}
             onMouseMove={(e) =>
