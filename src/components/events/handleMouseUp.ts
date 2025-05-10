@@ -30,8 +30,7 @@ export const handleMouseUp = ({
     const selectedIds = completeAreaSelection(
       shapes,
       areaSelection,
-      setAreaSelection,
-      isShiftSelect
+      setAreaSelection
     );
 
     // Update selected shapes

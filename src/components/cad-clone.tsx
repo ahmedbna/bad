@@ -29,9 +29,12 @@ import { TextDialog } from './dialogs/text-dialog';
 import { DimensionDialog } from './dialogs/dimension-dialog';
 import { PolarTrackingDialog } from './dialogs/polar-tracking-dialog';
 import { drawPolarTrackingLines } from './polar/polar-tracking';
-import { EditingToolbar } from '@/components/editing/editing-toolbar';
+import {
+  EditingToolbar,
+  editingToolsData,
+} from '@/components/editing/editing-toolbar';
 import { useEditing } from '@/components/editing/useEditing';
-import { EditingTool } from './editing/constants';
+import { EditingPhase, EditingTool } from './editing/constants';
 import { renderEditingVisuals } from './editing/render-editing';
 import { handleSelection } from './select/handleSelection';
 
@@ -654,8 +657,11 @@ export const AutoCADClone = () => {
               }
             }}
             onMouseDown={(e) => {
-              // Only handle mouse down when not in editing mode
-              if (!editingState.isActive) {
+              if (editingState.isActive && editingState.phase === 'select') {
+                // In editing mode and selection phase, start area selection
+                startAreaSelection(e, scale, offset, setAreaSelection);
+              } else if (!editingState.isActive) {
+                // Not in editing mode, handle regular mouse down
                 handleMouseDown({
                   e,
                   selectedTool,
@@ -670,8 +676,6 @@ export const AutoCADClone = () => {
                   snapEnabled: snapSettings.enabled,
                   activeSnapResult,
                 });
-              } else {
-                startAreaSelection(e, scale, offset, setAreaSelection);
               }
             }}
             onMouseMove={(e) =>
@@ -704,19 +708,14 @@ export const AutoCADClone = () => {
               })
             }
             onMouseUp={(e) => {
-              // Handle mouse up differently in editing mode
-              if (!editingState.isActive) {
-                handleMouseUp({
-                  e,
-                  areaSelection,
-                  shapes,
-                  setAreaSelection,
-                  setSelectedShapes,
-                  setIsDragging,
-                });
-              } else {
-                setIsDragging(false);
-              }
+              handleMouseUp({
+                e,
+                areaSelection,
+                shapes,
+                setAreaSelection,
+                setSelectedShapes,
+                setIsDragging,
+              });
             }}
             onMouseLeave={() => {
               setIsDragging(false);

@@ -74,6 +74,54 @@ export function useEditing(
     }
   }, [shapes, history]);
 
+  // Execute the current editing operation
+  const executeOperation = useCallback(
+    (targetPoint?: Point, secondaryPoint?: Point, additionalParams?: any) => {
+      if (!editingState.isActive || !editingState.tool) return;
+
+      // Determine which IDs to use - either from editing state or selected shapes
+      const idsToUse =
+        editingState.selectedIds.length > 0
+          ? editingState.selectedIds
+          : selectedShapeIds;
+
+      // Save current state to history before executing operation
+      addToHistory([...shapes]);
+
+      const newShapes = executeEditingOperation(
+        editingState.tool,
+        shapes,
+        idsToUse,
+        {
+          ...editingState.parameters,
+          ...additionalParams,
+        },
+        editingState.basePoint || undefined,
+        targetPoint
+      );
+
+      setShapes(newShapes);
+
+      // Reset the state or keep the tool active based on operation type
+      if (['copy', 'offset'].includes(editingState.tool)) {
+        // For 'copy' and 'offset', keep the tool active for continuous operations
+        const initialPhase =
+          editingToolsData[editingState.tool]?.phases?.[0] || 'select';
+        setEditingState({
+          ...editingState,
+          selectedIds: [],
+          basePoint: null,
+          phase: initialPhase as EditingPhase,
+          parameters: {}, // Reset parameters for next operation
+        });
+      } else {
+        // For other tools (move, rotate, mirror), reset to initial state
+        setEditingState(createInitialEditingState());
+      }
+    },
+    [editingState, shapes, setShapes, selectedShapeIds, addToHistory]
+  );
+
   // Handle canvas click during editing
   const handleEditingClick = useCallback(
     (e: React.MouseEvent) => {
@@ -87,16 +135,17 @@ export function useEditing(
 
       switch (editingState.phase) {
         case 'select':
-          // Use the selectedShapeIds provided from the parent component
+          // Check if shapes are already selected (from before activating the tool)
           if (selectedShapeIds.length > 0) {
+            // Use the existing selections and move to the next phase
+            const toolData = editingToolsData[editingState.tool];
+            if (!toolData) return;
+
             // For offset tool, only one shape can be selected at a time
             if (editingState.tool === 'offset' && selectedShapeIds.length > 1) {
               setStatusMessage('Please select only one object for offset');
               return;
             }
-
-            const toolData = editingToolsData[editingState.tool];
-            if (!toolData) return;
 
             const currentPhaseIndex = toolData.phases.indexOf('select');
             const nextPhase =
@@ -105,14 +154,17 @@ export function useEditing(
                 ? toolData.phases[currentPhaseIndex + 1]
                 : 'select';
 
-            // Update state to move to the next phase
+            // Update state to move to the next phase with already selected shapes
             setEditingState((prev) => ({
               ...prev,
               selectedIds: selectedShapeIds,
               phase: nextPhase as EditingPhase,
             }));
           } else {
-            setStatusMessage('Please select at least one object');
+            // Keep in selection phase until user selects objects
+            // This will be handled by area selection or clicking on objects
+            // We don't provide feedback here as the selection hasn't happened yet
+            return;
           }
           break;
 
@@ -172,55 +224,15 @@ export function useEditing(
           break;
       }
     },
-    [editingState, selectedShapeIds, scale, offset]
-  );
-
-  // Execute the current editing operation
-  const executeOperation = useCallback(
-    (targetPoint?: Point, secondaryPoint?: Point, additionalParams?: any) => {
-      if (!editingState.isActive || !editingState.tool) return;
-
-      // Determine which IDs to use - either from editing state or selected shapes
-      const idsToUse =
-        editingState.selectedIds.length > 0
-          ? editingState.selectedIds
-          : selectedShapeIds;
-
-      // Save current state to history before executing operation
-      addToHistory([...shapes]);
-
-      const newShapes = executeEditingOperation(
-        editingState.tool,
-        shapes,
-        idsToUse,
-        {
-          ...editingState.parameters,
-          ...additionalParams,
-        },
-        editingState.basePoint || undefined,
-        targetPoint
-      );
-
-      setShapes(newShapes);
-
-      // Reset the state or keep the tool active based on operation type
-      if (['copy', 'offset'].includes(editingState.tool)) {
-        // For 'copy' and 'offset', keep the tool active for continuous operations
-        const initialPhase =
-          editingToolsData[editingState.tool]?.phases?.[0] || 'select';
-        setEditingState({
-          ...editingState,
-          selectedIds: [],
-          basePoint: null,
-          phase: initialPhase as EditingPhase,
-          parameters: {}, // Reset parameters for next operation
-        });
-      } else {
-        // For other tools (move, rotate, mirror), reset to initial state
-        setEditingState(createInitialEditingState());
-      }
-    },
-    [editingState, shapes, setShapes, selectedShapeIds, addToHistory]
+    [
+      editingState,
+      selectedShapeIds,
+      scale,
+      offset,
+      executeOperation,
+      editingToolsData,
+      setStatusMessage,
+    ]
   );
 
   // Set the editing tool
@@ -243,6 +255,9 @@ export function useEditing(
       //   return;
       // }
 
+      // Check if shapes are already selected before activating tool
+      const hasExistingSelection = selectedShapeIds.length > 0;
+
       // Handle parameter input for tools that need initial parameters
       if (toolData.phases[0] === 'parameter') {
         // Set default parameters for tools that need them upfront
@@ -258,25 +273,32 @@ export function useEditing(
           isActive: true,
           tool,
           basePoint: null,
-          selectedIds: [],
+          selectedIds: hasExistingSelection ? selectedShapeIds : [],
           phase: toolData.phases[0] as EditingPhase,
           parameters: initialParameters,
         });
       } else {
         // Standard tool activation
+        // If there are already selected shapes, we might want to skip the select phase
+        const startPhase =
+          hasExistingSelection && toolData.phases.includes('select')
+            ? toolData.phases[toolData.phases.indexOf('select') + 1]
+            : toolData.phases[0];
+
         setEditingState({
           isActive: true,
           tool,
           basePoint: null,
-          selectedIds: [],
-          phase: toolData.phases[0] as EditingPhase,
+          selectedIds: hasExistingSelection ? selectedShapeIds : [],
+          phase: hasExistingSelection
+            ? (startPhase as EditingPhase)
+            : (toolData.phases[0] as EditingPhase),
           parameters: {},
         });
       }
     },
-    [handleUndo, handleRedo]
+    [selectedShapeIds]
   );
-
   // Update parameter for current editing operation
   const updateParameter = useCallback((paramName: string, value: number) => {
     setEditingState((prevState) => {

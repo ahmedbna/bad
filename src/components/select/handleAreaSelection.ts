@@ -963,8 +963,7 @@ export const updateAreaSelection = (
 export const completeAreaSelection = (
   shapes: Shape[],
   areaSelection: AreaSelectionState,
-  setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>,
-  isShiftSelect: boolean
+  setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>
 ): string[] => {
   if (
     !areaSelection.active ||
