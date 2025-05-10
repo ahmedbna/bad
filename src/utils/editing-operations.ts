@@ -1,6 +1,9 @@
 import { Point, Shape } from '@/types';
-import { angleFromPoints, calculateDistance } from './calculations';
-// import {  intersectShapes } from './geometry';
+import {
+  angleFromPoints,
+  calculateDistance,
+  intersectShapes,
+} from './calculations';
 
 // Deep clone a shape
 export function cloneShape(shape: Shape): Shape {
