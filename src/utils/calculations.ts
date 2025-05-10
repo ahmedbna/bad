@@ -1,4 +1,4 @@
-import { Point } from '@/types/point';
+import { Point } from '@/types';
 
 /**
  * Calculate distance between two points
@@ -403,3 +403,22 @@ export const pointOnArc = (
 export const distance = (p1: Point, p2: Point): number => {
   return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
 };
+
+/**
+ * Calculate the angle in radians from the positive x-axis to the line formed by two points
+ * @param p1 The reference point
+ * @param p2 The target point
+ * @returns The angle in radians (0 to 2π)
+ */
+export function angleFromPoints(p1: Point, p2: Point): number {
+  // Calculate the angle using Math.atan2
+  // atan2 returns angle in range -π to π, with 0 at positive x-axis
+  let angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+
+  // Convert to range 0 to 2π if negative
+  if (angle < 0) {
+    angle += 2 * Math.PI;
+  }
+
+  return angle;
+}
