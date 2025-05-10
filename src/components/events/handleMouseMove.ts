@@ -1,5 +1,11 @@
 import { DrawingTool, ArcMode } from '@/constants';
-import { DimensionParams, Point, Shape, TextParams } from '@/types';
+import {
+  DimensionParams,
+  Point,
+  PolarSettings,
+  Shape,
+  TextParams,
+} from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import {
   AreaSelectionState,
@@ -12,6 +18,7 @@ import {
   previewStartEndRadiusArc,
   previewThreePointArc,
 } from '../arc/handle-arc';
+import { applyPolarTracking } from '../polar/polar-tracking';
 
 interface MouseMoveProps {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -43,6 +50,7 @@ interface MouseMoveProps {
   handleCursorMove: (screenPoint: Point) => Point;
   textParams: TextParams;
   dimensionParams: DimensionParams;
+  polarSettings: PolarSettings;
 }
 
 /**
@@ -73,6 +81,7 @@ export const handleMouseMove = ({
   handleCursorMove,
   textParams,
   dimensionParams,
+  polarSettings,
 }: MouseMoveProps) => {
   try {
     // Get mouse position in canvas coordinates
@@ -88,6 +97,17 @@ export const handleMouseMove = ({
       snappedPoint = handleCursorMove(canvasPoint);
     } else {
       snappedPoint = canvasToWorld({ point: canvasPoint, offset, scale });
+    }
+
+    // Apply polar tracking if enabled and we have a starting point
+    if (polarSettings.enabled && drawingPoints.length > 0) {
+      const referencePoint = drawingPoints[drawingPoints.length - 1];
+      snappedPoint = applyPolarTracking(
+        referencePoint,
+        snappedPoint,
+        polarSettings,
+        scale
+      );
     }
 
     // Early exit if mouse is outside the canvas bounds

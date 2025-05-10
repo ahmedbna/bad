@@ -26,6 +26,8 @@ import { EllipseDialog } from './dialogs/ellipse-dialog';
 import { SplineDialog } from './dialogs/spline-dialog';
 import { TextDialog } from './dialogs/text-dialog';
 import { DimensionDialog } from './dialogs/dimension-dialog';
+import { PolarTrackingDialog } from './dialogs/polar-tracking-dialog';
+import { drawPolarTrackingLines } from './polar/polar-tracking';
 
 export const AutoCADClone = () => {
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
@@ -124,6 +126,15 @@ export const AutoCADClone = () => {
 
   // Reference to track mouse position
   const [mousePosition, setMousePosition] = useState<Point | null>(null);
+
+  const [polarSettings, setPolarSettings] = useState({
+    enabled: true,
+    angleIncrement: 45, // Default 45 degrees
+    angles: [0, 45, 90, 135, 180, 225, 270, 315], // Default angles
+    snapThreshold: 100, // Snap threshold in pixels
+    trackingLines: true, // Show tracking lines
+  });
+  const [showPolarDialog, setShowPolarDialog] = useState(false);
 
   // Refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -242,6 +253,24 @@ export const AutoCADClone = () => {
     if (snapSettings.enabled && activeSnapResult) {
       renderSnapIndicator(ctx, activeSnapResult, scale, offset);
     }
+
+    if (
+      drawingPoints &&
+      drawingPoints.length > 0 &&
+      polarSettings.enabled &&
+      polarSettings.trackingLines &&
+      mousePosition
+    ) {
+      drawPolarTrackingLines({
+        dpr,
+        ctx,
+        scale,
+        offset,
+        mousePosition,
+        angles: polarSettings.angles,
+        originPoint: drawingPoints[0],
+      });
+    }
   };
 
   // Complete shape and add to shapes list
@@ -331,7 +360,27 @@ export const AutoCADClone = () => {
     };
   }, [selectedShapes]);
 
-  console.log('shapes', shapes);
+  // Add this before the return statement in AutoCADClone component
+  const togglePolarTracking = () => {
+    setPolarSettings((prev) => ({
+      ...prev,
+      enabled: !prev.enabled,
+    }));
+  };
+
+  const updatePolarAngleIncrement = (increment: number) => {
+    // Calculate the angles based on the increment
+    const angles: number[] = [];
+    for (let angle = 0; angle < 360; angle += increment) {
+      angles.push(angle);
+    }
+
+    setPolarSettings((prev) => ({
+      ...prev,
+      angleIncrement: increment,
+      angles: angles,
+    }));
+  };
 
   return (
     <div className='flex flex-col h-screen'>
@@ -366,6 +415,8 @@ export const AutoCADClone = () => {
           setSelectedTab={setSelectedTab}
           setDrawingPoints={setDrawingPoints}
           setTempShape={setTempShape}
+          polarSettings={polarSettings}
+          setShowPolarDialog={setShowPolarDialog}
         />
 
         {/* Drawing canvas */}
@@ -458,6 +509,7 @@ export const AutoCADClone = () => {
                 handleCursorMove,
                 textParams,
                 dimensionParams,
+                polarSettings,
               })
             }
             onMouseUp={(e) =>
@@ -523,6 +575,15 @@ export const AutoCADClone = () => {
         setShowDimensionDialog={setShowDimensionDialog}
         dimensionParams={dimensionParams}
         setDimensionParams={setDimensionParams}
+      />
+
+      <PolarTrackingDialog
+        showPolarDialog={showPolarDialog}
+        setShowPolarDialog={setShowPolarDialog}
+        polarSettings={polarSettings}
+        setPolarSettings={setPolarSettings}
+        updatePolarAngleIncrement={updatePolarAngleIncrement}
+        togglePolarTracking={togglePolarTracking}
       />
     </div>
   );

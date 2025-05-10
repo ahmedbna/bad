@@ -1,12 +1,14 @@
 'use client';
 
 import { Command, DrawingTool } from '@/constants';
-import { Point, Shape } from '@/types';
+import { Point, PolarSettings, Shape } from '@/types';
 import { SnapMode } from '../snap/useSnapping';
 import { Tools } from './tools';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShapeInputPanel } from './shape-input-panel';
+import { Switch } from '../ui/switch';
+import { Button } from '../ui/button';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -50,6 +52,8 @@ type Props = {
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
   setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
+  polarSettings: PolarSettings;
+  setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export const SidePanel = ({
@@ -82,6 +86,8 @@ export const SidePanel = ({
   setSelectedTab,
   setDrawingPoints,
   setTempShape,
+  polarSettings,
+  setShowPolarDialog,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -131,6 +137,8 @@ export const SidePanel = ({
               setSelectedCommand={setSelectedCommand}
               handleCancelDrawing={handleCancelDrawing}
               setSelectedTab={setSelectedTab}
+              polarSettings={polarSettings}
+              setShowPolarDialog={setShowPolarDialog}
             />
           </TabsContent>
           <TabsContent value='props'>

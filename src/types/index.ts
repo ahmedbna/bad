@@ -68,3 +68,11 @@ export interface DimensionParams {
   value: number;
   textPosition?: Point;
 }
+
+export type PolarSettings = {
+  enabled: boolean;
+  angleIncrement: number;
+  angles: number[];
+  snapThreshold: number;
+  trackingLines: boolean;
+};

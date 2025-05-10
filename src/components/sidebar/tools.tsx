@@ -36,6 +36,7 @@ import {
   Type,
   ZoomIn,
   ZoomOut,
+  Radar,
 } from 'lucide-react';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { Command, DrawingTool } from '@/constants';
@@ -51,10 +52,11 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Point } from '@/types';
+import { Point, PolarSettings } from '@/types';
 import { StatusBar } from './status-bar';
 import { Commands } from './commands';
 import { ShapeInputPanel } from './shape-input-panel';
+import { Switch } from '../ui/switch';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -93,6 +95,8 @@ type Props = {
   setSelectedCommand: (tool: Command) => void;
   handleCancelDrawing: () => void;
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
+  polarSettings: PolarSettings;
+  setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export const Tools = ({
@@ -120,6 +124,8 @@ export const Tools = ({
   setSelectedCommand,
   handleCancelDrawing,
   setSelectedTab,
+  polarSettings,
+  setShowPolarDialog,
 }: Props) => {
   const isSnapModeActive = (mode: SnapMode): boolean => {
     return snapSettings.modes.has(mode);
@@ -466,6 +472,21 @@ export const Tools = ({
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {/* Polar Tracking controls */}
+        <Button
+          size='sm'
+          variant='outline'
+          className='w-full flex items-center mt-2 mb-4'
+          onClick={() => setShowPolarDialog(true)}
+        >
+          <Radar size={16} />
+          <span className='ml-1'>
+            {polarSettings.enabled
+              ? `Polar Tracking: ${polarSettings.angleIncrement}°`
+              : 'Polar Tracking: Off'}
+          </span>
+        </Button>
 
         <StatusBar
           scale={scale}
