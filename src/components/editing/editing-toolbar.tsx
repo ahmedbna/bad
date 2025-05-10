@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/tooltip';
 import { EditingTool, EditingState, EditingPhase } from './constants';
 import { Label } from '@/components/ui/label';
+import { DrawingTool } from '@/constants';
 
 export const editingToolsData = {
   copy: {
@@ -63,9 +64,14 @@ export const editingToolsData = {
 type Props = {
   editingState: EditingState;
   setEditingState: (state: EditingState) => void;
+  setSelectedTool: (tool: DrawingTool) => void;
 };
 
-export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
+export const EditingToolbar = ({
+  editingState,
+  setEditingState,
+  setSelectedTool,
+}: Props) => {
   const [showToolbar, setShowToolbar] = useState(true);
 
   const handleToolClick = (tool: EditingTool) => {
@@ -77,6 +83,7 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
       parameters: {},
       phase: editingToolsData[tool].phases[0] as EditingPhase,
     });
+    setSelectedTool('select');
   };
 
   const handleCancel = () => {

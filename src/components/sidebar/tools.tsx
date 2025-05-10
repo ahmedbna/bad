@@ -353,6 +353,7 @@ export const Tools = ({
       <EditingToolbar
         editingState={editingState}
         setEditingState={setEditingState}
+        setSelectedTool={setSelectedTool}
       />
 
       {/* Show status message when in editing mode */}
@@ -391,31 +392,6 @@ export const Tools = ({
                         ...editingState.parameters,
                         distance: value,
                       },
-                      phase: 'select',
-                    });
-                  } else if (editingState.tool === 'chamfer') {
-                    if (!editingState.parameters.distance1) {
-                      setEditingState({
-                        ...editingState,
-                        parameters: {
-                          ...editingState.parameters,
-                          distance1: value,
-                        },
-                      });
-                    } else {
-                      setEditingState({
-                        ...editingState,
-                        parameters: {
-                          ...editingState.parameters,
-                          distance2: value,
-                        },
-                        phase: 'select',
-                      });
-                    }
-                  } else if (editingState.tool === 'fillet') {
-                    setEditingState({
-                      ...editingState,
-                      parameters: { ...editingState.parameters, radius: value },
                       phase: 'select',
                     });
                   }
