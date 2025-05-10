@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShapeInputPanel } from './shape-input-panel';
 import { Switch } from '../ui/switch';
 import { Button } from '../ui/button';
+import { EditingToolbar } from '../editing/editing-toolbar';
+import { useState } from 'react';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -89,6 +91,23 @@ export const SidePanel = ({
   polarSettings,
   setShowPolarDialog,
 }: Props) => {
+  const [editingState, setEditingState] = useState({
+    isActive: false,
+    tool: null,
+    basePoint: null,
+    selectedIds: [],
+    phase: 'select',
+    parameters: {
+      angle: 0,
+      distance: 0,
+      radius: 0,
+      length: 0,
+      distance1: 0,
+      distance2: 0,
+      side: 'left',
+    },
+  });
+
   return (
     <div className='w-64 h-full flex flex-col border-r'>
       <div className='w-full border-b'>
@@ -98,6 +117,11 @@ export const SidePanel = ({
           <ModeToggle variant='ghost' />
         </div>
       </div>
+
+      <EditingToolbar
+        editingState={editingState}
+        setEditingState={setEditingState}
+      />
 
       <div className='p-2'>
         <Tabs

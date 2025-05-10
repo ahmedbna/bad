@@ -24,7 +24,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Separator } from '@/components/ui/separator';
-import { EditingTool, EditingState } from './constants';
+import { EditingTool, EditingState, EditingPhase } from './constants';
 
 // Import from editingToolsData from constants
 const editingToolsData = {
@@ -107,11 +107,12 @@ const editingToolsData = {
   },
 };
 
-export const EditingToolbar = ({
-  editingState,
-  setEditingState,
-  executeOperation,
-}) => {
+type Props = {
+  editingState: EditingState;
+  setEditingState: (state: EditingState) => void;
+};
+
+export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
   const [showToolbar, setShowToolbar] = useState(true);
 
   const handleToolClick = (tool: EditingTool) => {
@@ -120,7 +121,7 @@ export const EditingToolbar = ({
       tool,
       basePoint: null,
       selectedIds: [],
-      phase: editingToolsData[tool].phases[0],
+      phase: editingToolsData[tool].phases[0] as EditingPhase,
       parameters: {},
     });
   };
@@ -381,7 +382,7 @@ export const EditingToolbar = ({
 
   return (
     <div className='flex flex-col w-full'>
-      <div className='bg-slate-100 p-2 rounded-t-md flex items-center justify-between'>
+      <div className=' p-2 rounded-t-md flex items-center justify-between'>
         <h3 className='text-sm font-medium'>Editing Tools</h3>
         <Button
           variant='ghost'
@@ -395,7 +396,7 @@ export const EditingToolbar = ({
 
       {showToolbar && (
         <>
-          <div className='bg-white border p-2 flex flex-wrap gap-1'>
+          <div className=' border p-2 flex flex-wrap gap-1'>
             <TooltipProvider>
               {Object.entries(editingToolsData).map(([key, data]) => {
                 const Icon = data.icon;
@@ -427,7 +428,7 @@ export const EditingToolbar = ({
             </TooltipProvider>
           </div>
 
-          <div className='bg-slate-50 border-x border-b p-3 rounded-b-md'>
+          <div className='border-x border-b p-3 rounded-b-md'>
             <div className='flex items-center justify-between'>
               <div className='flex-1'>
                 <p className='text-sm font-medium'>{getStatusMessage()}</p>

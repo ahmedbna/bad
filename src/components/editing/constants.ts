@@ -1,3 +1,5 @@
+import { Point } from '@/types';
+
 // Constants for editing tools
 export type EditingTool =
   | 'undo'
@@ -26,8 +28,13 @@ export type EditingState = {
     distance?: number;
     radius?: number;
     length?: number;
+    distance1?: number;
+    distance2?: number;
+    side?: 'left' | 'right';
   };
 };
+
+export type EditingPhase = 'select' | 'base' | 'target' | 'parameter';
 
 export const editingToolsData = {
   copy: {
