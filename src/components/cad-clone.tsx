@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { drawGrid } from './draw/draw-grid';
 import { Point } from '@/types';
 import { Shape } from '@/types';
-import { DrawingTool, ArcMode, Command } from '@/constants';
+import { DrawingTool, ArcMode } from '@/constants';
 import { drawShape } from './draw/draw-shape';
 import { SidePanel } from './sidebar/side-panel';
 import { useCanvasResize } from '@/hooks/useCanvasResize';
@@ -29,23 +29,14 @@ import { TextDialog } from './dialogs/text-dialog';
 import { DimensionDialog } from './dialogs/dimension-dialog';
 import { PolarTrackingDialog } from './dialogs/polar-tracking-dialog';
 import { drawPolarTrackingLines } from './polar/polar-tracking';
-import {
-  EditingToolbar,
-  editingToolsData,
-} from '@/components/editing/editing-toolbar';
 import { useEditing } from '@/components/editing/useEditing';
-import {
-  createInitialEditingState,
-  EditingPhase,
-  EditingTool,
-} from './editing/constants';
+import { createInitialEditingState, EditingTool } from './editing/constants';
 import { renderEditingVisuals } from './editing/render-editing';
 import { handleSelection } from './select/handleSelection';
 
 export const AutoCADClone = () => {
-  const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
-  const [selectedCommand, setSelectedCommand] = useState<Command | null>(null);
   const [shapes, setShapes] = useState<Shape[]>([]);
+  const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
   const [tempShape, setTempShape] = useState<Shape | null>(null);
 
@@ -366,6 +357,7 @@ export const AutoCADClone = () => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        setEditingState(createInitialEditingState());
         handleCancelDrawing();
         setSelectedTool('select');
         setSelectedTab('tools');
@@ -410,11 +402,20 @@ export const AutoCADClone = () => {
     }));
   };
 
-  // Inside your component
   const keyBuffer = useRef<string>('');
   const keyBufferTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Handle keyboard shortcuts for both drawing and editing tools
+  // Add these changes to the setEditingTool function in the useEditing hook:
+  const setEditingToolWithDrawing = (tool: EditingTool | null) => {
+    // When activating an editing tool, set the drawing tool to select
+    if (tool) {
+      setSelectedTool('select');
+    }
+
+    setEditingTool(tool);
+  };
+
+  // Inside your component
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Skip if user is typing in an input field
@@ -427,26 +428,21 @@ export const AutoCADClone = () => {
 
       // Handle Escape to cancel current operation
       if (e.key === 'Escape') {
-        if (editingState.isActive) {
-          // Cancel editing operation
-          setEditingState({
-            isActive: false,
-            tool: null,
-            basePoint: null,
-            selectedIds: [],
-            phase: 'select',
-            parameters: {},
-          });
-        } else if (drawingPoints.length > 0) {
-          // Cancel current drawing
-          setDrawingPoints([]);
-          setTempShape(null);
-        } else {
-          // Deselect selected shapes
-          setSelectedShapes([]);
-        }
+        setEditingState(createInitialEditingState());
+        handleCancelDrawing();
+        setSelectedTool('select');
+        setSelectedTab('tools');
         keyBuffer.current = '';
         return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedShapes.length > 0) {
+          handleDeleteShape();
+          handleCancelDrawing();
+          setSelectedTool('select');
+          setSelectedTab('tools');
+        }
       }
 
       // Handle common shortcuts
@@ -497,25 +493,17 @@ export const AutoCADClone = () => {
 
         // Check for drawing tool match
         if (drawingShortcuts[keyBuffer.current]) {
-          setSelectedTool(drawingShortcuts[keyBuffer.current] as DrawingTool);
-          // Deactivate any editing tool
+          // Clear any active editing state first
           if (editingState.isActive) {
-            setEditingState({
-              isActive: false,
-              tool: null,
-              basePoint: null,
-              selectedIds: [],
-              phase: 'select',
-              parameters: {},
-            });
+            setEditingState(createInitialEditingState());
           }
+          setSelectedTool(drawingShortcuts[keyBuffer.current] as DrawingTool);
           keyBuffer.current = '';
         }
         // Check for editing tool match
         else if (editingShortcuts[keyBuffer.current]) {
-          setEditingTool(editingShortcuts[keyBuffer.current]);
-          // Deactivate any drawing tool
-          setSelectedTool('select');
+          // Using the wrapper function to also set selectedTool to 'select'
+          setEditingToolWithDrawing(editingShortcuts[keyBuffer.current]);
           keyBuffer.current = '';
         } else {
           // Set timeout to clear buffer after 1 second
@@ -545,7 +533,7 @@ export const AutoCADClone = () => {
     editingState.isActive,
     drawingPoints.length,
     setEditingState,
-    setEditingTool,
+    setEditingToolWithDrawing,
     setSelectedTool,
     setDrawingPoints,
     setTempShape,
@@ -563,7 +551,6 @@ export const AutoCADClone = () => {
           offset={offset}
           selectedTool={selectedTool}
           drawingPoints={drawingPoints}
-          selectedShapes={selectedShapes}
           mousePosition={mousePosition}
           handleCancelDrawing={handleCancelDrawing}
           completeShape={completeShape}
@@ -582,8 +569,6 @@ export const AutoCADClone = () => {
           setShowEllipseDialog={setShowEllipseDialog}
           setShowSplineDialog={setShowSplineDialog}
           setShowDimensionDialog={setShowDimensionDialog}
-          selectedCommand={selectedCommand}
-          setSelectedCommand={setSelectedCommand}
           selectedTab={selectedTab}
           setSelectedTab={setSelectedTab}
           setDrawingPoints={setDrawingPoints}
@@ -592,8 +577,6 @@ export const AutoCADClone = () => {
           setShowPolarDialog={setShowPolarDialog}
           editingState={editingState}
           setEditingState={setEditingState}
-          statusMessage={statusMessage}
-          commandBuffer={commandBuffer}
         />
 
         {/* Drawing canvas */}
@@ -728,6 +711,15 @@ export const AutoCADClone = () => {
             className={`cursor-${editingState.isActive ? 'pointer' : 'crosshair'} bg-muted`}
           />
         </div>
+
+        {editingState.isActive && (
+          <div className='absolute top-4 left-1/2 transform -translate-x-1/2 bg-background px-4 py-2 rounded-md shadow-md z-10 border'>
+            <p className='text-sm font-medium'>{statusMessage}</p>
+            {commandBuffer && (
+              <p className='text-xs text-muted-foreground'>{commandBuffer}</p>
+            )}
+          </div>
+        )}
       </div>
 
       <PolygonDialog

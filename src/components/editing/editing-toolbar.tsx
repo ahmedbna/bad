@@ -64,12 +64,18 @@ export const editingToolsData = {
 type Props = {
   editingState: EditingState;
   setEditingState: (state: EditingState) => void;
+  setSelectedTool: (tool: DrawingTool) => void;
 };
 
-export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
+export const EditingToolbar = ({
+  editingState,
+  setEditingState,
+  setSelectedTool,
+}: Props) => {
   const [showToolbar, setShowToolbar] = useState(true);
 
   const handleToolClick = (tool: EditingTool) => {
+    setSelectedTool('select');
     setEditingState({
       isActive: true,
       tool,
@@ -102,8 +108,7 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
   };
 
   const getStatusMessage = () => {
-    if (!editingState.isActive || !editingState.tool)
-      return 'Select an editing tool to begin';
+    if (!editingState.isActive || !editingState.tool) return null;
 
     const tool = editingState.tool;
     const phase = editingState.phase;
@@ -207,31 +212,6 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
         }
         return null;
 
-        if (editingState.phase === 'parameter') {
-          return (
-            <div className='flex items-center gap-2'>
-              <label className='text-sm'>Radius:</label>
-              <Input
-                type='number'
-                className='w-24'
-                value={editingState.parameters.radius || ''}
-                onChange={(e) =>
-                  handleParameterChange('radius', e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setEditingState({
-                      ...editingState,
-                      phase: 'select',
-                    });
-                  }
-                }}
-              />
-            </div>
-          );
-        }
-        return null;
-
       default:
         return null;
     }
@@ -239,7 +219,7 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
 
   return (
     <div className='flex flex-col w-full'>
-      <div className=' p-2 rounded-t-md flex items-center justify-between'>
+      <div className='py-2 rounded-t-md flex items-center justify-between'>
         <h3 className='text-sm font-medium'>Editing Tools</h3>
         <Button
           variant='ghost'
@@ -253,7 +233,7 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
 
       {showToolbar && (
         <>
-          <div className=' border p-2 flex flex-wrap gap-1'>
+          <div className='grid grid-cols-5 gap-2'>
             <TooltipProvider>
               {Object.entries(editingToolsData).map(([key, data]) => {
                 const Icon = data.icon;
@@ -263,12 +243,13 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
                   <Tooltip key={key}>
                     <TooltipTrigger asChild>
                       <Button
-                        variant={isActive ? 'default' : 'outline'}
                         size='sm'
-                        className='p-2 h-8 w-8'
+                        variant={isActive ? 'default' : 'outline'}
                         onClick={() => handleToolClick(key as EditingTool)}
+                        className='flex flex-col items-center justify-center h-12'
                       >
                         <Icon className='h-4 w-4' />
+                        <span className='text-[10px]'>{data.label}</span>
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -285,21 +266,16 @@ export const EditingToolbar = ({ editingState, setEditingState }: Props) => {
             </TooltipProvider>
           </div>
 
-          <div className='border-x border-b p-3 rounded-b-md'>
-            <div className='flex items-center justify-between'>
+          <div className='py-3'>
+            <div className='flex items-start justify-between'>
               <div className='flex-1'>
-                <p className='text-sm font-medium'>{getStatusMessage()}</p>
+                <p className='text-sm font-medium mb-1'>{getStatusMessage()}</p>
                 {renderParameterInputs()}
               </div>
 
               {editingState.isActive && (
-                <Button
-                  variant='destructive'
-                  size='sm'
-                  onClick={handleCancel}
-                  className='h-7'
-                >
-                  <XCircle className='h-4 w-4 mr-1' /> Cancel
+                <Button variant='destructive' size='sm' onClick={handleCancel}>
+                  <XCircle className='h-4 w-4' />
                 </Button>
               )}
             </div>

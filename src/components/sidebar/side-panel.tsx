@@ -1,16 +1,12 @@
 'use client';
 
-import { Command, DrawingTool } from '@/constants';
+import { DrawingTool } from '@/constants';
 import { Point, PolarSettings, Shape } from '@/types';
 import { SnapMode } from '../snap/useSnapping';
 import { Tools } from './tools';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShapeInputPanel } from './shape-input-panel';
-import { Switch } from '../ui/switch';
-import { Button } from '../ui/button';
-import { EditingToolbar } from '../editing/editing-toolbar';
-import { useState } from 'react';
 import { EditingState } from '../editing/constants';
 
 type Props = {
@@ -19,7 +15,6 @@ type Props = {
   mousePosition: Point | null;
   scale: number;
   offset: Point;
-  selectedShapes: string[];
   gridSize: number;
   setScale: React.Dispatch<React.SetStateAction<number>>;
   snapSettings: {
@@ -49,8 +44,6 @@ type Props = {
   setShowEllipseDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowSplineDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowDimensionDialog: React.Dispatch<React.SetStateAction<boolean>>;
-  selectedCommand: Command | null;
-  setSelectedCommand: (tool: Command) => void;
   selectedTab: string;
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
@@ -59,14 +52,11 @@ type Props = {
   setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
   editingState: EditingState;
   setEditingState: React.Dispatch<React.SetStateAction<EditingState>>;
-  statusMessage: string;
-  commandBuffer: string;
 };
 
 export const SidePanel = ({
   selectedTool,
   drawingPoints,
-  selectedShapes,
   mousePosition,
   scale,
   offset,
@@ -87,8 +77,6 @@ export const SidePanel = ({
   setShowEllipseDialog,
   setShowSplineDialog,
   setShowDimensionDialog,
-  setSelectedCommand,
-  selectedCommand,
   selectedTab,
   setSelectedTab,
   setDrawingPoints,
@@ -97,8 +85,6 @@ export const SidePanel = ({
   setShowPolarDialog,
   editingState,
   setEditingState,
-  statusMessage,
-  commandBuffer,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -127,7 +113,6 @@ export const SidePanel = ({
               gridSize={gridSize}
               selectedTool={selectedTool}
               setSelectedTool={setSelectedTool}
-              selectedShapes={selectedShapes}
               setGridSize={setGridSize}
               setScale={setScale}
               scale={scale}
@@ -144,16 +129,12 @@ export const SidePanel = ({
               setShowEllipseDialog={setShowEllipseDialog}
               setShowSplineDialog={setShowSplineDialog}
               setShowDimensionDialog={setShowDimensionDialog}
-              selectedCommand={selectedCommand}
-              setSelectedCommand={setSelectedCommand}
               handleCancelDrawing={handleCancelDrawing}
               setSelectedTab={setSelectedTab}
               polarSettings={polarSettings}
               setShowPolarDialog={setShowPolarDialog}
               editingState={editingState}
               setEditingState={setEditingState}
-              statusMessage={statusMessage}
-              commandBuffer={commandBuffer}
             />
           </TabsContent>
           <TabsContent value='props'>

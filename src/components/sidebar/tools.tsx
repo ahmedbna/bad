@@ -38,8 +38,7 @@ import {
   ZoomOut,
   Radar,
 } from 'lucide-react';
-import { ModeToggle } from '@/components/ui/mode-toggle';
-import { Command, DrawingTool } from '@/constants';
+import { DrawingTool } from '@/constants';
 import { SnapMode } from '../snap/useSnapping';
 import {
   Tooltip,
@@ -57,12 +56,15 @@ import { StatusBar } from './status-bar';
 import { Commands } from './commands';
 import { ShapeInputPanel } from './shape-input-panel';
 import { Switch } from '../ui/switch';
-import { EditingState } from '../editing/constants';
+import {
+  createInitialEditingState,
+  EditingState,
+  EditingTool,
+} from '../editing/constants';
 import { EditingToolbar } from '../editing/editing-toolbar';
 
 type Props = {
   selectedTool: DrawingTool;
-  selectedShapes: string[];
   gridSize: number;
   setScale: React.Dispatch<React.SetStateAction<number>>;
   snapSettings: {
@@ -93,26 +95,21 @@ type Props = {
   setShowEllipseDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowSplineDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowDimensionDialog: React.Dispatch<React.SetStateAction<boolean>>;
-  selectedCommand: Command | null;
-  setSelectedCommand: (tool: Command) => void;
   handleCancelDrawing: () => void;
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
   polarSettings: PolarSettings;
   setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
   editingState: EditingState;
   setEditingState: React.Dispatch<React.SetStateAction<EditingState>>;
-  statusMessage: string;
-  commandBuffer: string;
 };
 
 export const Tools = ({
+  setScale,
+  handleDeleteShape,
   gridSize,
   selectedTool,
   setSelectedTool,
-  selectedShapes,
   setGridSize,
-  setScale,
-  handleDeleteShape,
   setShowArcMode,
   snapSettings,
   toggleSnapMode,
@@ -126,16 +123,12 @@ export const Tools = ({
   setShowEllipseDialog,
   setShowSplineDialog,
   setShowDimensionDialog,
-  selectedCommand,
-  setSelectedCommand,
   handleCancelDrawing,
   setSelectedTab,
   polarSettings,
   setShowPolarDialog,
   editingState,
   setEditingState,
-  statusMessage,
-  commandBuffer,
 }: Props) => {
   const isSnapModeActive = (mode: SnapMode): boolean => {
     return snapSettings.modes.has(mode);
@@ -143,7 +136,7 @@ export const Tools = ({
 
   return (
     <div className='h-full overflow-y-auto'>
-      <h2 className='text-md font-bold text-muted-foreground mb-1'>Draw</h2>
+      <h2 className='text-sm font-medium mb-2'>Draw</h2>
       <div className='grid grid-cols-4 gap-2'>
         <Button
           title='Select'
@@ -164,6 +157,7 @@ export const Tools = ({
           onClick={() => {
             handleCancelDrawing();
             setSelectedTool('pan');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'pan' ? 'default' : 'outline'}
@@ -197,6 +191,7 @@ export const Tools = ({
             handleCancelDrawing();
             setSelectedTool('line');
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'line' ? 'default' : 'outline'}
@@ -212,6 +207,7 @@ export const Tools = ({
             handleCancelDrawing();
             setSelectedTool('rectangle');
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'rectangle' ? 'default' : 'outline'}
@@ -227,6 +223,7 @@ export const Tools = ({
             handleCancelDrawing();
             setSelectedTool('circle');
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'circle' ? 'default' : 'outline'}
@@ -243,6 +240,7 @@ export const Tools = ({
             setSelectedTool('arc');
             setShowArcMode(true);
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'arc' ? 'default' : 'outline'}
@@ -259,6 +257,7 @@ export const Tools = ({
             setSelectedTool('ellipse');
             setShowEllipseDialog(true);
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'ellipse' ? 'default' : 'outline'}
@@ -275,6 +274,7 @@ export const Tools = ({
             setSelectedTool('polygon');
             setShowPolygonDialog(true);
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'polygon' ? 'default' : 'outline'}
@@ -290,6 +290,7 @@ export const Tools = ({
             handleCancelDrawing();
             setSelectedTool('polyline');
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'polyline' ? 'default' : 'outline'}
@@ -306,6 +307,7 @@ export const Tools = ({
             setSelectedTool('spline');
             setShowSplineDialog(true);
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'spline' ? 'default' : 'outline'}
@@ -322,6 +324,7 @@ export const Tools = ({
             setSelectedTool('text');
             setShowTextDialog(true);
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'text' ? 'default' : 'outline'}
@@ -338,6 +341,7 @@ export const Tools = ({
             setSelectedTool('dimension');
             setShowDimensionDialog(true);
             setSelectedTab('props');
+            setEditingState(createInitialEditingState());
           }}
           className='flex flex-col items-center justify-center h-12'
           variant={selectedTool === 'dimension' ? 'default' : 'outline'}
@@ -353,62 +357,8 @@ export const Tools = ({
       <EditingToolbar
         editingState={editingState}
         setEditingState={setEditingState}
+        setSelectedTool={setSelectedTool}
       />
-
-      {/* Show status message when in editing mode */}
-      {editingState.isActive && (
-        <div className='absolute top-4 left-1/2 transform -translate-x-1/2 bg-background px-4 py-2 rounded-md shadow-md z-10 border'>
-          <p className='text-sm font-medium'>{statusMessage}</p>
-          {commandBuffer && (
-            <p className='text-xs text-muted-foreground'>{commandBuffer}</p>
-          )}
-        </div>
-      )}
-
-      {/* Add a command line input for numeric values during editing */}
-      {editingState.isActive && editingState.phase === 'parameter' && (
-        <div className='border-t p-2 flex items-center'>
-          <span className='text-sm font-medium mr-2'>Command:</span>
-          <input
-            type='text'
-            className='px-2 py-1 border rounded flex-1'
-            placeholder='Enter value...'
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                const value = parseFloat(e.currentTarget.value);
-                if (!isNaN(value)) {
-                  // Update parameter and move to next phase
-                  if (editingState.tool === 'rotate') {
-                    setEditingState({
-                      ...editingState,
-                      parameters: { ...editingState.parameters, angle: value },
-                      phase: 'target',
-                    });
-                  } else if (editingState.tool === 'offset') {
-                    setEditingState({
-                      ...editingState,
-                      parameters: {
-                        ...editingState.parameters,
-                        distance: value,
-                      },
-                      phase: 'select',
-                    });
-                  }
-                  e.currentTarget.value = '';
-                }
-              }
-            }}
-          />
-        </div>
-      )}
-
-      {/* <h2 className='text-md font-bold text-muted-foreground mb-1'>Modify</h2>
-      <Commands
-        selectedShapes={selectedShapes}
-        selectedCommand={selectedCommand}
-        setSelectedCommand={setSelectedCommand}
-        handleDeleteShape={handleDeleteShape}
-      /> */}
 
       <Separator className='my-4' />
 

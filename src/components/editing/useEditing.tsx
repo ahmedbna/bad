@@ -102,22 +102,8 @@ export function useEditing(
 
       setShapes(newShapes);
 
-      // Reset the state or keep the tool active based on operation type
-      if (['copy', 'offset'].includes(editingState.tool)) {
-        // For 'copy' and 'offset', keep the tool active for continuous operations
-        const initialPhase =
-          editingToolsData[editingState.tool]?.phases?.[0] || 'select';
-        setEditingState({
-          ...editingState,
-          selectedIds: [],
-          basePoint: null,
-          phase: initialPhase as EditingPhase,
-          parameters: {}, // Reset parameters for next operation
-        });
-      } else {
-        // For other tools (move, rotate, mirror), reset to initial state
-        setEditingState(createInitialEditingState());
-      }
+      // For other tools (move, rotate, mirror), reset to initial state
+      setEditingState(createInitialEditingState());
     },
     [editingState, shapes, setShapes, selectedShapeIds, addToHistory]
   );
