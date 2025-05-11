@@ -35,53 +35,13 @@ export function useEditing(
   const keyBuffer = useRef<string>('');
   const keyBufferTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // History for undo/redo functionality
-  const [history, setHistory] = useState<Array<Doc<'shapes'>>[]>([]);
-  const [historyIndex, setHistoryIndex] = useState<number>(-1);
-
-  // Add shape changes to history
-  const addToHistory = useCallback(
-    (newShapes: Array<Doc<'shapes'>>) => {
-      // Only add if different from current state
-      if (JSON.stringify(newShapes) !== JSON.stringify(shapes)) {
-        const newHistory = history.slice(0, historyIndex + 1);
-        newHistory.push([...newShapes]);
-        setHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
-      }
-    },
-    [history, historyIndex, shapes]
-  );
-
-  // Handle undo operation
-  const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      // setShapes(history[newIndex]);
-    }
-  }, [history, historyIndex]);
-
-  // Handle redo operation
-  const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      // setShapes(history[newIndex]);
-    }
-  }, [history, historyIndex]);
-
-  // Initial history setup
-  useEffect(() => {
-    if (history.length === 0 && shapes.length > 0) {
-      setHistory([[...shapes]]);
-      setHistoryIndex(0);
-    }
-  }, [shapes, history]);
-
   // Execute the current editing operation
   const executeOperation = useCallback(
-    (targetPoint?: Point, secondaryPoint?: Point, additionalParams?: any) => {
+    async (
+      targetPoint?: Point,
+      secondaryPoint?: Point,
+      additionalParams?: any
+    ) => {
       if (!editingState.isActive || !editingState.tool) return;
 
       // Determine which IDs to use - either from editing state or selected shapes
@@ -90,12 +50,18 @@ export function useEditing(
           ? editingState.selectedIds
           : selectedShapeIds;
 
-      // Save current state to history before executing operation
-      addToHistory([...shapes]);
+      if (idsToUse.length === 0) return;
 
-      const newShapes = executeEditingOperation(
+      // Get the selected shapes from the shapes array
+      const selectedShapes = shapes.filter((shape) =>
+        idsToUse.includes(shape._id)
+      );
+      if (selectedShapes.length === 0) return;
+
+      // Execute the operation (simulation - this now returns operations to perform)
+      const operationResult = executeEditingOperation(
         editingState.tool,
-        shapes,
+        selectedShapes,
         idsToUse,
         {
           ...editingState.parameters,
@@ -105,12 +71,50 @@ export function useEditing(
         targetPoint
       );
 
-      setShapes(newShapes);
+      // Apply the changes to Convex database
+      try {
+        // Find which shapes need to be created, updated, or deleted
+        const existingShapeIds = new Set(shapes.map((s) => s._id));
+        const projectId = selectedShapes[0].projectId; // Get project ID from selected shapes
 
-      // For other tools (move, rotate, mirror), reset to initial state
+        // Process new shapes (not in original shapes array)
+        const newShapes = operationResult.filter(
+          (shape) => !('_id' in shape) || !existingShapeIds.has(shape._id)
+        );
+
+        // For operations that create new shapes (copy, mirror, offset)
+        if (newShapes.length > 0) {
+          // Create each new shape in Convex
+          for (const shape of newShapes) {
+            await createShape({
+              projectId,
+              type: shape.type,
+              points: shape.points,
+              properties: shape.properties,
+            });
+          }
+        }
+
+        // For operations that modify existing shapes (move, rotate)
+        const updatedShapes = operationResult.filter(
+          (shape) => '_id' in shape && existingShapeIds.has(shape._id)
+        );
+
+        for (const shape of updatedShapes) {
+          await updateShape({
+            shapeId: shape._id,
+            points: shape.points,
+            properties: shape.properties,
+          });
+        }
+      } catch (error) {
+        console.error('Error applying editing operation:', error);
+      }
+
+      // Reset to initial state after operation
       setEditingState(createInitialEditingState());
     },
-    [editingState, shapes, setShapes, selectedShapeIds, addToHistory]
+    [editingState, shapes, selectedShapeIds, createShape, updateShape]
   );
 
   // Handle canvas click during editing
@@ -153,8 +157,6 @@ export function useEditing(
             }));
           } else {
             // Keep in selection phase until user selects objects
-            // This will be handled by area selection or clicking on objects
-            // We don't provide feedback here as the selection hasn't happened yet
             return;
           }
           break;
@@ -221,7 +223,6 @@ export function useEditing(
       scale,
       offset,
       executeOperation,
-      editingToolsData,
       setStatusMessage,
     ]
   );
@@ -236,15 +237,6 @@ export function useEditing(
 
       const toolData = editingToolsData[tool];
       if (!toolData) return;
-
-      // Special handling for undo/redo
-      // if (tool === 'undo') {
-      //   handleUndo();
-      //   return;
-      // } else if (tool === 'redo') {
-      //   handleRedo();
-      //   return;
-      // }
 
       // Check if shapes are already selected before activating tool
       const hasExistingSelection = selectedShapeIds.length > 0;
@@ -290,6 +282,7 @@ export function useEditing(
     },
     [selectedShapeIds]
   );
+
   // Update parameter for current editing operation
   const updateParameter = useCallback((paramName: string, value: number) => {
     setEditingState((prevState) => {
@@ -343,15 +336,7 @@ export function useEditing(
 
       // Handle common shortcuts
       if (e.ctrlKey) {
-        if (e.key === 'z') {
-          e.preventDefault();
-          handleUndo();
-          return;
-        } else if (e.key === 'y') {
-          e.preventDefault();
-          handleRedo();
-          return;
-        } else if (e.key === 'c' && !editingState.isActive) {
+        if (e.key === 'c' && !editingState.isActive) {
           e.preventDefault();
           setEditingTool('copy');
           return;
@@ -416,13 +401,7 @@ export function useEditing(
         clearTimeout(keyBufferTimeoutRef.current);
       }
     };
-  }, [
-    editingState.isActive,
-    editingState.phase,
-    setEditingTool,
-    handleUndo,
-    handleRedo,
-  ]);
+  }, [editingState.isActive, editingState.phase, setEditingTool]);
 
   // Handle numeric input for parameters
   const handleNumericInput = useCallback(
@@ -444,6 +423,16 @@ export function useEditing(
     },
     [editingState, updateParameter]
   );
+
+  // Placeholder functions for undo/redo - these would need to be implemented differently
+  // in a server-based architecture
+  const handleUndo = useCallback(() => {
+    console.log('Undo functionality needs server implementation');
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    console.log('Redo functionality needs server implementation');
+  }, []);
 
   return {
     editingState,

@@ -47,13 +47,6 @@ export default defineSchema({
 
     // Various properties associated with different shape types
     properties: v.object({
-      radius: v.optional(v.number()),
-      controlPoints: v.optional(
-        v.array(v.object({ x: v.number(), y: v.number() }))
-      ),
-      isClockwise: v.optional(v.boolean()),
-      isClosed: v.optional(v.boolean()),
-
       // Common properties
       strokeColor: v.optional(v.string()),
       strokeWidth: v.optional(v.number()),
@@ -108,8 +101,32 @@ export default defineSchema({
           ),
         })
       ),
+      radius: v.optional(v.number()),
+      angle: v.optional(v.number()),
+      isClockwise: v.optional(v.boolean()),
+      isClosed: v.optional(v.boolean()),
       isCompleted: v.optional(v.boolean()),
       rotation: v.optional(v.number()),
+      width: v.optional(v.number()),
+      height: v.optional(v.number()),
+      length: v.optional(v.number()),
+      controlPoints: v.optional(
+        v.array(v.object({ x: v.number(), y: v.number() }))
+      ),
+      degree: v.optional(v.number()),
+      knots: v.optional(v.array(v.number())),
+      weights: v.optional(v.array(v.number())),
+      perimeter: v.optional(v.number()),
+      area: v.optional(v.number()),
+      diagonal: v.optional(v.number()),
+      diameter: v.optional(v.number()),
+      circumference: v.optional(v.number()),
+      sideLength: v.optional(v.number()),
+      internalAngle: v.optional(v.number()),
+      arcLength: v.optional(v.number()),
+      chordLength: v.optional(v.number()),
+      innerRadius: v.optional(v.number()),
+      center: v.optional(v.array(v.object({ x: v.number(), y: v.number() }))),
     }),
   }).index('projectId', ['projectId']),
 });

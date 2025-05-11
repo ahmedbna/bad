@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShapeInputPanel } from './shape-input-panel';
 import { EditingState } from '../editing/constants';
 import { Doc } from '@/convex/_generated/dataModel';
+import Link from 'next/link';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -91,7 +92,9 @@ export const SidePanel = ({
     <div className='w-64 h-full flex flex-col border-r'>
       <div className='w-full border-b'>
         <div className='px-2 py-1 flex items-center justify-between'>
-          <h1 className='font-black text-2xl'>BNA</h1>
+          <Link href='/'>
+            <h1 className='font-black text-2xl'>BNA</h1>
+          </Link>
 
           <ModeToggle variant='ghost' />
         </div>

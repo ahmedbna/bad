@@ -32,9 +32,12 @@ export const create = mutation({
       })
     ),
     properties: v.object({
+      // Common properties
       strokeColor: v.optional(v.string()),
       strokeWidth: v.optional(v.number()),
       fillColor: v.optional(v.string()),
+
+      // Text properties
       textParams: v.optional(
         v.object({
           content: v.optional(v.string()),
@@ -46,13 +49,23 @@ export const create = mutation({
           justification: v.optional(v.string()),
         })
       ),
+
+      // Arc properties
       startAngle: v.optional(v.number()),
       endAngle: v.optional(v.number()),
+
+      // Ellipse properties
       radiusX: v.optional(v.number()),
       radiusY: v.optional(v.number()),
       isFullEllipse: v.optional(v.boolean()),
+
+      // Spline properties
       tension: v.optional(v.number()),
+
+      // Polygon properties
       sides: v.optional(v.number()),
+
+      // Dimension properties
       dimensionParams: v.optional(
         v.object({
           dimensionType: v.optional(v.string()),
@@ -73,13 +86,32 @@ export const create = mutation({
           ),
         })
       ),
+      radius: v.optional(v.number()),
+      angle: v.optional(v.number()),
+      isClockwise: v.optional(v.boolean()),
+      isClosed: v.optional(v.boolean()),
+      isCompleted: v.optional(v.boolean()),
+      rotation: v.optional(v.number()),
+      width: v.optional(v.number()),
+      height: v.optional(v.number()),
+      length: v.optional(v.number()),
       controlPoints: v.optional(
         v.array(v.object({ x: v.number(), y: v.number() }))
       ),
-      isClockwise: v.optional(v.boolean()),
-      isClosed: v.optional(v.boolean()),
-      rotation: v.optional(v.number()),
-      isCompleted: v.optional(v.boolean()),
+      degree: v.optional(v.number()),
+      knots: v.optional(v.array(v.number())),
+      weights: v.optional(v.array(v.number())),
+      perimeter: v.optional(v.number()),
+      area: v.optional(v.number()),
+      diagonal: v.optional(v.number()),
+      diameter: v.optional(v.number()),
+      circumference: v.optional(v.number()),
+      sideLength: v.optional(v.number()),
+      internalAngle: v.optional(v.number()),
+      arcLength: v.optional(v.number()),
+      chordLength: v.optional(v.number()),
+      innerRadius: v.optional(v.number()),
+      center: v.optional(v.array(v.object({ x: v.number(), y: v.number() }))),
     }),
   },
   handler: async (ctx, args) => {
@@ -111,9 +143,12 @@ export const update = mutation({
       )
     ),
     properties: v.object({
+      // Common properties
       strokeColor: v.optional(v.string()),
       strokeWidth: v.optional(v.number()),
       fillColor: v.optional(v.string()),
+
+      // Text properties
       textParams: v.optional(
         v.object({
           content: v.optional(v.string()),
@@ -125,13 +160,23 @@ export const update = mutation({
           justification: v.optional(v.string()),
         })
       ),
+
+      // Arc properties
       startAngle: v.optional(v.number()),
       endAngle: v.optional(v.number()),
+
+      // Ellipse properties
       radiusX: v.optional(v.number()),
       radiusY: v.optional(v.number()),
       isFullEllipse: v.optional(v.boolean()),
+
+      // Spline properties
       tension: v.optional(v.number()),
+
+      // Polygon properties
       sides: v.optional(v.number()),
+
+      // Dimension properties
       dimensionParams: v.optional(
         v.object({
           dimensionType: v.optional(v.string()),
@@ -152,13 +197,32 @@ export const update = mutation({
           ),
         })
       ),
+      radius: v.optional(v.number()),
+      angle: v.optional(v.number()),
+      isClockwise: v.optional(v.boolean()),
+      isClosed: v.optional(v.boolean()),
+      isCompleted: v.optional(v.boolean()),
+      rotation: v.optional(v.number()),
+      width: v.optional(v.number()),
+      height: v.optional(v.number()),
+      length: v.optional(v.number()),
       controlPoints: v.optional(
         v.array(v.object({ x: v.number(), y: v.number() }))
       ),
-      isClockwise: v.optional(v.boolean()),
-      isClosed: v.optional(v.boolean()),
-      rotation: v.optional(v.number()),
-      isCompleted: v.optional(v.boolean()),
+      degree: v.optional(v.number()),
+      knots: v.optional(v.array(v.number())),
+      weights: v.optional(v.array(v.number())),
+      perimeter: v.optional(v.number()),
+      area: v.optional(v.number()),
+      diagonal: v.optional(v.number()),
+      diameter: v.optional(v.number()),
+      circumference: v.optional(v.number()),
+      sideLength: v.optional(v.number()),
+      internalAngle: v.optional(v.number()),
+      arcLength: v.optional(v.number()),
+      chordLength: v.optional(v.number()),
+      innerRadius: v.optional(v.number()),
+      center: v.optional(v.array(v.object({ x: v.number(), y: v.number() }))),
     }),
   },
   handler: async (ctx, args) => {

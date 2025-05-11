@@ -1,5 +1,5 @@
 import { Doc, Id } from '@/convex/_generated/dataModel';
-import { Point, Shape } from '@/types';
+import { Point } from '@/types';
 import { calculateDistance } from '@/utils/calculations';
 
 // Execute a specific editing operation
@@ -10,15 +10,15 @@ export function executeEditingOperation(
   parameters: any,
   basePoint?: Point,
   targetPoint?: Point
-): Array<Doc<'shapes'>> {
+): Array<any> {
   // Return original shapes if no selection or required points are missing
   if (!selectedIds.length) return shapes;
 
-  const selectedShapeIds = shapes.filter((shape) =>
+  const selectedShapes = shapes.filter((shape) =>
     selectedIds.includes(shape._id)
   );
 
-  if (selectedShapeIds.length === 0) return shapes;
+  if (selectedShapes.length === 0) return shapes;
 
   switch (operation) {
     case 'copy': {
@@ -27,11 +27,12 @@ export function executeEditingOperation(
       const dx = targetPoint.x - basePoint.x;
       const dy = targetPoint.y - basePoint.y;
 
-      // Create deep copies of the selected shapes with new IDs
-      const newShapes: Shape[] = selectedShapeIds.map((shape) =>
-        translateShape(shape, dx, dy)
+      // Create deep copies of the selected shapes (without _id to indicate they are new)
+      const newShapes = selectedShapes.map((shape) =>
+        translateShape(shape, dx, dy, true)
       );
 
+      // Return both original and new shapes
       return [...shapes, ...newShapes];
     }
 
@@ -41,10 +42,10 @@ export function executeEditingOperation(
       const dx = targetPoint.x - basePoint.x;
       const dy = targetPoint.y - basePoint.y;
 
-      // Move the selected shapes to the new position
+      // Move the selected shapes to the new position (updating existing shapes)
       return shapes.map((shape) => {
-        if (selectedIds.includes(shape.id)) {
-          return translateShape(shape, dx, dy, false); // Don't create new IDs when moving
+        if (selectedIds.includes(shape._id)) {
+          return translateShape(shape, dx, dy, false); // Keep original ID for updates
         }
         return shape;
       });
@@ -67,8 +68,8 @@ export function executeEditingOperation(
 
       // Rotate the selected shapes
       return shapes.map((shape) => {
-        if (selectedIds.includes(shape.id)) {
-          return rotateShape(shape, basePoint, radians, false); // Don't create new IDs when rotating in place
+        if (selectedIds.includes(shape._id)) {
+          return rotateShape(shape, basePoint, radians, false); // Keep original ID for updates
         }
         return shape;
       });
@@ -77,18 +78,21 @@ export function executeEditingOperation(
     case 'mirror': {
       if (!basePoint || !targetPoint) return shapes;
 
-      // Create mirrored copies of the selected shapes
-      const newShapes: Shape[] = selectedShapeIds.map((shape) =>
+      // Create mirrored copies of the selected shapes (without _id to indicate they are new)
+      const newShapes = selectedShapes.map((shape) =>
         mirrorShape(shape, basePoint, targetPoint)
       );
 
+      // Return both original and new shapes
       return [...shapes, ...newShapes];
     }
 
     case 'offset': {
       if (!parameters.distance || selectedIds.length !== 1) return shapes;
 
-      const shapeToOffset = shapes.find((shape) => shape.id === selectedIds[0]);
+      const shapeToOffset = shapes.find(
+        (shape) => shape._id === selectedIds[0]
+      );
       if (!shapeToOffset) return shapes;
 
       // Determine side based on parameters or target point relative to base point
@@ -98,12 +102,14 @@ export function executeEditingOperation(
         side = determineSide(shapeToOffset, basePoint, targetPoint);
       }
 
-      const offsetedShape: Shape = offsetShape(
+      // Create offset shape (without _id to indicate it's new)
+      const offsetedShape = offsetShape(
         shapeToOffset,
         parameters.distance,
         side
       );
 
+      // Return both original and new offset shape
       return [...shapes, offsetedShape];
     }
 
@@ -114,7 +120,7 @@ export function executeEditingOperation(
 
 // Helper function to determine which side to offset to
 function determineSide(
-  shape: Shape,
+  shape: Doc<'shapes'>,
   basePoint: Point,
   targetPoint: Point
 ): 'left' | 'right' {
@@ -145,28 +151,36 @@ function determineSide(
   return targetPoint.x > basePoint.x ? 'right' : 'left';
 }
 
-// Deep clone a shape
-export function cloneShape(shape: Shape): Shape {
-  return {
+// Create a cloned shape without _id for new shapes
+export function cloneShape(
+  shape: Doc<'shapes'>,
+  createNewId: boolean = true
+): any {
+  const clonedShape = {
     ...shape,
-    id: `shape-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     points: [...shape.points.map((p) => ({ ...p }))],
     properties: { ...shape.properties },
   };
+
+  // Remove _id to indicate this is a new shape to be created
+  if (createNewId) {
+    const { _id, ...rest } = clonedShape;
+    return rest;
+  }
+
+  return clonedShape;
 }
 
 // Translate a shape by dx, dy
 export function translateShape(
-  shape: Shape,
+  shape: Doc<'shapes'>,
   dx: number,
   dy: number,
   createNewId: boolean = true
-): Shape {
-  const newShape = createNewId
-    ? cloneShape(shape)
-    : { ...shape, points: [...shape.points.map((p) => ({ ...p }))] };
+): any {
+  const newShape = cloneShape(shape, createNewId);
 
-  newShape.points = newShape.points.map((point) => ({
+  newShape.points = newShape.points.map((point: Point) => ({
     x: point.x + dx,
     y: point.y + dy,
   }));
@@ -176,16 +190,14 @@ export function translateShape(
 
 // Rotate a shape around a point
 export function rotateShape(
-  shape: Shape,
+  shape: Doc<'shapes'>,
   center: Point,
   angle: number,
   createNewId: boolean = true
-): Shape {
-  const newShape = createNewId
-    ? cloneShape(shape)
-    : { ...shape, points: [...shape.points.map((p) => ({ ...p }))] };
+): any {
+  const newShape = cloneShape(shape, createNewId);
 
-  newShape.points = newShape.points.map((point) => {
+  newShape.points = newShape.points.map((point: Point) => {
     // Translate point to origin
     const x = point.x - center.x;
     const y = point.y - center.y;
@@ -207,8 +219,8 @@ export function rotateShape(
 }
 
 // Create a mirrored copy of a shape across a line defined by two points
-export function mirrorShape(shape: Shape, p1: Point, p2: Point): Shape {
-  const newShape = cloneShape(shape);
+export function mirrorShape(shape: Doc<'shapes'>, p1: Point, p2: Point): any {
+  const newShape = cloneShape(shape, true); // Always create new ID for mirrored shapes
 
   // Calculate the line's direction vector
   const dx = p2.x - p1.x;
@@ -219,7 +231,7 @@ export function mirrorShape(shape: Shape, p1: Point, p2: Point): Shape {
   const nx = dy / lineLength;
   const ny = -dx / lineLength;
 
-  newShape.points = newShape.points.map((point) => {
+  newShape.points = newShape.points.map((point: Point) => {
     // Calculate the vector from p1 to the point
     const vx = point.x - p1.x;
     const vy = point.y - p1.y;
@@ -239,11 +251,11 @@ export function mirrorShape(shape: Shape, p1: Point, p2: Point): Shape {
 
 // Create an offset of a shape (works for lines and arcs)
 export function offsetShape(
-  shape: Shape,
+  shape: Doc<'shapes'>,
   distance: number,
   side: 'left' | 'right' | 'inner' | 'outer'
-): Shape {
-  const newShape = cloneShape(shape);
+): any {
+  const newShape = cloneShape(shape, true); // Always create new ID for offset shapes
 
   // Handle different shape types
   switch (shape.type) {
