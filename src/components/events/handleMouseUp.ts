@@ -1,4 +1,4 @@
-import { Shape } from '@/types';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 import {
   AreaSelectionState,
   completeAreaSelection,
@@ -7,9 +7,9 @@ import {
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;
   areaSelection: AreaSelectionState;
-  shapes: Shape[];
+  shapes: Doc<'shapes'>[];
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
-  setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
+  setSelectedShapeIds: React.Dispatch<React.SetStateAction<Id<'shapes'>[]>>;
   setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
@@ -19,7 +19,7 @@ export const handleMouseUp = ({
   areaSelection,
   shapes,
   setAreaSelection,
-  setSelectedShapes,
+  setSelectedShapeIds,
   setIsDragging,
 }: Props) => {
   setIsDragging(false);
@@ -36,12 +36,12 @@ export const handleMouseUp = ({
     // Update selected shapes
     if (isShiftSelect) {
       // Remove selectedIds from current selection
-      setSelectedShapes((prev) =>
+      setSelectedShapeIds((prev) =>
         prev.filter((id) => !selectedIds.includes(id))
       );
     } else {
       // Add to existing selection
-      setSelectedShapes((prev) => {
+      setSelectedShapeIds((prev) => {
         const newSelection = [...prev];
 
         selectedIds.forEach((id) => {

@@ -53,14 +53,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Point, PolarSettings } from '@/types';
 import { StatusBar } from './status-bar';
-import { Commands } from './commands';
-import { ShapeInputPanel } from './shape-input-panel';
-import { Switch } from '../ui/switch';
-import {
-  createInitialEditingState,
-  EditingState,
-  EditingTool,
-} from '../editing/constants';
+import { createInitialEditingState, EditingState } from '../editing/constants';
 import { EditingToolbar } from '../editing/editing-toolbar';
 
 type Props = {

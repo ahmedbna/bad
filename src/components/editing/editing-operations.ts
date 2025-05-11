@@ -1,23 +1,24 @@
+import { Doc, Id } from '@/convex/_generated/dataModel';
 import { Point, Shape } from '@/types';
 import { calculateDistance } from '@/utils/calculations';
 
 // Execute a specific editing operation
 export function executeEditingOperation(
   operation: 'copy' | 'move' | 'rotate' | 'offset' | 'mirror',
-  shapes: Shape[],
-  selectedIds: string[],
+  shapes: Array<Doc<'shapes'>>,
+  selectedIds: Id<'shapes'>[],
   parameters: any,
   basePoint?: Point,
   targetPoint?: Point
-): Shape[] {
+): Array<Doc<'shapes'>> {
   // Return original shapes if no selection or required points are missing
   if (!selectedIds.length) return shapes;
 
-  const selectedShapes = shapes.filter((shape) =>
-    selectedIds.includes(shape.id)
+  const selectedShapeIds = shapes.filter((shape) =>
+    selectedIds.includes(shape._id)
   );
 
-  if (selectedShapes.length === 0) return shapes;
+  if (selectedShapeIds.length === 0) return shapes;
 
   switch (operation) {
     case 'copy': {
@@ -27,7 +28,7 @@ export function executeEditingOperation(
       const dy = targetPoint.y - basePoint.y;
 
       // Create deep copies of the selected shapes with new IDs
-      const newShapes: Shape[] = selectedShapes.map((shape) =>
+      const newShapes: Shape[] = selectedShapeIds.map((shape) =>
         translateShape(shape, dx, dy)
       );
 
@@ -77,7 +78,7 @@ export function executeEditingOperation(
       if (!basePoint || !targetPoint) return shapes;
 
       // Create mirrored copies of the selected shapes
-      const newShapes: Shape[] = selectedShapes.map((shape) =>
+      const newShapes: Shape[] = selectedShapeIds.map((shape) =>
         mirrorShape(shape, basePoint, targetPoint)
       );
 

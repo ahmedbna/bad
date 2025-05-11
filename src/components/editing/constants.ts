@@ -1,3 +1,4 @@
+import { Id } from '@/convex/_generated/dataModel';
 import { Point } from '@/types';
 
 // Constants for editing tools
@@ -8,7 +9,7 @@ export type EditingState = {
   isActive: boolean;
   tool: EditingTool | null;
   basePoint: Point | null;
-  selectedIds: string[];
+  selectedIds: Id<'shapes'>[];
   phase: EditingPhase;
   parameters: {
     angle?: number;

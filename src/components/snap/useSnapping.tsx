@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Point, Shape } from '@/types';
+import { Point } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { distance } from '@/utils/calculations';
+import { Doc } from '@/convex/_generated/dataModel';
 
 // Define snap modes
 export enum SnapMode {
@@ -45,7 +46,7 @@ export interface SnapSettings {
 type Props = {
   scale: number;
   offset: Point;
-  shapes: Shape[];
+  shapes: Array<Doc<'shapes'>>;
   snapSettings: SnapSettings;
 };
 
@@ -90,14 +91,14 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findEndpointSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
     let snapInfo = {};
 
     shapes.forEach((shape) => {
-      const { points, type, id, properties } = shape;
+      const { points, type, _id, properties } = shape;
 
       if (type === 'rectangle' && points.length === 2) {
         // Rectangle corners
@@ -113,7 +114,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = corner;
-            snapInfo = { shapeId: id, pointIndex: index };
+            snapInfo = { shapeId: _id, pointIndex: index };
           }
         });
       } else if (type === 'polygon') {
@@ -138,7 +139,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = point;
-            snapInfo = { shapeId: id, pointIndex: index };
+            snapInfo = { shapeId: _id, pointIndex: index };
           }
         });
       } else {
@@ -148,7 +149,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = point;
-            snapInfo = { shapeId: id, pointIndex: index };
+            snapInfo = { shapeId: _id, pointIndex: index };
           }
         });
       }
@@ -169,14 +170,14 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findMidpointSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
     let snapInfo = {};
 
     shapes.forEach((shape) => {
-      const { points, type, id, properties } = shape;
+      const { points, type, _id, properties } = shape;
 
       // For lines, find midpoint
       if (type === 'line' && points.length === 2) {
@@ -188,7 +189,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
         if (dist < minDistance) {
           minDistance = dist;
           closestPoint = midpoint;
-          snapInfo = { shapeId: id, segmentIndex: 0 };
+          snapInfo = { shapeId: _id, segmentIndex: 0 };
         }
       }
 
@@ -230,7 +231,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
               minDistance = dist;
               closestPoint = midpoint;
               snapInfo = {
-                shapeId: id,
+                shapeId: _id,
                 segmentIndex: i,
                 pointIndex1: i,
                 pointIndex2: i < polygonVertices.length - 1 ? i + 1 : 0,
@@ -251,7 +252,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = midpoint;
-            snapInfo = { shapeId: id, segmentIndex: i };
+            snapInfo = { shapeId: _id, segmentIndex: i };
           }
         }
       }
@@ -273,7 +274,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = midpoint;
-            snapInfo = { shapeId: id, edgeIndex: i };
+            snapInfo = { shapeId: _id, edgeIndex: i };
           }
         });
       }
@@ -294,14 +295,14 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findCenterSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
     let snapInfo = {};
 
     shapes.forEach((shape) => {
-      const { points, type, id, properties } = shape;
+      const { points, type, _id, properties } = shape;
       let center: Point | null = null;
 
       // For circles and arcs with center point
@@ -351,7 +352,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
         if (dist < minDistance) {
           minDistance = dist;
           closestPoint = center;
-          snapInfo = { shapeId: id };
+          snapInfo = { shapeId: _id };
         }
       }
     });
@@ -369,7 +370,10 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
   /**
    * Find node snap (any point of polylines, polygons, splines)
    */
-  const findNodeSnap = (cursorPosition: Point, shapes: Shape[]): SnapResult => {
+  const findNodeSnap = (
+    cursorPosition: Point,
+    shapes: Array<Doc<'shapes'>>
+  ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
     let snapInfo = {};
@@ -383,7 +387,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
         if (dist < minDistance) {
           minDistance = dist;
           closestPoint = point;
-          snapInfo = { shapeId: shape.id, pointIndex: index };
+          snapInfo = { shapeId: shape._id, pointIndex: index };
         }
       });
 
@@ -395,7 +399,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
             minDistance = dist;
             closestPoint = point;
             snapInfo = {
-              shapeId: shape.id,
+              shapeId: shape._id,
               pointIndex: index,
               isControlPoint: true,
             };
@@ -419,7 +423,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findQuadrantSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
@@ -485,7 +489,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = q.point;
-            snapInfo = { shapeId: shape.id, quadrant: q.quadrant };
+            snapInfo = { shapeId: shape._id, quadrant: q.quadrant };
           }
         });
       }
@@ -506,7 +510,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findIntersectionSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
@@ -527,7 +531,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = point;
-            snapInfo = { shapeId1: shape1.id, shapeId2: shape2.id };
+            snapInfo = { shapeId1: shape1._id, shapeId2: shape2._id };
           }
         });
       }
@@ -546,7 +550,10 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
   /**
    * Find shape intersections between two shapes
    */
-  const findShapeIntersections = (shape1: Shape, shape2: Shape): Point[] => {
+  const findShapeIntersections = (
+    shape1: Doc<'shapes'>,
+    shape2: Doc<'shapes'>
+  ): Point[] => {
     const intersections: Point[] = [];
 
     // Line - Line intersection
@@ -732,7 +739,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findExtensionSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
@@ -762,7 +769,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = projection;
-            snapInfo = { shapeId: shape.id, isExtension: true, t };
+            snapInfo = { shapeId: shape._id, isExtension: true, t };
           }
         }
       }
@@ -793,7 +800,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
               minDistance = dist;
               closestPoint = projection;
               snapInfo = {
-                shapeId: shape.id,
+                shapeId: shape._id,
                 pointIndex: i,
                 isExtension: true,
                 t,
@@ -819,7 +826,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findPerpendicularSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
@@ -848,7 +855,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = projection;
-            snapInfo = { shapeId: shape.id, t };
+            snapInfo = { shapeId: shape._id, t };
           }
         }
       }
@@ -877,7 +884,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
             if (dist < minDistance) {
               minDistance = dist;
               closestPoint = projection;
-              snapInfo = { shapeId: shape.id, pointIndex: i, t };
+              snapInfo = { shapeId: shape._id, pointIndex: i, t };
             }
           }
         }
@@ -916,7 +923,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
             if (dist < minDistance) {
               minDistance = dist;
               closestPoint = projection;
-              snapInfo = { shapeId: shape.id, sideIndex: i };
+              snapInfo = { shapeId: shape._id, sideIndex: i };
             }
           }
         });
@@ -969,7 +976,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findTangentSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
@@ -1049,7 +1056,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
             if (dist < minDistance) {
               minDistance = dist;
               closestPoint = point;
-              snapInfo = { shapeId: shape.id, tangentIndex: i };
+              snapInfo = { shapeId: shape._id, tangentIndex: i };
             }
           });
         }
@@ -1073,7 +1080,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
    */
   const findNearestSnap = (
     cursorPosition: Point,
-    shapes: Shape[]
+    shapes: Array<Doc<'shapes'>>
   ): SnapResult => {
     let closestPoint: Point | null = null;
     let minDistance = snapThreshold / scale;
@@ -1103,7 +1110,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
           if (dist < minDistance) {
             minDistance = dist;
             closestPoint = projection;
-            snapInfo = { shapeId: shape.id, t };
+            snapInfo = { shapeId: shape._id, t };
           }
         }
       }
@@ -1133,7 +1140,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
             if (dist < minDistance) {
               minDistance = dist;
               closestPoint = projection;
-              snapInfo = { shapeId: shape.id, pointIndex: i, t };
+              snapInfo = { shapeId: shape._id, pointIndex: i, t };
             }
           }
         }
@@ -1157,7 +1164,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
               minDistance = dist;
               closestPoint = projection;
               snapInfo = {
-                shapeId: shape.id,
+                shapeId: shape._id,
                 pointIndex: points.length - 1,
                 t,
               };
@@ -1186,7 +1193,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
         if (dist < minDistance) {
           minDistance = dist;
           closestPoint = nearestPoint;
-          snapInfo = { shapeId: shape.id };
+          snapInfo = { shapeId: shape._id };
         }
       }
 
@@ -1242,7 +1249,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
         if (dist < minDistance) {
           minDistance = dist;
           closestPoint = nearestPoint;
-          snapInfo = { shapeId: shape.id };
+          snapInfo = { shapeId: shape._id };
         }
       }
 
@@ -1279,7 +1286,7 @@ export const useSnapping = ({ shapes, snapSettings, scale, offset }: Props) => {
             if (dist < minDistance) {
               minDistance = dist;
               closestPoint = projection;
-              snapInfo = { shapeId: shape.id, sideIndex: i };
+              snapInfo = { shapeId: shape._id, sideIndex: i };
             }
           }
         });

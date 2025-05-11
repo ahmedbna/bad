@@ -1,11 +1,5 @@
 import { DrawingTool, ArcMode } from '@/constants';
-import {
-  DimensionParams,
-  Point,
-  PolarSettings,
-  Shape,
-  TextParams,
-} from '@/types';
+import { DimensionParams, Point, PolarSettings, TextParams } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import {
   AreaSelectionState,
@@ -19,6 +13,7 @@ import {
   previewThreePointArc,
 } from '../arc/handle-arc';
 import { applyPolarTracking } from '../polar/polar-tracking';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 
 interface MouseMoveProps {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -27,7 +22,7 @@ interface MouseMoveProps {
   offset: Point;
   isDragging: boolean;
   dragStart: Point;
-  tempShape: Shape | null;
+  tempShape: Doc<'shapes'> | null;
   drawingPoints: Point[];
   arcAngles: { startAngle: number; endAngle: number };
   ellipseParams: {
@@ -43,7 +38,7 @@ interface MouseMoveProps {
   setMousePosition: React.Dispatch<React.SetStateAction<Point | null>>;
   setOffset: React.Dispatch<React.SetStateAction<Point>>;
   setDragStart: React.Dispatch<React.SetStateAction<Point>>;
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
   arcMode: ArcMode;
   snapEnabled: boolean;
@@ -138,8 +133,11 @@ export const handleMouseMove = ({
     if (selectedTool === 'text') {
       if (!tempShape) {
         // Create a temporary text shape for preview if it doesn't exist
-        const newTempShape: Shape = {
-          id: 'temp-text-preview',
+        const newTempShape = {
+          _id: `temp-${Date.now()}` as Id<'shapes'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          userId: `temp-usr-${Date.now()}` as Id<'users'>,
           type: 'text',
           points: [snappedPoint], // Store text position here
           properties: {
@@ -224,7 +222,7 @@ const updateTempShapeOnMouseMove = ({
 }: {
   snappedPoint: Point;
   selectedTool: DrawingTool;
-  tempShape: Shape;
+  tempShape: Doc<'shapes'>;
   drawingPoints: Point[];
   ellipseParams: {
     radiusX: number;
@@ -234,7 +232,7 @@ const updateTempShapeOnMouseMove = ({
   };
   polygonSides: number;
   splineTension: number;
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
   arcMode: ArcMode;
   textParams: TextParams;
   dimensionParams: DimensionParams;
@@ -332,8 +330,8 @@ const updateTempShapeOnMouseMove = ({
 const handleLinePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   setTempShape({
     ...tempShape,
@@ -347,8 +345,8 @@ const handleLinePreview = (
 const handlePolylinePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (drawingPoints.length > 0) {
     const newPoints = [...drawingPoints];
@@ -375,8 +373,8 @@ const handlePolylinePreview = (
 const handleRectanglePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   setTempShape({
     ...tempShape,
@@ -390,8 +388,8 @@ const handleRectanglePreview = (
 const handleCirclePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   const circleCenter = drawingPoints[0];
   const radius = calculateDistance(circleCenter, snappedPoint);
@@ -411,14 +409,14 @@ const handleCirclePreview = (
 const handleEllipsePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
-  tempShape: Shape,
+  tempShape: Doc<'shapes'>,
   ellipseParams: {
     radiusX: number;
     radiusY: number;
     rotation: number;
     isFullEllipse: boolean;
   },
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   const ellipseCenter = drawingPoints[0];
 
@@ -465,9 +463,9 @@ const handleEllipsePreview = (
 const handlePolygonPreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
-  tempShape: Shape,
+  tempShape: Doc<'shapes'>,
   polygonSides: number,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   const polygonCenter = drawingPoints[0];
   const polygonRadius = calculateDistance(polygonCenter, snappedPoint);
@@ -488,9 +486,9 @@ const handlePolygonPreview = (
 const handleSplinePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
-  tempShape: Shape,
+  tempShape: Doc<'shapes'>,
   splineTension: number,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (drawingPoints.length > 0) {
     setTempShape({
@@ -511,8 +509,8 @@ const handleArcPreview = (
   arcMode: ArcMode,
   point: Point,
   drawingPoints: Point[],
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (!tempShape) return;
 
@@ -565,9 +563,9 @@ const calculatePerpendicularDistance = (
  */
 const handleTextPreview = (
   currentPoint: Point,
-  tempShape: Shape,
+  tempShape: Doc<'shapes'>,
   textParams: TextParams,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   // Update the temporary shape with the current mouse position
   // The position of text is stored in the points array
@@ -588,9 +586,9 @@ const handleTextPreview = (
 const handleDimensionPreview = (
   drawingPoints: Point[],
   currentPoint: Point,
-  tempShape: Shape,
+  tempShape: Doc<'shapes'>,
   dimensionParams?: DimensionParams,
-  setTempShape?: React.Dispatch<React.SetStateAction<Shape | null>>
+  setTempShape?: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (!setTempShape || drawingPoints.length < 1) return;
 

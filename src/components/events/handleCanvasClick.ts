@@ -1,11 +1,5 @@
 import { DrawingTool, ArcMode } from '@/constants';
-import {
-  Point,
-  ShapeProperties,
-  Shape,
-  TextParams,
-  DimensionParams,
-} from '@/types';
+import { Point, ShapeProperties, TextParams, DimensionParams } from '@/types';
 import { handleSelection } from '../select/handleSelection';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import {
@@ -21,13 +15,14 @@ import {
   handleThreePointArc,
 } from '../arc/handle-arc';
 import { SnapResult } from '../snap/useSnapping';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 
 interface Props {
   e: React.MouseEvent<HTMLCanvasElement>;
   selectedTool: DrawingTool;
   scale: number;
   offset: Point;
-  tempShape: Shape | null;
+  tempShape: Doc<'shapes'> | null;
   ellipseParams: {
     radiusX: number;
     radiusY: number;
@@ -38,10 +33,10 @@ interface Props {
   polygonSides: number;
   drawingPoints: Point[];
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
-  completeShape: (points: Point[], properties?: ShapeProperties) => void;
-  shapes: Shape[];
-  setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
+  completeShape: (points: Point[], properties?: any) => void;
+  shapes: Doc<'shapes'>[];
+  setSelectedShapeIds: React.Dispatch<React.SetStateAction<Id<'shapes'>[]>>;
   arcMode: ArcMode;
   snapEnabled: boolean;
   activeSnapResult: SnapResult;
@@ -66,7 +61,7 @@ export const handleCanvasClick = ({
   polygonSides,
   completeShape,
   shapes,
-  setSelectedShapes,
+  setSelectedShapeIds,
   arcMode,
   snapEnabled,
   activeSnapResult,
@@ -108,7 +103,7 @@ export const handleCanvasClick = ({
         scale,
         offset,
         shapes,
-        setSelectedShapes,
+        setSelectedShapeIds,
       });
       return;
     }
@@ -139,8 +134,11 @@ export const handleCanvasClick = ({
         setDrawingPoints([snappedPoint]);
 
         // Set temporary shape for preview
-        const newDimShape: Shape = {
-          id: `temp-dim-${Date.now()}`,
+        const newDimShape: Doc<'shapes'> = {
+          _id: `temp-dim-${Date.now()}` as Id<'shapes'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          userId: `temp-usr-${Date.now()}` as Id<'users'>,
           type: 'dimension',
           points: [snappedPoint],
           properties: {
@@ -249,13 +247,16 @@ const startNewShape = (
   point: Point,
   selectedTool: DrawingTool,
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   setDrawingPoints([point]);
 
   // Create temporary shape
-  const newTempShape: Shape = {
-    id: `temp-${Date.now()}`,
+  const newTempShape: Doc<'shapes'> = {
+    _id: `temp-${Date.now()}` as Id<'shapes'>,
+    _creationTime: Date.now(),
+    projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+    userId: `temp-usr-${Date.now()}` as Id<'users'>,
     type: selectedTool,
     points: [point],
     properties: {},
@@ -272,7 +273,7 @@ const handleShapeProgress = (
   snappedPoint: Point,
   selectedTool: DrawingTool,
   drawingPoints: Point[],
-  tempShape: Shape | null,
+  tempShape: Doc<'shapes'> | null,
   ellipseParams: {
     radiusX: number;
     radiusY: number;
@@ -282,7 +283,7 @@ const handleShapeProgress = (
   splineTension: number,
   polygonSides: number,
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void,
   arcMode: ArcMode
 ) => {
@@ -373,7 +374,7 @@ const handlePolylineProgress = (
   snappedPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   const updatedPoints = [...drawingPoints, snappedPoint];
@@ -423,8 +424,8 @@ const handleEllipseProgress = (
     rotation: number;
     isFullEllipse: boolean;
   },
-  tempShape: Shape | null,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  tempShape: Doc<'shapes'> | null,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   const center = drawingPoints[0];
@@ -506,7 +507,7 @@ const handleSplineProgress = (
   drawingPoints: Point[],
   splineTension: number,
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   const updatedPoints = [...drawingPoints, snappedPoint];
@@ -538,7 +539,7 @@ const handleArcDrawing = (
   point: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   // Modified arc handlers to include property calculations

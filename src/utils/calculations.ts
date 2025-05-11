@@ -1,4 +1,5 @@
-import { Point, Shape } from '@/types';
+import { Doc, Id } from '@/convex/_generated/dataModel';
+import { Point } from '@/types';
 
 /**
  * Calculate distance between two points
@@ -429,7 +430,10 @@ export function angleFromPoints(p1: Point, p2: Point): number {
  * @param shape2 Second shape
  * @returns Array of intersection points
  */
-export function intersectShapes(shape1: Shape, shape2: Shape): Point[] {
+export function intersectShapes(
+  shape1: Doc<'shapes'>,
+  shape2: Doc<'shapes'>
+): Point[] {
   // Line-Line intersection
   if (shape1.type === 'line' && shape2.type === 'line') {
     return intersectLineLine(shape1, shape2);
@@ -467,7 +471,10 @@ export function intersectShapes(shape1: Shape, shape2: Shape): Point[] {
 /**
  * Calculate intersection between two line segments
  */
-function intersectLineLine(line1: Shape, line2: Shape): Point[] {
+function intersectLineLine(
+  line1: Doc<'shapes'>,
+  line2: Doc<'shapes'>
+): Point[] {
   if (line1.points.length < 2 || line2.points.length < 2) {
     return [];
   }
@@ -507,7 +514,7 @@ function intersectLineLine(line1: Shape, line2: Shape): Point[] {
 /**
  * Calculate intersection between a line and an arc
  */
-function intersectLineArc(line: Shape, arc: Shape): Point[] {
+function intersectLineArc(line: Doc<'shapes'>, arc: Doc<'shapes'>): Point[] {
   if (line.points.length < 2 || arc.points.length < 1) {
     return [];
   }
@@ -584,7 +591,7 @@ function intersectLineArc(line: Shape, arc: Shape): Point[] {
 /**
  * Calculate intersection between two arcs
  */
-function intersectArcArc(arc1: Shape, arc2: Shape): Point[] {
+function intersectArcArc(arc1: Doc<'shapes'>, arc2: Doc<'shapes'>): Point[] {
   const center1 = arc1.points[0];
   const center2 = arc2.points[0];
 
@@ -669,13 +676,19 @@ function intersectArcArc(arc1: Shape, arc2: Shape): Point[] {
 /**
  * Calculate intersection between a line and a polyline
  */
-function intersectLinePolyline(line: Shape, polyline: Shape): Point[] {
+function intersectLinePolyline(
+  line: Doc<'shapes'>,
+  polyline: Doc<'shapes'>
+): Point[] {
   const intersections: Point[] = [];
 
   // Create line segments from polyline points
   for (let i = 1; i < polyline.points.length; i++) {
-    const lineSegment: Shape = {
-      id: 'temp',
+    const lineSegment: Doc<'shapes'> = {
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'line',
       points: [polyline.points[i - 1], polyline.points[i]],
       properties: {},

@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/providers/theme-provider';
 
 import './globals.css';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { ConvexAuthenticationProvider } from '@/providers/convex-auth-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -74,10 +75,10 @@ export default function RootLayout({
     <html lang='en' suppressHydrationWarning>
       <head />
 
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <ConvexClientProvider>
+      <ConvexAuthenticationProvider>
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
           <ThemeProvider
             enableSystem
             attribute='class'
@@ -87,8 +88,8 @@ export default function RootLayout({
           >
             <TooltipProvider>{children}</TooltipProvider>
           </ThemeProvider>
-        </ConvexClientProvider>
-      </body>
+        </body>
+      </ConvexAuthenticationProvider>
     </html>
   );
 }

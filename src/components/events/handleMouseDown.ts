@@ -1,10 +1,11 @@
-import { Shape, Point } from '@/types';
+import { Point } from '@/types';
 import { SnapResult } from '../snap/useSnapping';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import {
   AreaSelectionState,
   startAreaSelection,
 } from '../select/handleAreaSelection';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -15,7 +16,7 @@ type Props = {
   setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
   setDragStart: React.Dispatch<React.SetStateAction<Point>>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
   snapEnabled: boolean;
   activeSnapResult: SnapResult;
@@ -71,7 +72,10 @@ export const handleMouseDown = ({
     setDrawingPoints(newPoints);
 
     setTempShape({
-      id: 'temp-polyline',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'polyline',
       points: newPoints,
       properties: {},

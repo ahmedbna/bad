@@ -1,4 +1,5 @@
-import { Point, Shape } from '@/types';
+import { Doc, Id } from '@/convex/_generated/dataModel';
+import { Point } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 
@@ -13,7 +14,7 @@ export type AreaSelectionState = {
  * Determines if a shape is contained within the selection rectangle
  */
 export const isShapeInSelectionArea = (
-  shape: Shape,
+  shape: Doc<'shapes'>,
   selectionStart: Point,
   selectionEnd: Point,
   selectionMode: 'crossing' | 'window'
@@ -37,7 +38,7 @@ export const isShapeInSelectionArea = (
  * Determines if a shape is fully contained within the selection rectangle
  */
 const isShapeFullyContained = (
-  shape: Shape,
+  shape: Doc<'shapes'>,
   minX: number,
   maxX: number,
   minY: number,
@@ -295,7 +296,7 @@ const isShapeFullyContained = (
  * Determines if a shape intersects with the selection rectangle
  */
 const isShapeIntersecting = (
-  shape: Shape,
+  shape: Doc<'shapes'>,
   minX: number,
   maxX: number,
   minY: number,
@@ -723,8 +724,11 @@ const isShapeIntersecting = (
           (180 / Math.PI);
 
         // Create a text shape for intersection testing
-        const textShape: Shape = {
-          id: 'temp-text',
+        const textShape: Doc<'shapes'> = {
+          _id: `temp-${Date.now()}` as Id<'shapes'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          userId: `temp-usr-${Date.now()}` as Id<'users'>,
           type: 'text',
           points: [textPosition],
           properties: {
@@ -961,10 +965,10 @@ export const updateAreaSelection = (
  * Completes area selection on mouse up and returns selected shape IDs
  */
 export const completeAreaSelection = (
-  shapes: Shape[],
+  shapes: Doc<'shapes'>[],
   areaSelection: AreaSelectionState,
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>
-): string[] => {
+) => {
   if (
     !areaSelection.active ||
     !areaSelection.startPoint ||
@@ -983,7 +987,7 @@ export const completeAreaSelection = (
         areaSelection.selectionMode
       )
     )
-    .map((shape) => shape.id);
+    .map((shape) => shape._id);
 
   // Reset area selection
   setAreaSelection(createInitialAreaSelectionState());

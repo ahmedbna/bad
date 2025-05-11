@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Point, Shape, ShapeProperties } from '@/types';
+import { Point, ShapeProperties } from '@/types';
 import { DrawingTool } from '@/constants';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -22,13 +22,14 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { InfoIcon } from 'lucide-react';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 
 interface ShapeInputPanelProps {
   selectedTool: DrawingTool;
   drawingPoints: Point[];
   completeShape: (points: Point[], properties?: ShapeProperties) => void;
   handleCancelDrawing: () => void;
-  setTempShape: (shape: Shape) => void;
+  setTempShape: (shape: Doc<'shapes'>) => void;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
 }
 
@@ -134,7 +135,10 @@ export const ShapeInputPanel = ({
     switch (selectedTool) {
       case 'line':
         setTempShape({
-          id: 'temp-shape',
+          _id: `temp-${Date.now()}` as Id<'shapes'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          userId: `temp-usr-${Date.now()}` as Id<'users'>,
           type: 'line',
           points: [basePoint, point],
           properties: {},
@@ -143,7 +147,10 @@ export const ShapeInputPanel = ({
 
       case 'rectangle':
         setTempShape({
-          id: 'temp-shape',
+          _id: `temp-${Date.now()}` as Id<'shapes'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          userId: `temp-usr-${Date.now()}` as Id<'users'>,
           type: 'rectangle',
           points: [basePoint, point],
           properties: {},
@@ -154,7 +161,10 @@ export const ShapeInputPanel = ({
         const radius = Math.hypot(point.x - basePoint.x, point.y - basePoint.y);
 
         setTempShape({
-          id: 'temp-shape',
+          _id: `temp-${Date.now()}` as Id<'shapes'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          userId: `temp-usr-${Date.now()}` as Id<'users'>,
           type: 'circle',
           points: [basePoint],
           properties: { radius },
@@ -170,7 +180,10 @@ export const ShapeInputPanel = ({
           );
 
           setTempShape({
-            id: 'temp-shape',
+            _id: 'temp-shape' as Id<'shapes'>,
+            _creationTime: 10,
+            projectId: 'temp-project' as Id<'projects'>,
+            userId: 'temp-user' as Id<'users'>,
             type: 'ellipse',
             points: [basePoint, point],
             properties: {
@@ -197,7 +210,10 @@ export const ShapeInputPanel = ({
           const radiusY = Math.abs(dotProduct);
 
           setTempShape({
-            id: 'temp-shape',
+            _id: 'temp-shape' as Id<'shapes'>,
+            _creationTime: 10,
+            projectId: 'temp-project' as Id<'projects'>,
+            userId: 'temp-user' as Id<'users'>,
             type: 'ellipse',
             points: [basePoint],
             properties: {
@@ -217,7 +233,10 @@ export const ShapeInputPanel = ({
         );
 
         setTempShape({
-          id: 'temp-shape',
+          _id: `temp-${Date.now()}` as Id<'shapes'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          userId: `temp-usr-${Date.now()}` as Id<'users'>,
           type: 'polygon',
           points: [basePoint],
           properties: {
@@ -231,7 +250,10 @@ export const ShapeInputPanel = ({
         if (step === 1) {
           // 3-point arc (storing second point)
           setTempShape({
-            id: 'temp-shape',
+            _id: 'temp-shape' as Id<'shapes'>,
+            _creationTime: 10,
+            projectId: 'temp-project' as Id<'projects'>,
+            userId: 'temp-user' as Id<'users'>,
             type: 'arc',
             points: [basePoint, point],
             properties: {},
@@ -239,7 +261,10 @@ export const ShapeInputPanel = ({
         } else if (step === 2 && drawingPoints.length >= 2) {
           // 3-point arc (complete with third point)
           setTempShape({
-            id: 'temp-shape',
+            _id: 'temp-shape' as Id<'shapes'>,
+            _creationTime: 10,
+            projectId: 'temp-project' as Id<'projects'>,
+            userId: 'temp-user' as Id<'users'>,
             type: 'arc',
             points: [basePoint, drawingPoints[1], point],
             properties: {},
@@ -250,7 +275,10 @@ export const ShapeInputPanel = ({
       case 'spline':
         const splinePoints = [...drawingPoints, point];
         setTempShape({
-          id: 'temp-shape',
+          _id: `temp-${Date.now()}` as Id<'shapes'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          userId: `temp-usr-${Date.now()}` as Id<'users'>,
           type: 'spline',
           points: splinePoints,
           properties: {
@@ -262,14 +290,20 @@ export const ShapeInputPanel = ({
       case 'dimension':
         if (step === 1) {
           setTempShape({
-            id: 'temp-shape',
+            _id: 'temp-shape' as Id<'shapes'>,
+            _creationTime: 10,
+            projectId: 'temp-project' as Id<'projects'>,
+            userId: 'temp-user' as Id<'users'>,
             type: 'dimension',
             points: [basePoint, point],
             properties: {},
           });
         } else if (step === 2 && drawingPoints.length >= 2) {
           setTempShape({
-            id: 'temp-shape',
+            _id: 'temp-shape' as Id<'shapes'>,
+            _creationTime: 10,
+            projectId: 'temp-project' as Id<'projects'>,
+            userId: 'temp-user' as Id<'users'>,
             type: 'dimension',
             points: [basePoint, drawingPoints[1], point],
             properties: {},
@@ -688,7 +722,10 @@ export const ShapeInputPanel = ({
             });
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'line',
               points: [basePoint, secondPoint],
               properties: {},
@@ -715,7 +752,10 @@ export const ShapeInputPanel = ({
             });
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'rectangle',
               points: [basePoint, secondPoint],
               properties: {},
@@ -748,7 +788,10 @@ export const ShapeInputPanel = ({
             });
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'circle',
               points: [basePoint],
               properties: { radius },
@@ -779,7 +822,10 @@ export const ShapeInputPanel = ({
             });
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'ellipse',
               points: [basePoint],
               properties: {
@@ -813,7 +859,10 @@ export const ShapeInputPanel = ({
             });
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'polygon',
               points: [basePoint],
               properties: {
@@ -851,7 +900,10 @@ export const ShapeInputPanel = ({
             });
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'arc',
               points: [basePoint],
               properties: {
@@ -1169,7 +1221,10 @@ export const ShapeInputPanel = ({
 
             // Update temp shape for preview
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'line',
               points: [basePoint, secondPoint],
               properties: {},
@@ -1196,7 +1251,10 @@ export const ShapeInputPanel = ({
             };
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'rectangle',
               points: [basePoint, secondPoint],
               properties: {},
@@ -1236,7 +1294,10 @@ export const ShapeInputPanel = ({
             };
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'circle',
               points: [basePoint],
               properties: { radius },
@@ -1266,7 +1327,10 @@ export const ShapeInputPanel = ({
             };
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'ellipse',
               points: [basePoint],
               properties: {
@@ -1299,7 +1363,10 @@ export const ShapeInputPanel = ({
             };
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'polygon',
               points: [basePoint],
               properties: {
@@ -1332,7 +1399,10 @@ export const ShapeInputPanel = ({
             };
 
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'arc',
               points: [basePoint],
               properties: {
@@ -1355,7 +1425,10 @@ export const ShapeInputPanel = ({
           const tension = parseFloat(updatedProperties.tension || '0.5');
           if (!isNaN(tension)) {
             setTempShape({
-              id: 'temp-shape',
+              _id: 'temp-shape' as Id<'shapes'>,
+              _creationTime: 10,
+              projectId: 'temp-project' as Id<'projects'>,
+              userId: 'temp-user' as Id<'users'>,
               type: 'spline',
               points: drawingPoints,
               properties: { tension },

@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { drawGrid } from './draw/draw-grid';
 import { Point } from '@/types';
-import { Shape } from '@/types';
 import { DrawingTool, ArcMode } from '@/constants';
 import { drawShape } from './draw/draw-shape';
 import { SidePanel } from './sidebar/side-panel';
@@ -33,15 +32,27 @@ import { useEditing } from '@/components/editing/useEditing';
 import { createInitialEditingState, EditingTool } from './editing/constants';
 import { renderEditingVisuals } from './editing/render-editing';
 import { handleSelection } from './select/handleSelection';
+import { Doc, Id } from '@/convex/_generated/dataModel';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
-export const AutoCADClone = () => {
-  const [shapes, setShapes] = useState<Shape[]>([]);
+type Props = {
+  projectId: Id<'projects'>;
+  shapes: Array<Doc<'shapes'>>;
+};
+
+export const CADApp = ({ projectId, shapes }: Props) => {
+  const createShape = useMutation(api.shapes.create);
+  const updateShape = useMutation(api.shapes.update);
+  const deleteShapes = useMutation(api.shapes.deleteShapes);
+
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
-  const [tempShape, setTempShape] = useState<Shape | null>(null);
+  const [tempShape, setTempShape] = useState<Doc<'shapes'> | null>(null);
+  const [selectedShapeIds, setSelectedShapeIds] = useState<Id<'shapes'>[]>([]);
 
   const [selectedTab, setSelectedTab] = useState('tools');
-  const [editingTextId, setEditingTextId] = useState<string | null>(null);
+  const [editingTextId, setEditingTextId] = useState<Id<'shapes'> | null>(null);
 
   const [textParams, setTextParams] = useState({
     content: 'Sample Text',
@@ -70,7 +81,6 @@ export const AutoCADClone = () => {
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<Point>({ x: 0, y: 0 });
-  const [selectedShapes, setSelectedShapes] = useState<string[]>([]);
   const [areaSelection, setAreaSelection] = useState(
     createInitialAreaSelectionState()
   );
@@ -108,7 +118,7 @@ export const AutoCADClone = () => {
     commandBuffer,
     handleUndo,
     handleRedo,
-  } = useEditing(shapes, setShapes, scale, offset, selectedShapes);
+  } = useEditing(scale, offset, shapes, selectedShapeIds);
 
   // Dialog states
   const [showPolygonDialog, setShowPolygonDialog] = useState(false);
@@ -201,7 +211,7 @@ export const AutoCADClone = () => {
     tempShape,
     scale,
     offset,
-    selectedShapes,
+    selectedShapeIds,
     areaSelection,
     gridSize,
     activeSnapResult,
@@ -238,7 +248,7 @@ export const AutoCADClone = () => {
 
     // Draw all shapes
     shapes.forEach((shape) => {
-      const isSelected = selectedShapes.includes(shape.id);
+      const isSelected = selectedShapeIds.includes(shape._id);
       drawShape({
         ctx,
         scale,
@@ -293,17 +303,16 @@ export const AutoCADClone = () => {
   };
 
   // Complete shape and add to shapes list
-  const completeShape = (points: Point[], properties = {}) => {
+  const completeShape = async (points: Point[], properties: {}) => {
     if (points.length < 1) return;
 
-    const newShape: Shape = {
-      id: `shape-${Date.now()}`,
+    await createShape({
+      projectId,
       type: selectedTool,
       points,
       properties,
-    };
+    });
 
-    setShapes((prev) => [...prev, newShape]);
     setDrawingPoints([]);
     setTempShape(null);
 
@@ -313,21 +322,20 @@ export const AutoCADClone = () => {
   // Clear drawing and cancel current operation
   const handleCancelDrawing = () => {
     setDrawingPoints([]);
-    setSelectedShapes([]);
+    setSelectedShapeIds([]);
+    setEditingTextId(null);
     setTempShape(null);
 
     clearSnap();
   };
 
   // Delete selected shapes
-  const handleDeleteShape = () => {
-    if (!selectedShapes.length) return;
+  const handleDeleteShape = async () => {
+    if (!selectedShapeIds.length) return;
 
-    setShapes((prev) =>
-      prev.filter((shape) => !selectedShapes.includes(shape.id))
-    );
+    await deleteShapes({ shapeIds: selectedShapeIds });
 
-    setSelectedShapes([]);
+    setSelectedShapeIds([]);
   };
 
   // Toggle snap mode
@@ -364,7 +372,7 @@ export const AutoCADClone = () => {
       }
 
       if (event.key === 'Delete' || event.key === 'Backspace') {
-        if (selectedShapes.length > 0) {
+        if (selectedShapeIds.length > 0) {
           handleDeleteShape();
           handleCancelDrawing();
           setSelectedTool('select');
@@ -378,7 +386,7 @@ export const AutoCADClone = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [selectedShapes]);
+  }, [selectedShapeIds]);
 
   // Add this before the return statement in AutoCADClone component
   const togglePolarTracking = () => {
@@ -437,7 +445,7 @@ export const AutoCADClone = () => {
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedShapes.length > 0) {
+        if (selectedShapeIds.length > 0) {
           handleDeleteShape();
           handleCancelDrawing();
           setSelectedTool('select');
@@ -537,7 +545,7 @@ export const AutoCADClone = () => {
     setSelectedTool,
     setDrawingPoints,
     setTempShape,
-    setSelectedShapes,
+    setSelectedShapeIds,
     shapes,
     handleUndo,
     handleRedo,
@@ -599,7 +607,7 @@ export const AutoCADClone = () => {
                   scale,
                   offset,
                   shapes,
-                  setSelectedShapes,
+                  setSelectedShapeIds,
                 });
               } else {
                 handleCanvasClick({
@@ -616,7 +624,7 @@ export const AutoCADClone = () => {
                   polygonSides,
                   completeShape,
                   shapes,
-                  setSelectedShapes,
+                  setSelectedShapeIds,
                   arcMode,
                   snapEnabled: snapSettings.enabled,
                   activeSnapResult,
@@ -700,7 +708,7 @@ export const AutoCADClone = () => {
                 areaSelection,
                 shapes,
                 setAreaSelection,
-                setSelectedShapes,
+                setSelectedShapeIds,
                 setIsDragging,
               });
             }}
@@ -757,7 +765,6 @@ export const AutoCADClone = () => {
         setTextParams={setTextParams}
         editingTextId={editingTextId}
         setEditingTextId={setEditingTextId}
-        setShapes={setShapes}
       />
 
       <DimensionDialog

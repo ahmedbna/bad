@@ -1,6 +1,7 @@
-import { Point, Shape, TextParams } from '@/types';
+import { Point, ShapeProperties, TextParams } from '@/types';
 import { DrawingTool } from '@/constants';
 import { canvasToWorld } from '@/utils/canvasToWorld';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;
@@ -9,11 +10,11 @@ type Props = {
   splineTension: number;
   scale: number;
   offset: Point;
-  shapes: Array<Shape>;
+  shapes: Array<Doc<'shapes'>>;
   setShowTextDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setTextParams: React.Dispatch<React.SetStateAction<TextParams>>;
-  completeShape: (points: Array<Point>, options?: { tension?: number }) => void;
-  setEditingTextId: React.Dispatch<React.SetStateAction<string | null>>;
+  completeShape: (points: Point[], properties?: any) => void;
+  setEditingTextId: React.Dispatch<React.SetStateAction<Id<'shapes'> | null>>;
 };
 
 export const handleCanvasDoubleClick = ({
@@ -54,12 +55,15 @@ export const handleCanvasDoubleClick = ({
       shape.properties.textParams?.content || ' ',
       shape.properties.textParams?.fontSize || 24,
       shape.properties.textParams?.rotation || 0,
-      shape.properties.textParams?.justification || 'center',
+      (shape.properties.textParams?.justification as
+        | 'left'
+        | 'center'
+        | 'right') || 'center',
       scale
     );
 
     if (isInside) {
-      setEditingTextId(shape.id);
+      setEditingTextId(shape._id);
 
       setTextParams({
         content: shape.properties.textParams?.content || ' ',
@@ -68,7 +72,11 @@ export const handleCanvasDoubleClick = ({
         fontStyle: shape.properties.textParams?.fontStyle || 'normal',
         fontWeight: shape.properties.textParams?.fontWeight || 'normal',
         rotation: shape.properties.textParams?.rotation || 0,
-        justification: shape.properties.textParams?.justification || 'center',
+        justification:
+          (shape.properties.textParams?.justification as
+            | 'left'
+            | 'center'
+            | 'right') || 'center',
       });
 
       setShowTextDialog(true);

@@ -55,9 +55,9 @@ import {
 
 type Props = {
   selectedTool: DrawingTool;
-  selectedShapes: string[];
+  selectedShapeIds: string[];
   gridSize: number;
-  setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
+  setSelectedShapeIds: React.Dispatch<React.SetStateAction<string[]>>;
   setScale: React.Dispatch<React.SetStateAction<number>>;
   snapSettings: {
     enabled: boolean;
@@ -86,8 +86,8 @@ export const Toolbar = ({
   gridSize,
   selectedTool,
   setSelectedTool,
-  setSelectedShapes,
-  selectedShapes,
+  setSelectedShapeIds,
+  selectedShapeIds,
   setGridSize,
   setScale,
   handleDeleteShape,
@@ -134,7 +134,7 @@ export const Toolbar = ({
           size='sm'
           onClick={() => {
             setSelectedTool('line');
-            setSelectedShapes([]);
+            setSelectedShapeIds([]);
           }}
           title='Line'
         >
@@ -146,7 +146,7 @@ export const Toolbar = ({
           size='sm'
           onClick={() => {
             setSelectedTool('polyline');
-            setSelectedShapes([]);
+            setSelectedShapeIds([]);
           }}
           title='Polyline'
         >
@@ -158,7 +158,7 @@ export const Toolbar = ({
           size='sm'
           onClick={() => {
             setSelectedTool('rectangle');
-            setSelectedShapes([]);
+            setSelectedShapeIds([]);
           }}
           title='Rectangle'
         >
@@ -170,7 +170,7 @@ export const Toolbar = ({
           size='sm'
           onClick={() => {
             setSelectedTool('circle');
-            setSelectedShapes([]);
+            setSelectedShapeIds([]);
           }}
           title='Circle'
         >
@@ -183,7 +183,7 @@ export const Toolbar = ({
           onClick={() => {
             setShowArcMode(true);
             setSelectedTool('arc');
-            setSelectedShapes([]);
+            setSelectedShapeIds([]);
           }}
           title='Arc'
         >
@@ -195,7 +195,7 @@ export const Toolbar = ({
           size='sm'
           onClick={() => {
             setSelectedTool('ellipse');
-            setSelectedShapes([]);
+            setSelectedShapeIds([]);
           }}
           title='Ellipse'
         >
@@ -207,7 +207,7 @@ export const Toolbar = ({
           size='sm'
           onClick={() => {
             setSelectedTool('polygon');
-            setSelectedShapes([]);
+            setSelectedShapeIds([]);
           }}
           title='Polygon'
         >
@@ -219,7 +219,7 @@ export const Toolbar = ({
           size='sm'
           onClick={() => {
             setSelectedTool('spline');
-            setSelectedShapes([]);
+            setSelectedShapeIds([]);
           }}
           title='Spline'
         >
@@ -449,7 +449,7 @@ export const Toolbar = ({
         </Button>
       </div>
 
-      {selectedShapes.length > 0 ? (
+      {selectedShapeIds.length > 0 ? (
         <>
           <Separator orientation='vertical' className='h-8' />
           <Button variant='destructive' size='sm' onClick={handleDeleteShape}>

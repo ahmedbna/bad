@@ -1,13 +1,13 @@
 import { Point } from '@/types/';
-import { Shape } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 
 type Props = {
   e: React.MouseEvent<HTMLCanvasElement>;
   scale: number;
   offset: Point;
-  shapes: Shape[];
-  setSelectedShapes: React.Dispatch<React.SetStateAction<string[]>>;
+  shapes: Array<Doc<'shapes'>>;
+  setSelectedShapeIds: React.Dispatch<React.SetStateAction<Id<'shapes'>[]>>;
 };
 
 // Handle selection
@@ -16,7 +16,7 @@ export const handleSelection = ({
   scale,
   offset,
   shapes,
-  setSelectedShapes,
+  setSelectedShapeIds,
 }: Props) => {
   const rect = e.currentTarget.getBoundingClientRect();
   const mouseX = e.clientX - rect.left;
@@ -41,15 +41,15 @@ export const handleSelection = ({
     const shape = shapes[i];
 
     if (isPointOnShape(worldPoint, shape, scale)) {
-      setSelectedShapes((prev) => {
+      setSelectedShapeIds((prev) => {
         // If the shape is already selected and shift is pressed, remove it
-        if (prev.includes(shape.id) && isShiftSelect) {
-          return prev.filter((id) => id !== shape.id);
+        if (prev.includes(shape._id) && isShiftSelect) {
+          return prev.filter((id) => id !== shape._id);
         }
 
         // If the shape is not selected, add it to selection (multi-select is default)
-        if (!prev.includes(shape.id)) {
-          return [...prev, shape.id];
+        if (!prev.includes(shape._id)) {
+          return [...prev, shape._id];
         }
 
         // Otherwise keep the current selection
@@ -61,7 +61,11 @@ export const handleSelection = ({
 };
 
 // Check if point is in shape
-const isPointOnShape = (point: Point, shape: Shape, scale: number): boolean => {
+const isPointOnShape = (
+  point: Point,
+  shape: Doc<'shapes'>,
+  scale: number
+): boolean => {
   switch (shape.type) {
     case 'line':
       if (shape.points.length < 2) return false;
@@ -170,7 +174,7 @@ const isPointOnShape = (point: Point, shape: Shape, scale: number): boolean => {
         shape.points[0],
         shape.points[1],
         shape.properties.dimensionParams.offset,
-        shape.properties?.dimensionParams?.value.toString() || '',
+        shape.properties?.dimensionParams?.value?.toString() || '',
         scale
       );
 

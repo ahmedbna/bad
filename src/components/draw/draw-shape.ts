@@ -1,13 +1,13 @@
-import { DimensionParams, Point, ShapeProperties, TextParams } from '@/types';
-import { Shape } from '@/types';
+import { Point } from '@/types';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 import { EditingState } from '@/components/editing/constants';
+import { Doc } from '@/convex/_generated/dataModel';
 
 type Props = {
   ctx: CanvasRenderingContext2D;
   scale: number;
   offset: Point;
-  shape: Shape;
+  shape: Doc<'shapes'>;
   isSelected: boolean;
   isTemporary: boolean;
   editingState: EditingState;
@@ -25,7 +25,7 @@ export const drawShape = ({
 }: Props) => {
   // Set styles based on selection and editing state
   const isEditingSelected =
-    editingState.isActive && editingState.selectedIds.includes(shape.id);
+    editingState.isActive && editingState.selectedIds.includes(shape._id);
 
   // Regular selection style
   // if (isSelected && !editingState.isActive) {
@@ -461,7 +461,7 @@ export const drawText = (
   ctx: CanvasRenderingContext2D,
   scale: number,
   offset: Point,
-  shape: Shape,
+  shape: Doc<'shapes'>,
   isSelected: boolean,
   isTemporary: boolean
 ) => {
@@ -480,7 +480,7 @@ export const drawText = (
     ctx.save();
 
     // Apply text styling
-    ctx.font = `${textParams.fontStyle} ${textParams.fontWeight} ${textParams.fontSize * scale}px ${textParams.fontFamily}`;
+    ctx.font = `${textParams.fontStyle} ${textParams.fontWeight} ${textParams.fontSize! * scale}px ${textParams.fontFamily}`;
     ctx.fillStyle = isSelected
       ? '#0066ff'
       : isTemporary
@@ -490,22 +490,22 @@ export const drawText = (
     // Apply rotation if needed
     if (textParams.rotation !== 0) {
       ctx.translate(point.x, point.y);
-      ctx.rotate((textParams.rotation * Math.PI) / 180);
+      ctx.rotate((textParams.rotation! * Math.PI) / 180);
       ctx.translate(-point.x, -point.y);
     }
 
     // Set text alignment
-    ctx.textAlign = textParams.justification;
+    ctx.textAlign = textParams.justification as CanvasTextAlign;
     ctx.textBaseline = 'middle';
 
     // Draw the text
-    ctx.fillText(textParams.content, point.x, point.y);
+    ctx.fillText(textParams.content ?? '', point.x, point.y);
 
     // Draw selection handles if selected
     if (isSelected) {
       // Calculate text width for bounding box
-      const textWidth = ctx.measureText(textParams.content).width;
-      const textHeight = textParams.fontSize * scale;
+      const textWidth = ctx.measureText(textParams.content ?? 'Text').width;
+      const textHeight = textParams.fontSize! * scale;
 
       // Draw bounding box (for selection visualization)
       ctx.strokeStyle = '#0066ff';
@@ -539,7 +539,7 @@ export const drawDimension = (
   ctx: CanvasRenderingContext2D,
   scale: number,
   offset: Point,
-  shape: Shape,
+  shape: Doc<'shapes'>,
   isSelected: boolean,
   isTemporary: boolean
 ) => {
@@ -570,6 +570,8 @@ export const drawDimension = (
         : '#000000';
     ctx.fillStyle = ctx.strokeStyle;
     ctx.lineWidth = isSelected ? 2 : 1;
+
+    if (!dimensionParams) return;
 
     // Draw based on dimension type
     switch (dimensionParams.dimensionType) {
@@ -655,7 +657,7 @@ const drawLinearDimension = (
   scale: number,
   startPoint: Point,
   endPoint: Point,
-  dimensionParams: DimensionParams,
+  dimensionParams: any,
   isSelected: boolean
 ) => {
   // Calculate dimension line angle
@@ -760,7 +762,7 @@ const drawAngularDimension = (
   scale: number,
   startPoint: Point,
   endPoint: Point,
-  dimensionParams: DimensionParams,
+  dimensionParams: any,
   isSelected: boolean
 ) => {
   // For angular dimensions, we interpret points differently:
@@ -847,7 +849,7 @@ const drawRadiusDimension = (
   scale: number,
   centerPoint: Point,
   radiusPoint: Point,
-  dimensionParams: DimensionParams,
+  dimensionParams: any,
   isSelected: boolean
 ) => {
   // For radius dimensions, we interpret:
@@ -921,7 +923,7 @@ const drawDiameterDimension = (
   scale: number,
   startPoint: Point,
   endPoint: Point,
-  dimensionParams: DimensionParams,
+  dimensionParams: any,
   isSelected: boolean
 ) => {
   // For diameter dimensions, we interpret:

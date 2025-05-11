@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Point, Shape } from '@/types';
+import { Point } from '@/types';
 import {
   EditingPhase,
   EditingState,
@@ -12,14 +12,19 @@ import {
 import { executeEditingOperation } from './editing-operations';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 import { editingToolsData } from './editing-toolbar';
+import { Doc, Id } from '@/convex/_generated/dataModel';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 export function useEditing(
-  shapes: Shape[],
-  setShapes: (shapes: Shape[]) => void,
   scale: number,
-  offset: { x: number; y: number },
-  selectedShapeIds: string[]
+  offset: Point,
+  shapes: Array<Doc<'shapes'>>,
+  selectedShapeIds: Id<'shapes'>[]
 ) {
+  const createShape = useMutation(api.shapes.create);
+  const updateShape = useMutation(api.shapes.update);
+
   // State for managing the current editing operation
   const [editingState, setEditingState] = useState<EditingState>(
     createInitialEditingState()
@@ -31,12 +36,12 @@ export function useEditing(
   const keyBufferTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // History for undo/redo functionality
-  const [history, setHistory] = useState<Shape[][]>([]);
+  const [history, setHistory] = useState<Array<Doc<'shapes'>>[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
 
   // Add shape changes to history
   const addToHistory = useCallback(
-    (newShapes: Shape[]) => {
+    (newShapes: Array<Doc<'shapes'>>) => {
       // Only add if different from current state
       if (JSON.stringify(newShapes) !== JSON.stringify(shapes)) {
         const newHistory = history.slice(0, historyIndex + 1);
@@ -53,18 +58,18 @@ export function useEditing(
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
-      setShapes(history[newIndex]);
+      // setShapes(history[newIndex]);
     }
-  }, [history, historyIndex, setShapes]);
+  }, [history, historyIndex]);
 
   // Handle redo operation
   const handleRedo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
-      setShapes(history[newIndex]);
+      // setShapes(history[newIndex]);
     }
-  }, [history, historyIndex, setShapes]);
+  }, [history, historyIndex]);
 
   // Initial history setup
   useEffect(() => {

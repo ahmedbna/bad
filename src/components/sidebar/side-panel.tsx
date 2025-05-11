@@ -1,13 +1,14 @@
 'use client';
 
 import { DrawingTool } from '@/constants';
-import { Point, PolarSettings, Shape } from '@/types';
+import { Point, PolarSettings } from '@/types';
 import { SnapMode } from '../snap/useSnapping';
 import { Tools } from './tools';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShapeInputPanel } from './shape-input-panel';
 import { EditingState } from '../editing/constants';
+import { Doc } from '@/convex/_generated/dataModel';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -47,7 +48,7 @@ type Props = {
   selectedTab: string;
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>;
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
   polarSettings: PolarSettings;
   setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
   editingState: EditingState;

@@ -19,10 +19,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Shape } from '@/types';
+import { Doc, Id } from '@/convex/_generated/dataModel';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 type Props = {
-  shapes: Shape[];
+  shapes: Array<Doc<'shapes'>>;
   showTextDialog: boolean;
   setShowTextDialog: (show: boolean) => void;
   textParams: {
@@ -35,9 +37,8 @@ type Props = {
     justification: 'left' | 'center' | 'right';
   };
   setTextParams: (params: any) => void;
-  editingTextId: string | null;
-  setShapes: React.Dispatch<React.SetStateAction<Shape[]>>;
-  setEditingTextId: React.Dispatch<React.SetStateAction<string | null>>;
+  editingTextId: Id<'shapes'> | null;
+  setEditingTextId: React.Dispatch<React.SetStateAction<Id<'shapes'> | null>>;
 };
 
 export const TextDialog = ({
@@ -47,27 +48,22 @@ export const TextDialog = ({
   textParams,
   setTextParams,
   editingTextId,
-  setShapes,
   setEditingTextId,
 }: Props) => {
+  const updateShape = useMutation(api.shapes.update);
+
   const handleApply = () => {
     if (editingTextId) {
-      setShapes((prev) =>
-        prev.map((shape) =>
-          shape.id === editingTextId
-            ? {
-                ...shape,
-                properties: {
-                  ...shape.properties,
-                  textParams: {
-                    ...textParams,
-                  },
-                },
-              }
-            : shape
-        )
-      );
+      const shape = shapes.find((s) => s._id === editingTextId);
+      updateShape({
+        shapeId: editingTextId,
+        properties: {
+          ...shape?.properties,
+          ...textParams,
+        },
+      });
     }
+
     setShowTextDialog(false);
     setEditingTextId(null);
   };

@@ -1,4 +1,5 @@
-import { Point, ShapeProperties, Shape } from '@/types';
+import { Doc, Id } from '@/convex/_generated/dataModel';
+import { Point, ShapeProperties } from '@/types';
 import {
   angleBetweenPoints,
   calculateArcCenter,
@@ -15,14 +16,17 @@ export const handleThreePointArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
     // First point (start point)
     setDrawingPoints([clickPoint]);
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'arc',
       points: [clickPoint],
       properties: { isCompleted: false },
@@ -33,7 +37,10 @@ export const handleThreePointArc = (
 
     // Show a line from start to second point
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'line',
       points: [drawingPoints[0], clickPoint],
       properties: { isCompleted: false },
@@ -88,14 +95,17 @@ export const handleStartCenterEndArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
     // First point (start point)
     setDrawingPoints([clickPoint]);
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'arc',
       points: [clickPoint],
       properties: { isCompleted: false },
@@ -109,7 +119,10 @@ export const handleStartCenterEndArc = (
 
     setDrawingPoints([...drawingPoints, clickPoint]);
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'arc',
       points: [center],
       properties: {
@@ -163,14 +176,17 @@ export const handleCenterStartEndArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
     // First point (center)
     setDrawingPoints([clickPoint]);
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'circle',
       points: [clickPoint],
       properties: {
@@ -187,7 +203,10 @@ export const handleCenterStartEndArc = (
 
     setDrawingPoints([...drawingPoints, clickPoint]);
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'arc',
       points: [center],
       properties: {
@@ -238,14 +257,17 @@ export const handleStartEndRadiusArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
     // First point (start point)
     setDrawingPoints([clickPoint]);
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'arc',
       points: [clickPoint],
       properties: { isCompleted: false },
@@ -259,7 +281,10 @@ export const handleStartEndRadiusArc = (
 
     // Show temporary line between start and end
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'line',
       points: [startPoint, endPoint],
       properties: { isCompleted: false },
@@ -293,14 +318,17 @@ export const handleStartEndDirectionArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
     // First point (start point)
     setDrawingPoints([clickPoint]);
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'arc',
       points: [clickPoint],
       properties: { isCompleted: false },
@@ -314,7 +342,10 @@ export const handleStartEndDirectionArc = (
 
     // Show temporary line between start and end
     setTempShape({
-      id: 'temp',
+      _id: `temp-${Date.now()}` as Id<'shapes'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      userId: `temp-usr-${Date.now()}` as Id<'users'>,
       type: 'line',
       points: [startPoint, endPoint],
       properties: { isCompleted: false },
@@ -347,8 +378,8 @@ export const handleStartEndDirectionArc = (
 export const previewThreePointArc = (
   mousePoint: Point,
   drawingPoints: Point[],
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (drawingPoints.length === 1) {
     // Preview line from start to current mouse position
@@ -418,8 +449,8 @@ export const previewThreePointArc = (
 export const previewStartCenterEndArc = (
   mousePoint: Point,
   drawingPoints: Point[],
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (drawingPoints.length === 1) {
     // Preview circle with radius from start to mouse position
@@ -480,8 +511,8 @@ export const previewStartCenterEndArc = (
 export const previewCenterStartEndArc = (
   mousePoint: Point,
   drawingPoints: Point[],
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (drawingPoints.length === 1) {
     // Preview circle from center to mouse position
@@ -540,8 +571,8 @@ export const previewCenterStartEndArc = (
 export const previewStartEndRadiusArc = (
   mousePoint: Point,
   drawingPoints: Point[],
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (drawingPoints.length === 1) {
     // Preview line from start to potential end
@@ -587,8 +618,8 @@ export const previewStartEndRadiusArc = (
 export const previewStartEndDirectionArc = (
   mousePoint: Point,
   drawingPoints: Point[],
-  tempShape: Shape,
-  setTempShape: React.Dispatch<React.SetStateAction<Shape | null>>
+  tempShape: Doc<'shapes'>,
+  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
 ) => {
   if (drawingPoints.length === 1) {
     // Preview line from start to end
