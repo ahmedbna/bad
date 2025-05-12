@@ -724,7 +724,7 @@ const isShapeIntersecting = (
           (180 / Math.PI);
 
         // Create a text shape for intersection testing
-        const textShape: Doc<'shapes'> = {
+        const textShape = {
           _id: `temp-${Date.now()}` as Id<'shapes'>,
           _creationTime: Date.now(),
           projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
@@ -744,6 +744,19 @@ const isShapeIntersecting = (
               rotation: textRotation,
             },
             rotation: textRotation,
+          },
+          layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+          layer: {
+            _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+            _creationTime: Date.now(),
+            projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+            name: 'temp-layer',
+            isVisible: true,
+            isLocked: false,
+            isDefault: true,
+            color: '#000000',
+            lineType: 'solid',
+            lineWidth: 1,
           },
         };
 

@@ -39,6 +39,7 @@ import {
   EyeOff,
   Check,
   CheckCheck,
+  Lock,
 } from 'lucide-react';
 
 interface Propss {
@@ -309,9 +310,15 @@ export const LayersDialog: React.FC<Propss> = ({
                           <Button
                             variant='ghost'
                             size='icon'
+                            disabled={layer.isDefault}
                             onClick={() => handleDeleteLayer(layer._id)}
                           >
-                            <Trash2 className='w-4 h-4 text-destructive' />
+                            {layer.isDefault ? (
+                              <Lock className='w-4 h-4 text-muted-foreground' />
+                            ) : (
+                              <Trash2 className='w-4 h-4 text-destructive' />
+                            )}
+                            {/* <Trash2 className='w-4 h-4 text-destructive' /> */}
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>Delete Layer</TooltipContent>

@@ -29,20 +29,15 @@ export const drawShape = ({
   const isEditingSelected =
     editingState.isActive && editingState.selectedIds.includes(shape._id);
 
-  const layerColor = shape.layer.isDefault
-    ? theme === 'dark'
-      ? '#000000'
-      : '#ffffff'
-    : shape.layer.color;
-
   ctx.strokeStyle =
     isSelected && !editingState.isActive
       ? '#2563eb'
       : isTemporary
         ? '#9ca3af'
-        : layerColor;
+        : shape.layer.color;
 
-  ctx.lineWidth = isSelected && !editingState.isActive ? 2 : 1;
+  ctx.lineWidth =
+    isSelected && !editingState.isActive ? 2 : shape.layer.lineWidth;
 
   // Add a fill color with transparency for temporary shapes to improve visual feedback
   if (isTemporary) {
