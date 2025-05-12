@@ -355,43 +355,43 @@ export function useEditing(
       if (editingState.isActive && editingState.phase !== 'parameter') return;
 
       // Track typed keys for AutoCAD-like command input
-      if (e.key.length === 1 && e.key.match(/[a-z0-9]/i)) {
-        // Clear any pending timeout
-        if (keyBufferTimeoutRef.current) {
-          clearTimeout(keyBufferTimeoutRef.current);
-        }
+      // if (e.key.length === 1 && e.key.match(/[a-z0-9]/i)) {
+      //   // Clear any pending timeout
+      //   if (keyBufferTimeoutRef.current) {
+      //     clearTimeout(keyBufferTimeoutRef.current);
+      //   }
 
-        // Add key to buffer
-        keyBuffer.current += e.key.toLowerCase();
+      //   // Add key to buffer
+      //   keyBuffer.current += e.key.toLowerCase();
 
-        // Check for shortcut matches
-        const matchedTool = Object.entries(editingToolsData).find(
-          ([_, data]) => data.shortcut?.toLowerCase() === keyBuffer.current
-        );
+      //   // Check for shortcut matches
+      //   const matchedTool = Object.entries(editingToolsData).find(
+      //     ([_, data]) => data.shortcut?.toLowerCase() === keyBuffer.current
+      //   );
 
-        if (matchedTool) {
-          const tool = matchedTool[0] as EditingTool;
-          setEditingTool(tool);
-          keyBuffer.current = '';
-        } else {
-          // Set timeout to clear buffer after 1 second
-          keyBufferTimeoutRef.current = setTimeout(() => {
-            keyBuffer.current = '';
-          }, 1000);
-        }
-      } else if (e.key === 'Enter' && keyBuffer.current) {
-        // Enter key should execute the current command if any
-        const matchedTool = Object.entries(editingToolsData).find(
-          ([tool, _]) => tool.toLowerCase() === keyBuffer.current
-        );
+      //   if (matchedTool) {
+      //     const tool = matchedTool[0] as EditingTool;
+      //     setEditingTool(tool);
+      //     keyBuffer.current = '';
+      //   } else {
+      //     // Set timeout to clear buffer after 1 second
+      //     keyBufferTimeoutRef.current = setTimeout(() => {
+      //       keyBuffer.current = '';
+      //     }, 1000);
+      //   }
+      // } else if (e.key === 'Enter' && keyBuffer.current) {
+      //   // Enter key should execute the current command if any
+      //   const matchedTool = Object.entries(editingToolsData).find(
+      //     ([tool, _]) => tool.toLowerCase() === keyBuffer.current
+      //   );
 
-        if (matchedTool) {
-          const tool = matchedTool[0] as EditingTool;
-          setEditingTool(tool);
-        }
+      //   if (matchedTool) {
+      //     const tool = matchedTool[0] as EditingTool;
+      //     setEditingTool(tool);
+      //   }
 
-        keyBuffer.current = '';
-      }
+      //   keyBuffer.current = '';
+      // }
     };
 
     window.addEventListener('keydown', handleKeyDown);

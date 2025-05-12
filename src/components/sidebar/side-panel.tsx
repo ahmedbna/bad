@@ -8,7 +8,7 @@ import { ModeToggle } from '@/components/ui/mode-toggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShapeInputPanel } from './shape-input-panel';
 import { EditingState } from '../editing/constants';
-import { Doc } from '@/convex/_generated/dataModel';
+import { Doc, Id } from '@/convex/_generated/dataModel';
 import Link from 'next/link';
 
 type Props = {
@@ -54,6 +54,7 @@ type Props = {
   setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
   editingState: EditingState;
   setEditingState: React.Dispatch<React.SetStateAction<EditingState>>;
+  setShowCollabsDialog: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export const SidePanel = ({
@@ -87,6 +88,7 @@ export const SidePanel = ({
   setShowPolarDialog,
   editingState,
   setEditingState,
+  setShowCollabsDialog,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -139,6 +141,7 @@ export const SidePanel = ({
               setShowPolarDialog={setShowPolarDialog}
               editingState={editingState}
               setEditingState={setEditingState}
+              setShowCollabsDialog={setShowCollabsDialog}
             />
           </TabsContent>
           <TabsContent value='props'>

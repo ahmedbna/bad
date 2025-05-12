@@ -12,8 +12,21 @@ type Props = {
 
 export const Project = ({ projectId }: Props) => {
   const shapes = useQuery(api.shapes.getShapesByProject, { projectId });
+  const currentUser = useQuery(api.users.get);
+  const activeUsers = useQuery(api.presence.getActiveUsers, {
+    projectId,
+    timeoutMs: 30000, // Consider users inactive after 30 seconds
+  });
+  const collaborators = useQuery(api.collaborators.getCollaborators, {
+    projectId,
+  });
 
-  if (shapes === undefined) {
+  if (
+    shapes === undefined ||
+    activeUsers === undefined ||
+    collaborators === undefined ||
+    currentUser === undefined
+  ) {
     return (
       <div className='w-screen h-screen flex items-center justify-center'>
         <Spinner />
@@ -21,7 +34,7 @@ export const Project = ({ projectId }: Props) => {
     );
   }
 
-  if (shapes === null) {
+  if (shapes === null || currentUser === null) {
     return (
       <div className='w-screen h-screen flex items-center justify-center'>
         <div>Not found</div>
@@ -29,5 +42,13 @@ export const Project = ({ projectId }: Props) => {
     );
   }
 
-  return <CADApp projectId={projectId} shapes={shapes} />;
+  return (
+    <CADApp
+      projectId={projectId}
+      shapes={shapes}
+      activeUsers={activeUsers}
+      collaborators={collaborators}
+      currentUser={currentUser}
+    />
+  );
 };

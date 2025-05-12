@@ -129,4 +129,43 @@ export default defineSchema({
       center: v.optional(v.array(v.object({ x: v.number(), y: v.number() }))),
     }),
   }).index('projectId', ['projectId']),
+
+  collaborators: defineTable({
+    projectId: v.id('projects'),
+    userId: v.id('users'),
+    role: v.union(v.literal('owner'), v.literal('editor'), v.literal('viewer')),
+  })
+    .index('projectId', ['projectId'])
+    .index('userId', ['userId'])
+    .index('projectId_userId', ['projectId', 'userId']),
+
+  pendingInvitations: defineTable({
+    projectId: v.id('projects'),
+    email: v.string(),
+    role: v.union(v.literal('editor'), v.literal('viewer')),
+    invitedBy: v.id('users'),
+    createdAt: v.number(),
+    acceptedAt: v.optional(v.number()),
+  })
+    .index('projectId', ['projectId'])
+    .index('email', ['email']),
+
+  presence: defineTable({
+    projectId: v.id('projects'),
+    userId: v.id('users'),
+    x: v.number(),
+    y: v.number(),
+    tool: v.optional(v.string()),
+    viewport: v.optional(
+      v.object({
+        x: v.number(),
+        y: v.number(),
+        scale: v.number(),
+      })
+    ),
+    lastUpdated: v.number(),
+  })
+    .index('projectId', ['projectId'])
+    .index('userId', ['userId'])
+    .index('projectId_userId', ['projectId', 'userId']),
 });

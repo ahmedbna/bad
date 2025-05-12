@@ -47,6 +47,7 @@ import { api } from '@/convex/_generated/api';
 import { Spinner } from '../ui/spinner';
 import { Id } from '@/convex/_generated/dataModel';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export const HomePage = () => {
   const router = useRouter();
@@ -60,6 +61,7 @@ export const HomePage = () => {
   const projects = useQuery(api.projects.getProjects);
   const createProject = useMutation(api.projects.create);
   const updateProject = useMutation(api.projects.update);
+  const deleteProject = useMutation(api.projects.deleteProject);
 
   if (user === undefined || projects === undefined) {
     return (
@@ -238,108 +240,144 @@ export const HomePage = () => {
               >
                 {filteredProjects.map((project) =>
                   viewMode === 'grid' ? (
-                    <Card key={project._id} className='overflow-hidden'>
-                      <div className='relative aspect-video'>
-                        {/* <img
+                    <Link href={`/project/${project._id}`} key={project._id}>
+                      <Card key={project._id} className='overflow-hidden'>
+                        <div className='relative aspect-video'>
+                          {/* <img
                           src={project.thumbnail}
                           alt={project.name}
                           className='w-full h-full object-cover'
                         /> */}
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm'
-                          onClick={() => toggleProjectStar(project._id)}
-                        >
-                          <Star
-                            className={`h-4 w-4 ${project.starred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`}
-                          />
-                        </Button>
-                      </div>
-                      <CardHeader className='p-4 pb-2'>
-                        <div className='flex justify-between items-start'>
-                          <h3 className='font-medium leading-none truncate'>
-                            {project.name}
-                          </h3>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='icon'
-                                className='h-8 w-8'
-                              >
-                                <MoreHorizontal className='h-4 w-4' />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align='end'>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className='text-destructive'>
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm'
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleProjectStar(project._id);
+                            }}
+                          >
+                            <Star
+                              className={`h-4 w-4 ${project.starred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`}
+                            />
+                          </Button>
                         </div>
-                      </CardHeader>
-                      <CardFooter className='p-4 pt-0'>
-                        <p className='text-xs text-muted-foreground'>
-                          Edited {project.lastEdited}
-                        </p>
-                      </CardFooter>
-                    </Card>
+                        <CardHeader className='p-4 pb-2'>
+                          <div className='flex justify-between items-start'>
+                            <h3 className='font-medium leading-none truncate'>
+                              {project.name}
+                            </h3>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant='ghost'
+                                  size='icon'
+                                  className='h-8 w-8'
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <MoreHorizontal className='h-4 w-4' />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align='end'>
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className='text-destructive'
+                                  onClick={async (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    await deleteProject({
+                                      projectId: project._id,
+                                    });
+                                  }}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </CardHeader>
+                        <CardFooter className='p-4 pt-0'>
+                          <p className='text-xs text-muted-foreground'>
+                            Edited {project.lastEdited}
+                          </p>
+                        </CardFooter>
+                      </Card>
+                    </Link>
                   ) : (
-                    <Card
-                      key={project._id}
-                      className='flex flex-row overflow-hidden'
-                    >
-                      {/* <div className='w-16 h-16'>
+                    <Link href={`/project/${project._id}`} key={project._id}>
+                      <Card
+                        key={project._id}
+                        className='flex flex-row overflow-hidden'
+                      >
+                        {/* <div className='w-16 h-16'>
                         <img
                           src={project.thumbnail}
                           alt={project.name}
                           className='w-full h-full object-cover'
                         />
                       </div> */}
-                      <div className='flex flex-1 items-center p-4'>
-                        <div className='flex-1'>
-                          <h3 className='font-medium'>{project.name}</h3>
-                          <p className='text-xs text-muted-foreground'>
-                            Edited {project.lastEdited}
-                          </p>
+                        <div className='flex flex-1 items-center p-4'>
+                          <div className='flex-1'>
+                            <h3 className='font-medium'>{project.name}</h3>
+                            <p className='text-xs text-muted-foreground'>
+                              Edited {project.lastEdited}
+                            </p>
+                          </div>
+                          <div className='flex items-center gap-1'>
+                            <Button
+                              variant='ghost'
+                              size='icon'
+                              className='h-8 w-8'
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleProjectStar(project._id);
+                              }}
+                            >
+                              <Star
+                                className={`h-4 w-4 ${project.starred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`}
+                              />
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant='ghost'
+                                  size='icon'
+                                  className='h-8 w-8'
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <MoreHorizontal className='h-4 w-4' />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align='end'>
+                                <DropdownMenuItem>Edit</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className='text-destructive'
+                                  onClick={async (e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    await deleteProject({
+                                      projectId: project._id,
+                                    });
+                                  }}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
-                        <div className='flex items-center gap-1'>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='h-8 w-8'
-                            onClick={() => toggleProjectStar(project._id)}
-                          >
-                            <Star
-                              className={`h-4 w-4 ${project.starred ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`}
-                            />
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant='ghost'
-                                size='icon'
-                                className='h-8 w-8'
-                              >
-                                <MoreHorizontal className='h-4 w-4' />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align='end'>
-                              <DropdownMenuItem>Edit</DropdownMenuItem>
-                              <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem className='text-destructive'>
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </Card>
+                      </Card>
+                    </Link>
                   )
                 )}
               </div>

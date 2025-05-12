@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { drawGrid } from './draw/draw-grid';
 import { Point } from '@/types';
 import { DrawingTool, ArcMode } from '@/constants';
@@ -33,18 +33,70 @@ import { createInitialEditingState, EditingTool } from './editing/constants';
 import { renderEditingVisuals } from './editing/render-editing';
 import { handleSelection } from './select/handleSelection';
 import { Doc, Id } from '@/convex/_generated/dataModel';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { CollaboratorCursor } from './collaboration/collaborator-cursor';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useThrottledFunction } from '@/hooks/useThrottledFunction';
+import {
+  Collaborators,
+  getCollaboratorName,
+  getUserColor,
+} from './collaboration/collaborators';
 
 type Props = {
   projectId: Id<'projects'>;
   shapes: Array<Doc<'shapes'>>;
+  activeUsers: {
+    user: {
+      _id: Id<'users'>;
+      name: string | undefined;
+      email: string | undefined;
+      image: string | undefined;
+    } | null;
+    isSelf: boolean;
+    _id: Id<'presence'>;
+    _creationTime: number;
+    tool?: string | undefined;
+    viewport?:
+      | {
+          x: number;
+          y: number;
+          scale: number;
+        }
+      | undefined;
+    userId: Id<'users'>;
+    projectId: Id<'projects'>;
+    x: number;
+    y: number;
+    lastUpdated: number;
+  }[];
+  collaborators: Array<
+    Doc<'collaborators'> & {
+      user: {
+        _id: Id<'users'>;
+        name: string | undefined;
+        email: string | undefined;
+        image: string | undefined;
+      } | null;
+    }
+  >;
+  currentUser: Doc<'users'>;
 };
 
-export const CADApp = ({ projectId, shapes }: Props) => {
+export const CADApp = ({
+  projectId,
+  shapes,
+  activeUsers,
+  collaborators,
+  currentUser,
+}: Props) => {
   const createShape = useMutation(api.shapes.create);
-  const updateShape = useMutation(api.shapes.update);
   const deleteShapes = useMutation(api.shapes.deleteShapes);
+
+  // Collaboration-specific mutations and queries
+  const updatePresence = useMutation(api.presence.updatePresence);
+  const leaveProject = useMutation(api.presence.leaveProject);
 
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
@@ -126,7 +178,7 @@ export const CADApp = ({ projectId, shapes }: Props) => {
   const [showSplineDialog, setShowSplineDialog] = useState(false);
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showDimensionDialog, setShowDimensionDialog] = useState(false);
-
+  const [showCollabsDialog, setShowCollabsDialog] = useState(false);
   // Dialog values
   const [polygonSides, setPolygonSides] = useState(6);
 
@@ -150,7 +202,10 @@ export const CADApp = ({ projectId, shapes }: Props) => {
   const [splineTension, setSplineTension] = useState(0.5);
 
   // Reference to track mouse position
-  const [mousePosition, setMousePosition] = useState<Point | null>(null);
+  const [mousePosition, setMousePosition] = useState<Point>({
+    x: 200,
+    y: 200,
+  });
 
   const [polarSettings, setPolarSettings] = useState({
     enabled: false,
@@ -306,7 +361,7 @@ export const CADApp = ({ projectId, shapes }: Props) => {
   const completeShape = async (points: Point[], properties: {}) => {
     if (points.length < 1) return;
 
-    await createShape({
+    createShape({
       projectId,
       type: selectedTool,
       points,
@@ -318,6 +373,73 @@ export const CADApp = ({ projectId, shapes }: Props) => {
 
     clearSnap();
   };
+
+  // Tracking our view position for collaboration
+  const debouncedMousePosition = useDebounce(mousePosition, 20);
+  const debouncedViewport = useDebounce(
+    { x: offset.x, y: offset.y, scale },
+    500
+  );
+
+  // Handle cursor movement for collaboration
+  const handleMoveCursor = useThrottledFunction((x: number, y: number) => {
+    if (!projectId || !currentUser) return;
+
+    // Send cursor position to server
+    updatePresence({
+      projectId,
+      x,
+      y,
+      tool: selectedTool,
+      viewport: {
+        x: offset.x,
+        y: offset.y,
+        scale: scale,
+      },
+    }).catch((err) => console.error('Failed to update presence:', err));
+  }, 100); // Throttle to every 100ms
+
+  // Update cursor position when mouse moves
+  useEffect(() => {
+    if (debouncedMousePosition && projectId) {
+      handleMoveCursor(debouncedMousePosition.x, debouncedMousePosition.y);
+    }
+  }, [debouncedMousePosition, projectId, handleMoveCursor]);
+
+  // // Update viewport when it changes
+  // useEffect(() => {
+  //   if (projectId) {
+  //     updatePresence({
+  //       projectId,
+  //       x: mousePosition.x,
+  //       y: mousePosition.y,
+  //       tool: selectedTool,
+  //       viewport: {
+  //         x: debouncedViewport.x,
+  //         y: debouncedViewport.y,
+  //         scale: debouncedViewport.scale,
+  //       },
+  //     }).catch((err) => console.error('Failed to update viewport:', err));
+  //   }
+  // }, [
+  //   debouncedViewport,
+  //   projectId,
+  //   updatePresence,
+  //   mousePosition.x,
+  //   mousePosition.y,
+  //   selectedTool,
+  // ]);
+
+  // Leave project when component unmounts
+  useEffect(() => {
+    return () => {
+      if (projectId) {
+        leaveProject({ projectId }).catch((err) =>
+          console.error('Failed to leave project:', err)
+        );
+      }
+    };
+  }, [projectId, leaveProject]);
 
   // Clear drawing and cancel current operation
   const handleCancelDrawing = () => {
@@ -585,6 +707,7 @@ export const CADApp = ({ projectId, shapes }: Props) => {
           setShowPolarDialog={setShowPolarDialog}
           editingState={editingState}
           setEditingState={setEditingState}
+          setShowCollabsDialog={setShowCollabsDialog}
         />
 
         {/* Drawing canvas */}
@@ -700,6 +823,7 @@ export const CADApp = ({ projectId, shapes }: Props) => {
                 textParams,
                 dimensionParams,
                 polarSettings,
+                handleMoveCursor,
               })
             }
             onMouseUp={(e) => {
@@ -718,6 +842,21 @@ export const CADApp = ({ projectId, shapes }: Props) => {
             }}
             className={`cursor-${editingState.isActive ? 'pointer' : 'crosshair'} bg-muted`}
           />
+
+          {/* Render collaborator cursors */}
+          {activeUsers &&
+            activeUsers
+              .filter((user) => !user.isSelf) // Don't show our own cursor
+              .map((user) => (
+                <CollaboratorCursor
+                  key={user.userId}
+                  x={user.x * scale + offset.x}
+                  y={user.y * scale + offset.y}
+                  name={getCollaboratorName(user.userId, collaborators)}
+                  color={getUserColor(user.userId)}
+                  tool={user.tool}
+                />
+              ))}
         </div>
 
         {editingState.isActive && (
@@ -781,6 +920,12 @@ export const CADApp = ({ projectId, shapes }: Props) => {
         setPolarSettings={setPolarSettings}
         updatePolarAngleIncrement={updatePolarAngleIncrement}
         togglePolarTracking={togglePolarTracking}
+      />
+
+      <Collaborators
+        projectId={projectId}
+        showCollabsDialog={showCollabsDialog}
+        setShowCollabsDialog={setShowCollabsDialog}
       />
     </div>
   );

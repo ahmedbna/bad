@@ -1,6 +1,7 @@
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { asyncMap } from 'convex-helpers';
 
 export const getProjectById = query({
   args: {
@@ -55,13 +56,19 @@ export const create = mutation({
       throw new Error('Not authenticated');
     }
 
-    const project = await ctx.db.insert('projects', {
+    const projectId = await ctx.db.insert('projects', {
       name: args.name,
       userId: authId,
       starred: false,
     });
 
-    return project;
+    await ctx.db.insert('collaborators', {
+      userId: authId,
+      projectId: projectId,
+      role: 'owner',
+    });
+
+    return projectId;
   },
 });
 
@@ -87,12 +94,45 @@ export const update = mutation({
     }
 
     await ctx.db.patch(project._id, {
-      name: args.name,
-      starred: args.starred,
-      description: args.description,
-      lastEdited: args.lastEdited,
+      name: args.name ?? project.name,
+      starred: args.starred ?? project.starred,
+      description: args.description ?? project.description,
+      lastEdited: args.lastEdited ?? project.lastEdited,
     });
 
     return project;
+  },
+});
+
+export const deleteProject = mutation({
+  args: {
+    projectId: v.id('projects'),
+  },
+  handler: async (ctx, args) => {
+    const authId = await getAuthUserId(ctx);
+
+    if (!authId) {
+      throw new Error('Not authenticated');
+    }
+
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    if (project.userId !== authId) {
+      throw new Error('Not authorized');
+    }
+
+    const shapes = await ctx.db
+      .query('shapes')
+      .withIndex('projectId', (q) => q.eq('projectId', args.projectId))
+      .collect();
+
+    await asyncMap(shapes, async (shape) => {
+      await ctx.db.delete(shape._id);
+    });
+
+    await ctx.db.delete(args.projectId);
   },
 });

@@ -273,7 +273,7 @@ export const deleteShapes = mutation({
     shapeIds: v.array(v.id('shapes')),
   },
   handler: async (ctx, args) => {
-    asyncMap(args.shapeIds, async (id) => {
+    await asyncMap(args.shapeIds, async (id) => {
       await ctx.db.delete(id);
     });
   },

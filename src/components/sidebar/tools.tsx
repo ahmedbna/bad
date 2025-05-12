@@ -37,6 +37,7 @@ import {
   ZoomIn,
   ZoomOut,
   Radar,
+  Users,
 } from 'lucide-react';
 import { DrawingTool } from '@/constants';
 import { SnapMode } from '../snap/useSnapping';
@@ -94,6 +95,7 @@ type Props = {
   setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
   editingState: EditingState;
   setEditingState: React.Dispatch<React.SetStateAction<EditingState>>;
+  setShowCollabsDialog: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export const Tools = ({
@@ -122,6 +124,7 @@ export const Tools = ({
   setShowPolarDialog,
   editingState,
   setEditingState,
+  setShowCollabsDialog,
 }: Props) => {
   const isSnapModeActive = (mode: SnapMode): boolean => {
     return snapSettings.modes.has(mode);
@@ -491,6 +494,22 @@ export const Tools = ({
             {polarSettings.enabled
               ? `Polar Tracking: ${polarSettings.angleIncrement}°`
               : 'Polar Tracking: Off'}
+          </span>
+        </Button>
+
+        {/* Collaborators */}
+        <Button
+          size='sm'
+          variant='outline'
+          className='w-full flex items-center mt-2 mb-4'
+          onClick={() => setShowCollabsDialog(true)}
+        >
+          <Users size={16} />
+          <span className='ml-1'>
+            Collaborators
+            {/* {polarSettings.enabled
+              ? `Polar Tracking: ${polarSettings.angleIncrement}°`
+              : 'Polar Tracking: Off'} */}
           </span>
         </Button>
 

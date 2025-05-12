@@ -16,6 +16,26 @@ export const get = query({
   },
 });
 
+export const getbyemail = query({
+  args: {
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const authId = await getAuthUserId(ctx);
+
+    if (!authId) {
+      throw new Error('Not authenticated');
+    }
+
+    const user = await ctx.db
+      .query('users')
+      .withIndex('email', (q) => q.eq('email', args.email))
+      .unique();
+
+    return user;
+  },
+});
+
 export const getAll = query({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
