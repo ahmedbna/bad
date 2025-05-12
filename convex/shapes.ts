@@ -31,6 +31,7 @@ export const create = mutation({
         y: v.number(),
       })
     ),
+    layerId: v.id('layers'),
     properties: v.object({
       // Common properties
       strokeColor: v.optional(v.string()),
@@ -126,6 +127,7 @@ export const create = mutation({
       projectId: args.projectId,
       type: args.type,
       points: args.points,
+      layerId: args.layerId,
       properties: args.properties,
     });
   },
@@ -142,6 +144,7 @@ export const update = mutation({
         })
       )
     ),
+    layerId: v.optional(v.id('layers')),
     properties: v.object({
       // Common properties
       strokeColor: v.optional(v.string()),
@@ -242,6 +245,7 @@ export const update = mutation({
     const updates: any = {};
     if (args.points) updates.points = args.points;
     if (args.properties) updates.properties = args.properties;
+    if (args.layerId) updates.layerId = args.layerId;
 
     return await ctx.db.patch(shape._id, updates);
   },
@@ -273,6 +277,12 @@ export const deleteShapes = mutation({
     shapeIds: v.array(v.id('shapes')),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
     await asyncMap(args.shapeIds, async (id) => {
       await ctx.db.delete(id);
     });

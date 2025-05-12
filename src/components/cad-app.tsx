@@ -49,8 +49,10 @@ import {
   getCollaboratorName,
   getUserColor,
 } from './collaboration/collaborators';
+import { LayersDialog } from './dialogs/layers-dialog';
 
 type Props = {
+  project: Doc<'projects'> & { layers: Doc<'layers'>[] };
   projectId: Id<'projects'>;
   shapes: Array<Doc<'shapes'>>;
   activeUsers: {
@@ -91,6 +93,7 @@ type Props = {
 };
 
 export const CADApp = ({
+  project,
   projectId,
   shapes,
   activeUsers,
@@ -108,7 +111,9 @@ export const CADApp = ({
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
   const [tempShape, setTempShape] = useState<Doc<'shapes'> | null>(null);
   const [selectedShapeIds, setSelectedShapeIds] = useState<Id<'shapes'>[]>([]);
-
+  const [currentLayerId, setCurrentLayerId] = useState<Id<'layers'>>(
+    project.layers[0]._id
+  );
   const [selectedTab, setSelectedTab] = useState('tools');
   const [editingTextId, setEditingTextId] = useState<Id<'shapes'> | null>(null);
 
@@ -185,6 +190,8 @@ export const CADApp = ({
   const [showTextDialog, setShowTextDialog] = useState(false);
   const [showDimensionDialog, setShowDimensionDialog] = useState(false);
   const [showCollabsDialog, setShowCollabsDialog] = useState(false);
+  const [showLayersDialog, setShowLayersDialog] = useState(false);
+
   // Dialog values
   const [polygonSides, setPolygonSides] = useState(6);
 
@@ -372,6 +379,7 @@ export const CADApp = ({
       type: selectedTool,
       points,
       properties,
+      layerId: currentLayerId,
     });
 
     setDrawingPoints([]);
@@ -674,6 +682,10 @@ export const CADApp = ({
     handleRedo,
   ]);
 
+  const onLayerSelect = (layerId: Id<'layers'>) => {
+    setCurrentLayerId(layerId);
+  };
+
   return (
     <div className='flex flex-col h-screen'>
       <div className='flex flex-1 overflow-hidden'>
@@ -709,6 +721,8 @@ export const CADApp = ({
           editingState={editingState}
           setEditingState={setEditingState}
           setShowCollabsDialog={setShowCollabsDialog}
+          setShowLayersDialog={setShowLayersDialog}
+          currentLayerId={currentLayerId}
         />
 
         {/* Drawing canvas */}
@@ -926,6 +940,14 @@ export const CADApp = ({
         projectId={projectId}
         showCollabsDialog={showCollabsDialog}
         setShowCollabsDialog={setShowCollabsDialog}
+      />
+
+      <LayersDialog
+        showLayersDialog={showLayersDialog}
+        setShowLayersDialog={setShowLayersDialog}
+        projectId={projectId}
+        currentLayerId={currentLayerId}
+        onLayerSelect={onLayerSelect}
       />
     </div>
   );

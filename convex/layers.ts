@@ -2,6 +2,27 @@ import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { getAuthUserId } from '@convex-dev/auth/server';
 
+export const get = query({
+  args: {
+    layerId: v.id('layers'),
+  },
+  handler: async (ctx, args) => {
+    const authId = await getAuthUserId(ctx);
+
+    if (!authId) {
+      throw new Error('Not authenticated');
+    }
+
+    const layer = await ctx.db.get(args.layerId);
+
+    if (!layer) {
+      throw new Error('Layer not found');
+    }
+
+    return layer;
+  },
+});
+
 export const createLayer = mutation({
   args: {
     projectId: v.id('projects'),
@@ -46,12 +67,12 @@ export const createLayer = mutation({
 export const updateLayer = mutation({
   args: {
     layerId: v.id('layers'),
-    name: v.string(),
-    color: v.string(),
-    lineWidth: v.number(),
-    lineType: v.string(),
-    isVisible: v.boolean(),
-    isLocked: v.boolean(),
+    name: v.optional(v.string()),
+    color: v.optional(v.string()),
+    lineWidth: v.optional(v.number()),
+    lineType: v.optional(v.string()),
+    isVisible: v.optional(v.boolean()),
+    isLocked: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const authId = await getAuthUserId(ctx);
@@ -199,11 +220,12 @@ export const createDefaultLayer = mutation({
     return await ctx.db.insert('layers', {
       projectId: args.projectId,
       name: 'Default Layer',
-      color: '#000000', // Black default color
+      color: '#FFFFFF', // White default color
       lineWidth: 1,
       lineType: 'solid',
       isVisible: true,
       isLocked: false,
+      isDefault: true,
     });
   },
 });

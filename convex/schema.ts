@@ -33,6 +33,7 @@ export default defineSchema({
     lineType: v.string(),
     isVisible: v.boolean(),
     isLocked: v.boolean(),
+    isDefault: v.optional(v.boolean()),
   })
     .index('projectId', ['projectId'])
     .index('projectId_name', ['projectId', 'name']),

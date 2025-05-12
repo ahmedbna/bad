@@ -55,6 +55,8 @@ type Props = {
   editingState: EditingState;
   setEditingState: React.Dispatch<React.SetStateAction<EditingState>>;
   setShowCollabsDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowLayersDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  currentLayerId: Id<'layers'>;
 };
 
 export const SidePanel = ({
@@ -89,6 +91,8 @@ export const SidePanel = ({
   editingState,
   setEditingState,
   setShowCollabsDialog,
+  setShowLayersDialog,
+  currentLayerId,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -142,6 +146,8 @@ export const SidePanel = ({
               editingState={editingState}
               setEditingState={setEditingState}
               setShowCollabsDialog={setShowCollabsDialog}
+              setShowLayersDialog={setShowLayersDialog}
+              currentLayerId={currentLayerId}
             />
           </TabsContent>
           <TabsContent value='props'>

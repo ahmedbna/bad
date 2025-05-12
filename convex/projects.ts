@@ -24,7 +24,12 @@ export const getProjectById = query({
       throw new Error('Not authorized');
     }
 
-    return project;
+    const layers = await ctx.db
+      .query('layers')
+      .withIndex('projectId', (q) => q.eq('projectId', args.projectId))
+      .collect();
+
+    return { ...project, layers };
   },
 });
 
@@ -72,11 +77,12 @@ export const create = mutation({
     await ctx.db.insert('layers', {
       projectId: projectId,
       name: 'Default Layer',
-      color: '#000000', // Black default color
+      color: '#FFFFFF', // White default color
       lineWidth: 1,
       lineType: 'solid',
       isVisible: true,
       isLocked: false,
+      isDefault: true,
     });
 
     return projectId;

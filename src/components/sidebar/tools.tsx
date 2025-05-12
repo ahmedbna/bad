@@ -56,6 +56,9 @@ import { Point, PolarSettings } from '@/types';
 import { StatusBar } from './status-bar';
 import { createInitialEditingState, EditingState } from '../editing/constants';
 import { EditingToolbar } from '../editing/editing-toolbar';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Id } from '@/convex/_generated/dataModel';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -96,6 +99,8 @@ type Props = {
   editingState: EditingState;
   setEditingState: React.Dispatch<React.SetStateAction<EditingState>>;
   setShowCollabsDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowLayersDialog: React.Dispatch<React.SetStateAction<boolean>>;
+  currentLayerId: Id<'layers'>;
 };
 
 export const Tools = ({
@@ -125,14 +130,33 @@ export const Tools = ({
   editingState,
   setEditingState,
   setShowCollabsDialog,
+  setShowLayersDialog,
+  currentLayerId,
 }: Props) => {
+  const layer = useQuery(api.layers.get, { layerId: currentLayerId });
+
   const isSnapModeActive = (mode: SnapMode): boolean => {
     return snapSettings.modes.has(mode);
   };
 
   return (
     <div className='h-full overflow-y-auto'>
-      <h2 className='text-sm font-medium mb-2'>Draw</h2>
+      {/* Layers  */}
+      <Button
+        size='sm'
+        variant='outline'
+        className='w-full flex items-center mt-2'
+        onClick={() => setShowLayersDialog(true)}
+      >
+        <span
+          className='p-0 w-4 h-4 rounded-full border border-primary'
+          style={{ backgroundColor: layer?.color || '#000000' }}
+        />
+
+        <span className='ml-1'>{layer?.name || 'Layer'} Layer</span>
+      </Button>
+
+      <h2 className='text-sm font-medium my-2'>Draw</h2>
       <div className='grid grid-cols-4 gap-2'>
         <Button
           title='Select'
