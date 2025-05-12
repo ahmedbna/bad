@@ -1,6 +1,7 @@
 import { v } from 'convex/values';
 import { mutation, query } from './_generated/server';
 import { getAuthUserId } from '@convex-dev/auth/server';
+import { asyncMap } from 'convex-helpers';
 
 export const get = query({
   args: {
@@ -60,6 +61,7 @@ export const createLayer = mutation({
       lineType: args.lineType ?? 'solid',
       isVisible: args.isVisible ?? true,
       isLocked: args.isLocked ?? false,
+      isDefault: false,
     });
   },
 });
@@ -148,6 +150,28 @@ export const deleteLayer = mutation({
     if (!projectAccess) {
       throw new Error('Not authorized to delete layers in this project');
     }
+
+    const defaultLayer = await ctx.db
+      .query('layers')
+      .withIndex('projectId_isDefault', (q) =>
+        q.eq('projectId', layer.projectId).eq('isDefault', true)
+      )
+      .unique();
+
+    if (defaultLayer === null) {
+      throw new Error('Cannot find the default layer');
+    }
+
+    const shapesInLayer = await ctx.db
+      .query('shapes')
+      .withIndex('layerId', (q) => q.eq('layerId', layer._id))
+      .collect();
+
+    await asyncMap(shapesInLayer, async (shape) => {
+      await ctx.db.patch(shape._id, {
+        layerId: defaultLayer._id,
+      });
+    });
 
     return await ctx.db.delete(args.layerId);
   },

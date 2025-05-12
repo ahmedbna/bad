@@ -22,7 +22,7 @@ interface MouseMoveProps {
   offset: Point;
   isDragging: boolean;
   dragStart: Point;
-  tempShape: Doc<'shapes'> | null;
+  tempShape: (Doc<'shapes'> & { layer: Doc<'layers'> }) | null;
   drawingPoints: Point[];
   arcAngles: { startAngle: number; endAngle: number };
   ellipseParams: {
@@ -38,7 +38,9 @@ interface MouseMoveProps {
   setMousePosition: React.Dispatch<React.SetStateAction<Point>>;
   setOffset: React.Dispatch<React.SetStateAction<Point>>;
   setDragStart: React.Dispatch<React.SetStateAction<Point>>;
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >;
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
   arcMode: ArcMode;
   snapEnabled: boolean;
@@ -145,6 +147,19 @@ export const handleMouseMove = ({
               ...textParams,
             },
           },
+          layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+          layer: {
+            _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+            _creationTime: Date.now(),
+            projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+            name: 'temp-layer',
+            isVisible: true,
+            isLocked: false,
+            isDefault: true,
+            color: '#000000',
+            lineType: 'solid',
+            lineWidth: 1,
+          },
         };
         setTempShape(newTempShape);
       } else {
@@ -232,7 +247,9 @@ const updateTempShapeOnMouseMove = ({
   };
   polygonSides: number;
   splineTension: number;
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >;
   arcMode: ArcMode;
   textParams: TextParams;
   dimensionParams: DimensionParams;
@@ -331,11 +348,26 @@ const handleLinePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   setTempShape({
     ...tempShape,
     points: [drawingPoints[0], snappedPoint],
+    layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+    layer: {
+      _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      name: 'temp-layer',
+      isVisible: true,
+      isLocked: false,
+      isDefault: true,
+      color: '#000000',
+      lineType: 'solid',
+      lineWidth: 1,
+    },
   });
 };
 
@@ -346,7 +378,9 @@ const handlePolylinePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (drawingPoints.length > 0) {
     const newPoints = [...drawingPoints];
@@ -363,6 +397,19 @@ const handlePolylinePreview = (
     setTempShape({
       ...tempShape,
       points: newPoints,
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   }
 };
@@ -374,11 +421,26 @@ const handleRectanglePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   setTempShape({
     ...tempShape,
     points: [drawingPoints[0], snappedPoint],
+    layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+    layer: {
+      _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      name: 'temp-layer',
+      isVisible: true,
+      isLocked: false,
+      isDefault: true,
+      color: '#000000',
+      lineType: 'solid',
+      lineWidth: 1,
+    },
   });
 };
 
@@ -389,7 +451,9 @@ const handleCirclePreview = (
   drawingPoints: Point[],
   snappedPoint: Point,
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   const circleCenter = drawingPoints[0];
   const radius = calculateDistance(circleCenter, snappedPoint);
@@ -399,6 +463,19 @@ const handleCirclePreview = (
     properties: {
       ...tempShape.properties,
       radius,
+    },
+    layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+    layer: {
+      _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      name: 'temp-layer',
+      isVisible: true,
+      isLocked: false,
+      isDefault: true,
+      color: '#000000',
+      lineType: 'solid',
+      lineWidth: 1,
     },
   });
 };
@@ -416,7 +493,9 @@ const handleEllipsePreview = (
     rotation: number;
     isFullEllipse: boolean;
   },
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   const ellipseCenter = drawingPoints[0];
 
@@ -433,6 +512,19 @@ const handleEllipsePreview = (
           ellipseParams.radiusY * (distance / (ellipseParams.radiusX || 1)),
         rotation: angle,
         isFullEllipse: ellipseParams.isFullEllipse,
+      },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
       },
     });
   } else if (drawingPoints.length === 2) {
@@ -453,6 +545,19 @@ const handleEllipsePreview = (
         ...tempShape.properties,
         radiusY,
       },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   }
 };
@@ -465,7 +570,9 @@ const handlePolygonPreview = (
   snappedPoint: Point,
   tempShape: Doc<'shapes'>,
   polygonSides: number,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   const polygonCenter = drawingPoints[0];
   const polygonRadius = calculateDistance(polygonCenter, snappedPoint);
@@ -476,6 +583,19 @@ const handlePolygonPreview = (
       ...tempShape.properties,
       radius: polygonRadius,
       sides: parseInt(polygonSides.toString(), 10),
+    },
+    layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+    layer: {
+      _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      name: 'temp-layer',
+      isVisible: true,
+      isLocked: false,
+      isDefault: true,
+      color: '#000000',
+      lineType: 'solid',
+      lineWidth: 1,
     },
   });
 };
@@ -488,7 +608,9 @@ const handleSplinePreview = (
   snappedPoint: Point,
   tempShape: Doc<'shapes'>,
   splineTension: number,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (drawingPoints.length > 0) {
     setTempShape({
@@ -497,6 +619,19 @@ const handleSplinePreview = (
       properties: {
         ...tempShape.properties,
         tension: splineTension,
+      },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
       },
     });
   }
@@ -510,7 +645,9 @@ const handleArcPreview = (
   point: Point,
   drawingPoints: Point[],
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (!tempShape) return;
 
@@ -565,7 +702,9 @@ const handleTextPreview = (
   currentPoint: Point,
   tempShape: Doc<'shapes'>,
   textParams: TextParams,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   // Update the temporary shape with the current mouse position
   // The position of text is stored in the points array
@@ -578,6 +717,19 @@ const handleTextPreview = (
         ...textParams,
       },
     },
+    layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+    layer: {
+      _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      name: 'temp-layer',
+      isVisible: true,
+      isLocked: false,
+      isDefault: true,
+      color: '#000000',
+      lineType: 'solid',
+      lineWidth: 1,
+    },
   });
 };
 /**
@@ -588,7 +740,9 @@ const handleDimensionPreview = (
   currentPoint: Point,
   tempShape: Doc<'shapes'>,
   dimensionParams?: DimensionParams,
-  setTempShape?: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape?: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (!setTempShape || drawingPoints.length < 1) return;
 
@@ -636,6 +790,19 @@ const handleDimensionPreview = (
             : true,
         textRotation: dimensionParams?.textRotation || 0,
       },
+    },
+    layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+    layer: {
+      _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+      _creationTime: Date.now(),
+      projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+      name: 'temp-layer',
+      isVisible: true,
+      isLocked: false,
+      isDefault: true,
+      color: '#000000',
+      lineType: 'solid',
+      lineWidth: 1,
     },
   });
 };

@@ -49,7 +49,9 @@ type Props = {
   selectedTab: string;
   setSelectedTab: React.Dispatch<React.SetStateAction<string>>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >;
   polarSettings: PolarSettings;
   setShowPolarDialog: React.Dispatch<React.SetStateAction<boolean>>;
   editingState: EditingState;

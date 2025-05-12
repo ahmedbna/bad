@@ -33,10 +33,11 @@ export default defineSchema({
     lineType: v.string(),
     isVisible: v.boolean(),
     isLocked: v.boolean(),
-    isDefault: v.optional(v.boolean()),
+    isDefault: v.boolean(),
   })
     .index('projectId', ['projectId'])
-    .index('projectId_name', ['projectId', 'name']),
+    .index('projectId_name', ['projectId', 'name'])
+    .index('projectId_isDefault', ['projectId', 'isDefault']),
 
   shapes: defineTable({
     userId: v.id('users'),
@@ -131,7 +132,9 @@ export default defineSchema({
       innerRadius: v.optional(v.number()),
       center: v.optional(v.array(v.object({ x: v.number(), y: v.number() }))),
     }),
-  }).index('projectId', ['projectId']),
+  })
+    .index('projectId', ['projectId'])
+    .index('layerId', ['layerId']),
 
   collaborators: defineTable({
     projectId: v.id('projects'),

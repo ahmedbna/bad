@@ -14,10 +14,23 @@ export const getShapesByProject = query({
       throw new Error('Not authenticated');
     }
 
-    return await ctx.db
+    const shapes = await ctx.db
       .query('shapes')
       .withIndex('projectId', (q) => q.eq('projectId', args.projectId))
       .collect();
+
+    return await asyncMap(shapes, async (shape) => {
+      const layer = await ctx.db.get(shape.layerId);
+
+      if (!layer) {
+        throw new Error(`Layer not found for shape ${shape._id}`);
+      }
+
+      return {
+        ...shape,
+        layer,
+      };
+    });
   },
 });
 

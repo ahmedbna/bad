@@ -16,7 +16,9 @@ export const handleThreePointArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
@@ -30,6 +32,19 @@ export const handleThreePointArc = (
       type: 'arc',
       points: [clickPoint],
       properties: { isCompleted: false },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 1) {
     // Second point (middle point)
@@ -44,6 +59,19 @@ export const handleThreePointArc = (
       type: 'line',
       points: [drawingPoints[0], clickPoint],
       properties: { isCompleted: false },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 2) {
     // Third point (end point) - complete the arc
@@ -95,7 +123,9 @@ export const handleStartCenterEndArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
@@ -109,6 +139,19 @@ export const handleStartCenterEndArc = (
       type: 'arc',
       points: [clickPoint],
       properties: { isCompleted: false },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 1) {
     // Second point (center)
@@ -130,6 +173,19 @@ export const handleStartCenterEndArc = (
         startAngle,
         endAngle: startAngle,
         isCompleted: false,
+      },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
       },
     });
   } else if (drawingPoints.length === 2) {
@@ -176,7 +232,9 @@ export const handleCenterStartEndArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
@@ -192,6 +250,19 @@ export const handleCenterStartEndArc = (
       properties: {
         radius: 0,
         isCompleted: false,
+      },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
       },
     });
   } else if (drawingPoints.length === 1) {
@@ -214,6 +285,19 @@ export const handleCenterStartEndArc = (
         startAngle,
         endAngle: startAngle,
         isCompleted: false,
+      },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
       },
     });
   } else if (drawingPoints.length === 2) {
@@ -257,7 +341,9 @@ export const handleStartEndRadiusArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
@@ -271,6 +357,19 @@ export const handleStartEndRadiusArc = (
       type: 'arc',
       points: [clickPoint],
       properties: { isCompleted: false },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 1) {
     // Second point (end point)
@@ -288,6 +387,19 @@ export const handleStartEndRadiusArc = (
       type: 'line',
       points: [startPoint, endPoint],
       properties: { isCompleted: false },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 2) {
     // Third click determines the bulge direction and completes the arc
@@ -318,7 +430,9 @@ export const handleStartEndDirectionArc = (
   clickPoint: Point,
   drawingPoints: Point[],
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>,
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >,
   completeShape: (points: Point[], properties?: ShapeProperties) => void
 ) => {
   if (drawingPoints.length === 0) {
@@ -332,6 +446,19 @@ export const handleStartEndDirectionArc = (
       type: 'arc',
       points: [clickPoint],
       properties: { isCompleted: false },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 1) {
     // Second point (end point)
@@ -349,6 +476,19 @@ export const handleStartEndDirectionArc = (
       type: 'line',
       points: [startPoint, endPoint],
       properties: { isCompleted: false },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 2) {
     // Third click determines the start direction
@@ -379,7 +519,9 @@ export const previewThreePointArc = (
   mousePoint: Point,
   drawingPoints: Point[],
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (drawingPoints.length === 1) {
     // Preview line from start to current mouse position
@@ -387,6 +529,19 @@ export const previewThreePointArc = (
       ...tempShape,
       type: 'line',
       points: [drawingPoints[0], mousePoint],
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 2) {
     // Preview arc through three points
@@ -401,6 +556,19 @@ export const previewThreePointArc = (
         ...tempShape,
         type: 'line',
         points: [startPoint, endPoint],
+        layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+        layer: {
+          _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          name: 'temp-layer',
+          isVisible: true,
+          isLocked: false,
+          isDefault: true,
+          color: '#000000',
+          lineType: 'solid',
+          lineWidth: 1,
+        },
       });
       return;
     }
@@ -442,6 +610,19 @@ export const previewThreePointArc = (
         endAngle: adjustedEndAngle,
         isClockwise,
       },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   }
 };
@@ -450,7 +631,9 @@ export const previewStartCenterEndArc = (
   mousePoint: Point,
   drawingPoints: Point[],
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (drawingPoints.length === 1) {
     // Preview circle with radius from start to mouse position
@@ -466,6 +649,19 @@ export const previewStartCenterEndArc = (
         radius,
         // Add dashed property to indicate it's a preview
         // isDashed: true,
+      },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
       },
     });
   } else if (drawingPoints.length === 2) {
@@ -504,6 +700,19 @@ export const previewStartCenterEndArc = (
         endAngle: adjustedEndAngle,
         isClockwise,
       },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   }
 };
@@ -512,7 +721,9 @@ export const previewCenterStartEndArc = (
   mousePoint: Point,
   drawingPoints: Point[],
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (drawingPoints.length === 1) {
     // Preview circle from center to mouse position
@@ -526,6 +737,19 @@ export const previewCenterStartEndArc = (
       properties: {
         radius,
         // isDashed: true,
+      },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
       },
     });
   } else if (drawingPoints.length === 2) {
@@ -564,6 +788,19 @@ export const previewCenterStartEndArc = (
         endAngle: adjustedEndAngle,
         isClockwise,
       },
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   }
 };
@@ -572,7 +809,9 @@ export const previewStartEndRadiusArc = (
   mousePoint: Point,
   drawingPoints: Point[],
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (drawingPoints.length === 1) {
     // Preview line from start to potential end
@@ -580,6 +819,19 @@ export const previewStartEndRadiusArc = (
       ...tempShape,
       type: 'line',
       points: [drawingPoints[0], mousePoint],
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 2) {
     // Preview arc based on bulge point
@@ -603,6 +855,19 @@ export const previewStartEndRadiusArc = (
           endAngle: normalizeAngle(endAngle),
           isClockwise,
         },
+        layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+        layer: {
+          _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          name: 'temp-layer',
+          isVisible: true,
+          isLocked: false,
+          isDefault: true,
+          color: '#000000',
+          lineType: 'solid',
+          lineWidth: 1,
+        },
       });
     } else {
       // Failed to calculate arc, show the chord line
@@ -610,6 +875,19 @@ export const previewStartEndRadiusArc = (
         ...tempShape,
         type: 'line',
         points: [startPoint, endPoint],
+        layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+        layer: {
+          _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          name: 'temp-layer',
+          isVisible: true,
+          isLocked: false,
+          isDefault: true,
+          color: '#000000',
+          lineType: 'solid',
+          lineWidth: 1,
+        },
       });
     }
   }
@@ -619,7 +897,9 @@ export const previewStartEndDirectionArc = (
   mousePoint: Point,
   drawingPoints: Point[],
   tempShape: Doc<'shapes'>,
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >
 ) => {
   if (drawingPoints.length === 1) {
     // Preview line from start to end
@@ -627,6 +907,19 @@ export const previewStartEndDirectionArc = (
       ...tempShape,
       type: 'line',
       points: [drawingPoints[0], mousePoint],
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   } else if (drawingPoints.length === 2) {
     // Preview arc based on direction
@@ -652,6 +945,19 @@ export const previewStartEndDirectionArc = (
           endAngle: normalizeAngle(endAngle),
           isClockwise,
         },
+        layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+        layer: {
+          _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          name: 'temp-layer',
+          isVisible: true,
+          isLocked: false,
+          isDefault: true,
+          color: '#000000',
+          lineType: 'solid',
+          lineWidth: 1,
+        },
       });
     } else {
       // Direction makes it impossible to create an arc, show line
@@ -659,6 +965,19 @@ export const previewStartEndDirectionArc = (
         ...tempShape,
         type: 'line',
         points: [startPoint, endPoint],
+        layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+        layer: {
+          _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+          _creationTime: Date.now(),
+          projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+          name: 'temp-layer',
+          isVisible: true,
+          isLocked: false,
+          isDefault: true,
+          color: '#000000',
+          lineType: 'solid',
+          lineWidth: 1,
+        },
       });
     }
   }

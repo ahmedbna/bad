@@ -97,7 +97,7 @@ export const drawGrid = ({
       ctx.font = '9px Arial';
       ctx.fillStyle = '#666';
       ctx.textAlign = 'center';
-      ctx.fillText(i.toString(), x, originY + 15);
+      ctx.fillText((i * gridSize).toString(), x, originY + 15);
     }
   }
 
@@ -119,7 +119,7 @@ export const drawGrid = ({
       ctx.font = '9px Arial';
       ctx.fillStyle = '#666';
       ctx.textAlign = 'right';
-      ctx.fillText((-i).toString(), originX - 5, y + 4);
+      ctx.fillText((-i * gridSize).toString(), originX - 5, y + 4);
     }
   }
 

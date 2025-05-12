@@ -7,10 +7,11 @@ type Props = {
   ctx: CanvasRenderingContext2D;
   scale: number;
   offset: Point;
-  shape: Doc<'shapes'>;
+  shape: Doc<'shapes'> & { layer: Doc<'layers'> };
   isSelected: boolean;
   isTemporary: boolean;
   editingState: EditingState;
+  theme?: string;
 };
 
 // Draw shape
@@ -22,23 +23,25 @@ export const drawShape = ({
   offset,
   isTemporary = false,
   editingState,
+  theme = 'dark',
 }: Props) => {
   // Set styles based on selection and editing state
   const isEditingSelected =
     editingState.isActive && editingState.selectedIds.includes(shape._id);
 
-  // Regular selection style
-  // if (isSelected && !editingState.isActive) {
-  //   ctx.strokeStyle = '#2563eb'; // Blue for regular selection
-  //   ctx.lineWidth = ((shape.strokeWidth || 1) * 1.5) / scale;
-  // }
+  const layerColor = shape.layer.isDefault
+    ? theme === 'dark'
+      ? '#000000'
+      : '#ffffff'
+    : shape.layer.color;
 
   ctx.strokeStyle =
     isSelected && !editingState.isActive
       ? '#2563eb'
       : isTemporary
         ? '#9ca3af'
-        : '#000';
+        : layerColor;
+
   ctx.lineWidth = isSelected && !editingState.isActive ? 2 : 1;
 
   // Add a fill color with transparency for temporary shapes to improve visual feedback

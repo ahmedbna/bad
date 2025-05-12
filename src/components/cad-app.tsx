@@ -48,7 +48,7 @@ import { useTheme } from 'next-themes';
 type Props = {
   project: Doc<'projects'> & { layers: Doc<'layers'>[] };
   projectId: Id<'projects'>;
-  shapes: Array<Doc<'shapes'>>;
+  shapes: Array<Doc<'shapes'> & { layer: Doc<'layers'> }>;
   activeUsers: {
     user: {
       _id: Id<'users'>;
@@ -105,7 +105,9 @@ export const CADApp = ({
 
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
-  const [tempShape, setTempShape] = useState<Doc<'shapes'> | null>(null);
+  const [tempShape, setTempShape] = useState<
+    (Doc<'shapes'> & { layer: Doc<'layers'> }) | null
+  >(null);
   const [selectedShapeIds, setSelectedShapeIds] = useState<Id<'shapes'>[]>([]);
   const [currentLayerId, setCurrentLayerId] = useState<Id<'layers'>>(
     project.layers[0]._id
@@ -849,7 +851,7 @@ export const CADApp = ({
               setIsDragging(false);
               clearSnap();
             }}
-            className={`cursor-${editingState.isActive ? 'pointer' : 'crosshair'} bg-muted`}
+            className='bg-muted cursor-crosshair'
           />
 
           {/* Render collaborator cursors */}

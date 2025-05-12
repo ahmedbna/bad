@@ -29,7 +29,7 @@ interface ShapeInputPanelProps {
   drawingPoints: Point[];
   completeShape: (points: Point[], properties?: ShapeProperties) => void;
   handleCancelDrawing: () => void;
-  setTempShape: (shape: Doc<'shapes'>) => void;
+  setTempShape: (shape: Doc<'shapes'> & { layer: Doc<'layers'> }) => void;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
 }
 
@@ -142,6 +142,19 @@ export const ShapeInputPanel = ({
           type: 'line',
           points: [basePoint, point],
           properties: {},
+          layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+          layer: {
+            _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+            _creationTime: Date.now(),
+            projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+            name: 'temp-layer',
+            isVisible: true,
+            isLocked: false,
+            isDefault: true,
+            color: '#000000',
+            lineType: 'solid',
+            lineWidth: 1,
+          },
         });
         break;
 
@@ -154,6 +167,19 @@ export const ShapeInputPanel = ({
           type: 'rectangle',
           points: [basePoint, point],
           properties: {},
+          layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+          layer: {
+            _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+            _creationTime: Date.now(),
+            projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+            name: 'temp-layer',
+            isVisible: true,
+            isLocked: false,
+            isDefault: true,
+            color: '#000000',
+            lineType: 'solid',
+            lineWidth: 1,
+          },
         });
         break;
 
@@ -168,6 +194,19 @@ export const ShapeInputPanel = ({
           type: 'circle',
           points: [basePoint],
           properties: { radius },
+          layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+          layer: {
+            _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+            _creationTime: Date.now(),
+            projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+            name: 'temp-layer',
+            isVisible: true,
+            isLocked: false,
+            isDefault: true,
+            color: '#000000',
+            lineType: 'solid',
+            lineWidth: 1,
+          },
         });
         break;
 
@@ -190,6 +229,19 @@ export const ShapeInputPanel = ({
               radiusX,
               radiusY: radiusX / 2, // Default ratio until second axis is defined
               isFullEllipse: true,
+            },
+            layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+            layer: {
+              _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+              _creationTime: Date.now(),
+              projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+              name: 'temp-layer',
+              isVisible: true,
+              isLocked: false,
+              isDefault: true,
+              color: '#000000',
+              lineType: 'solid',
+              lineWidth: 1,
             },
           });
         } else if (step === 2 && drawingPoints.length >= 2) {
@@ -222,6 +274,19 @@ export const ShapeInputPanel = ({
               rotation: angle,
               isFullEllipse: true,
             },
+            layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+            layer: {
+              _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+              _creationTime: Date.now(),
+              projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+              name: 'temp-layer',
+              isVisible: true,
+              isLocked: false,
+              isDefault: true,
+              color: '#000000',
+              lineType: 'solid',
+              lineWidth: 1,
+            },
           });
         }
         break;
@@ -243,6 +308,19 @@ export const ShapeInputPanel = ({
             radius: polygonRadius,
             sides: parseInt(propertyInput.sides || '6'),
           },
+          layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+          layer: {
+            _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+            _creationTime: Date.now(),
+            projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+            name: 'temp-layer',
+            isVisible: true,
+            isLocked: false,
+            isDefault: true,
+            color: '#000000',
+            lineType: 'solid',
+            lineWidth: 1,
+          },
         });
         break;
 
@@ -257,6 +335,19 @@ export const ShapeInputPanel = ({
             type: 'arc',
             points: [basePoint, point],
             properties: {},
+            layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+            layer: {
+              _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+              _creationTime: Date.now(),
+              projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+              name: 'temp-layer',
+              isVisible: true,
+              isLocked: false,
+              isDefault: true,
+              color: '#000000',
+              lineType: 'solid',
+              lineWidth: 1,
+            },
           });
         } else if (step === 2 && drawingPoints.length >= 2) {
           // 3-point arc (complete with third point)
@@ -268,6 +359,19 @@ export const ShapeInputPanel = ({
             type: 'arc',
             points: [basePoint, drawingPoints[1], point],
             properties: {},
+            layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+            layer: {
+              _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+              _creationTime: Date.now(),
+              projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+              name: 'temp-layer',
+              isVisible: true,
+              isLocked: false,
+              isDefault: true,
+              color: '#000000',
+              lineType: 'solid',
+              lineWidth: 1,
+            },
           });
         }
         break;
@@ -284,6 +388,19 @@ export const ShapeInputPanel = ({
           properties: {
             tension: parseFloat(propertyInput.tension || '0.5'),
           },
+          layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+          layer: {
+            _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+            _creationTime: Date.now(),
+            projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+            name: 'temp-layer',
+            isVisible: true,
+            isLocked: false,
+            isDefault: true,
+            color: '#000000',
+            lineType: 'solid',
+            lineWidth: 1,
+          },
         });
         break;
 
@@ -297,6 +414,19 @@ export const ShapeInputPanel = ({
             type: 'dimension',
             points: [basePoint, point],
             properties: {},
+            layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+            layer: {
+              _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+              _creationTime: Date.now(),
+              projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+              name: 'temp-layer',
+              isVisible: true,
+              isLocked: false,
+              isDefault: true,
+              color: '#000000',
+              lineType: 'solid',
+              lineWidth: 1,
+            },
           });
         } else if (step === 2 && drawingPoints.length >= 2) {
           setTempShape({
@@ -307,6 +437,19 @@ export const ShapeInputPanel = ({
             type: 'dimension',
             points: [basePoint, drawingPoints[1], point],
             properties: {},
+            layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+            layer: {
+              _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+              _creationTime: Date.now(),
+              projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+              name: 'temp-layer',
+              isVisible: true,
+              isLocked: false,
+              isDefault: true,
+              color: '#000000',
+              lineType: 'solid',
+              lineWidth: 1,
+            },
           });
         }
         break;
@@ -729,6 +872,19 @@ export const ShapeInputPanel = ({
               type: 'line',
               points: [basePoint, secondPoint],
               properties: {},
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
           }
         }
@@ -759,6 +915,19 @@ export const ShapeInputPanel = ({
               type: 'rectangle',
               points: [basePoint, secondPoint],
               properties: {},
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
           }
         }
@@ -795,6 +964,19 @@ export const ShapeInputPanel = ({
               type: 'circle',
               points: [basePoint],
               properties: { radius },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
           }
         }
@@ -834,6 +1016,19 @@ export const ShapeInputPanel = ({
                 rotation,
                 isFullEllipse: true,
               },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
           }
         }
@@ -868,6 +1063,19 @@ export const ShapeInputPanel = ({
               properties: {
                 radius,
                 sides,
+              },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
               },
             });
           }
@@ -910,6 +1118,19 @@ export const ShapeInputPanel = ({
                 radius,
                 startAngle,
                 endAngle,
+              },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
               },
             });
           }
@@ -1228,6 +1449,19 @@ export const ShapeInputPanel = ({
               type: 'line',
               points: [basePoint, secondPoint],
               properties: {},
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
 
             // Update coordinate display
@@ -1258,6 +1492,19 @@ export const ShapeInputPanel = ({
               type: 'rectangle',
               points: [basePoint, secondPoint],
               properties: {},
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
 
             setCoordinateInput({
@@ -1301,6 +1548,19 @@ export const ShapeInputPanel = ({
               type: 'circle',
               points: [basePoint],
               properties: { radius },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
 
             setCoordinateInput({
@@ -1339,6 +1599,19 @@ export const ShapeInputPanel = ({
                 rotation,
                 isFullEllipse: true,
               },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
 
             setCoordinateInput({
@@ -1372,6 +1645,19 @@ export const ShapeInputPanel = ({
               properties: {
                 radius,
                 sides,
+              },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
               },
             });
 
@@ -1410,6 +1696,19 @@ export const ShapeInputPanel = ({
                 startAngle,
                 endAngle,
               },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
 
             setCoordinateInput({
@@ -1432,6 +1731,19 @@ export const ShapeInputPanel = ({
               type: 'spline',
               points: drawingPoints,
               properties: { tension },
+              layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+              layer: {
+                _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+                _creationTime: Date.now(),
+                projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+                name: 'temp-layer',
+                isVisible: true,
+                isLocked: false,
+                isDefault: true,
+                color: '#000000',
+                lineType: 'solid',
+                lineWidth: 1,
+              },
             });
           }
         }

@@ -16,7 +16,9 @@ type Props = {
   setIsDragging: React.Dispatch<React.SetStateAction<boolean>>;
   setDragStart: React.Dispatch<React.SetStateAction<Point>>;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
-  setTempShape: React.Dispatch<React.SetStateAction<Doc<'shapes'> | null>>;
+  setTempShape: React.Dispatch<
+    React.SetStateAction<(Doc<'shapes'> & { layer: Doc<'layers'> }) | null>
+  >;
   setAreaSelection: React.Dispatch<React.SetStateAction<AreaSelectionState>>;
   snapEnabled: boolean;
   activeSnapResult: SnapResult;
@@ -79,6 +81,19 @@ export const handleMouseDown = ({
       type: 'polyline',
       points: newPoints,
       properties: {},
+      layerId: `temp-pro-${Date.now()}` as Id<'layers'>,
+      layer: {
+        _id: `temp-layer-${Date.now()}` as Id<'layers'>,
+        _creationTime: Date.now(),
+        projectId: `temp-pro-${Date.now()}` as Id<'projects'>,
+        name: 'temp-layer',
+        isVisible: true,
+        isLocked: false,
+        isDefault: true,
+        color: '#000000',
+        lineType: 'solid',
+        lineWidth: 1,
+      },
     });
   }
 };
