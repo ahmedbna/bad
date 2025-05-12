@@ -46,7 +46,6 @@ interface MouseMoveProps {
   textParams: TextParams;
   dimensionParams: DimensionParams;
   polarSettings: PolarSettings;
-  handleMoveCursor: (x: number, y: number) => void;
 }
 
 /**
@@ -78,7 +77,6 @@ export const handleMouseMove = ({
   textParams,
   dimensionParams,
   polarSettings,
-  handleMoveCursor,
 }: MouseMoveProps) => {
   try {
     // Get mouse position in canvas coordinates
@@ -119,7 +117,6 @@ export const handleMouseMove = ({
 
     // Update mouse position state
     setMousePosition({ x: mouseX, y: mouseY });
-    handleMoveCursor(mouseX, mouseY);
 
     if (areaSelection.active) {
       // Update area selection

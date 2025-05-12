@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 import { drawGrid } from './draw/draw-grid';
 import { Point } from '@/types';
 import { DrawingTool, ArcMode } from '@/constants';
@@ -381,54 +387,49 @@ export const CADApp = ({
     500
   );
 
-  // Handle cursor movement for collaboration
-  const handleMoveCursor = useThrottledFunction((x: number, y: number) => {
-    if (!projectId || !currentUser) return;
+  // Combine cursor and tool data
+  const cursorData = useMemo(
+    () => ({
+      x: debouncedMousePosition?.x || 0,
+      y: debouncedMousePosition?.y || 0,
+      tool: selectedTool,
+    }),
+    [debouncedMousePosition?.x, debouncedMousePosition?.y, selectedTool]
+  );
 
-    // Send cursor position to server
+  // Handle cursor movement for collaboration (more frequent updates)
+  useEffect(() => {
+    if (!projectId || !currentUser || !debouncedMousePosition) return;
+
+    // Send only cursor position and tool to server
     updatePresence({
       projectId,
-      x,
-      y,
+      x: debouncedMousePosition.x,
+      y: debouncedMousePosition.y,
+      tool: selectedTool,
+    }).catch((err) => console.error('Failed to update cursor presence:', err));
+  }, [cursorData, projectId, currentUser]);
+
+  // Handle viewport changes (less frequent updates)
+  useEffect(() => {
+    if (!projectId || !currentUser) return;
+
+    // Send viewport information separately, less frequently
+    updatePresence({
+      projectId,
+      // Still need to send cursor position as it's required by the API
+      x: debouncedMousePosition?.x || 0,
+      y: debouncedMousePosition?.y || 0,
       tool: selectedTool,
       viewport: {
-        x: offset.x,
-        y: offset.y,
-        scale: scale,
+        x: debouncedViewport.x,
+        y: debouncedViewport.y,
+        scale: debouncedViewport.scale,
       },
-    }).catch((err) => console.error('Failed to update presence:', err));
-  }, 100); // Throttle to every 100ms
-
-  // Update cursor position when mouse moves
-  useEffect(() => {
-    if (debouncedMousePosition && projectId) {
-      handleMoveCursor(debouncedMousePosition.x, debouncedMousePosition.y);
-    }
-  }, [debouncedMousePosition, projectId, handleMoveCursor]);
-
-  // // Update viewport when it changes
-  // useEffect(() => {
-  //   if (projectId) {
-  //     updatePresence({
-  //       projectId,
-  //       x: mousePosition.x,
-  //       y: mousePosition.y,
-  //       tool: selectedTool,
-  //       viewport: {
-  //         x: debouncedViewport.x,
-  //         y: debouncedViewport.y,
-  //         scale: debouncedViewport.scale,
-  //       },
-  //     }).catch((err) => console.error('Failed to update viewport:', err));
-  //   }
-  // }, [
-  //   debouncedViewport,
-  //   projectId,
-  //   updatePresence,
-  //   mousePosition.x,
-  //   mousePosition.y,
-  //   selectedTool,
-  // ]);
+    }).catch((err) =>
+      console.error('Failed to update viewport presence:', err)
+    );
+  }, [debouncedViewport, projectId, currentUser]);
 
   // Leave project when component unmounts
   useEffect(() => {
@@ -823,7 +824,6 @@ export const CADApp = ({
                 textParams,
                 dimensionParams,
                 polarSettings,
-                handleMoveCursor,
               })
             }
             onMouseUp={(e) => {

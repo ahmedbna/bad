@@ -486,7 +486,7 @@ export const Tools = ({
         <Button
           size='sm'
           variant='outline'
-          className='w-full flex items-center mt-2 mb-4'
+          className='w-full flex items-center mt-2'
           onClick={() => setShowPolarDialog(true)}
         >
           <Radar size={16} />
