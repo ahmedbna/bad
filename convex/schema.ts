@@ -27,25 +27,27 @@ export default defineSchema({
 
   layers: defineTable({
     projectId: v.id('projects'),
+    name: v.string(),
     color: v.string(),
-    strokWidth: v.string(),
-  }),
+    lineWidth: v.number(),
+    lineType: v.string(),
+    isVisible: v.boolean(),
+    isLocked: v.boolean(),
+  })
+    .index('projectId', ['projectId'])
+    .index('projectId_name', ['projectId', 'name']),
 
   shapes: defineTable({
     userId: v.id('users'),
     projectId: v.id('projects'),
-
+    layerId: v.id('layers'),
     type: v.string(),
-
-    // Array of points with x, y coordinates
     points: v.array(
       v.object({
         x: v.number(),
         y: v.number(),
       })
     ),
-
-    // Various properties associated with different shape types
     properties: v.object({
       // Common properties
       strokeColor: v.optional(v.string()),

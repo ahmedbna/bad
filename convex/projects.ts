@@ -68,6 +68,17 @@ export const create = mutation({
       role: 'owner',
     });
 
+    // Create default layer for the project
+    await ctx.db.insert('layers', {
+      projectId: projectId,
+      name: 'Default Layer',
+      color: '#000000', // Black default color
+      lineWidth: 1,
+      lineType: 'solid',
+      isVisible: true,
+      isLocked: false,
+    });
+
     return projectId;
   },
 });
