@@ -1,12 +1,6 @@
 'use client';
 
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-} from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { drawGrid } from './draw/draw-grid';
 import { Point } from '@/types';
 import { DrawingTool, ArcMode } from '@/constants';
@@ -39,17 +33,17 @@ import { createInitialEditingState, EditingTool } from './editing/constants';
 import { renderEditingVisuals } from './editing/render-editing';
 import { handleSelection } from './select/handleSelection';
 import { Doc, Id } from '@/convex/_generated/dataModel';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { CollaboratorCursor } from './collaboration/collaborator-cursor';
 import { useDebounce } from '@/hooks/useDebounce';
-import { useThrottledFunction } from '@/hooks/useThrottledFunction';
 import {
   Collaborators,
   getCollaboratorName,
   getUserColor,
 } from './collaboration/collaborators';
 import { LayersDialog } from './dialogs/layers-dialog';
+import { useTheme } from 'next-themes';
 
 type Props = {
   project: Doc<'projects'> & { layers: Doc<'layers'>[] };
@@ -100,6 +94,8 @@ export const CADApp = ({
   collaborators,
   currentUser,
 }: Props) => {
+  const { resolvedTheme: theme } = useTheme();
+
   const createShape = useMutation(api.shapes.create);
   const deleteShapes = useMutation(api.shapes.deleteShapes);
 
@@ -140,6 +136,7 @@ export const CADApp = ({
     value: 0,
   });
 
+  const [gridSize, setGridSize] = useState(10);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -147,9 +144,6 @@ export const CADApp = ({
   const [areaSelection, setAreaSelection] = useState(
     createInitialAreaSelectionState()
   );
-
-  const [majorGridInterval, setMajorGridInterval] = useState(10);
-  const [gridSize, setGridSize] = useState(10);
 
   // Snapping configuration
   const [snapSettings, setSnapSettings] = useState({
@@ -284,6 +278,7 @@ export const CADApp = ({
     gridSize,
     activeSnapResult,
     textParams,
+    theme,
   ]);
 
   // Draw the canvas
@@ -310,8 +305,8 @@ export const CADApp = ({
       scale,
       offset,
       gridSize,
-      majorGridInterval,
       dpr,
+      theme,
     });
 
     // Draw all shapes

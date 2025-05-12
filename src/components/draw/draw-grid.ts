@@ -6,8 +6,8 @@ type Props = {
   gridSize: number;
   scale: number;
   offset: Point;
-  majorGridInterval?: number; // Number of minor grid cells per major grid line
   dpr: number; // Device pixel ratio
+  theme?: string;
 };
 
 // Draw AutoCAD-like grid
@@ -17,8 +17,8 @@ export const drawGrid = ({
   scale,
   offset,
   gridSize,
-  majorGridInterval = 10, // Default to 10 minor grid cells per major grid line
   dpr,
+  theme = 'dark',
 }: Props) => {
   const canvas = canvasRef.current;
   if (!canvas) return;
@@ -48,13 +48,13 @@ export const drawGrid = ({
     Math.ceil((canvas.height - offsetY) / scaledGridSize) + 1;
 
   // Draw minor grid lines
-  ctx.strokeStyle = '#e6e6e6'; // Light grey for minor grid
+  ctx.strokeStyle = theme === 'dark' ? '#e6e6e6' : '#1e1e1e';
   ctx.lineWidth = 0.05;
 
   // Draw vertical minor grid lines
   for (let i = leftGridLine; i <= rightGridLine; i++) {
     // Skip if this is a major grid line
-    if (i % majorGridInterval === 0) continue;
+    if (i % gridSize === 0) continue;
 
     const x = originX + i * scaledGridSize;
     ctx.beginPath();
@@ -66,7 +66,7 @@ export const drawGrid = ({
   // Draw horizontal minor grid lines
   for (let i = topGridLine; i <= bottomGridLine; i++) {
     // Skip if this is a major grid line
-    if (i % majorGridInterval === 0) continue;
+    if (i % gridSize === 0) continue;
 
     const y = originY + i * scaledGridSize;
     ctx.beginPath();
@@ -76,14 +76,14 @@ export const drawGrid = ({
   }
 
   // Draw major grid lines
-  ctx.strokeStyle = '#c0c0c0'; // Darker grey for major grid
+  ctx.strokeStyle = theme === 'dark' ? '#c0c0c0' : '#444';
   ctx.lineWidth = 0.1;
 
   // Draw vertical major grid lines
   for (
-    let i = Math.floor(leftGridLine / majorGridInterval) * majorGridInterval;
-    i <= Math.ceil(rightGridLine / majorGridInterval) * majorGridInterval;
-    i += majorGridInterval
+    let i = Math.floor(leftGridLine / gridSize) * gridSize;
+    i <= Math.ceil(rightGridLine / gridSize) * gridSize;
+    i += gridSize
   ) {
     const x = originX + i * scaledGridSize;
     ctx.beginPath();
@@ -103,9 +103,9 @@ export const drawGrid = ({
 
   // Draw horizontal major grid lines
   for (
-    let i = Math.floor(topGridLine / majorGridInterval) * majorGridInterval;
-    i <= Math.ceil(bottomGridLine / majorGridInterval) * majorGridInterval;
-    i += majorGridInterval
+    let i = Math.floor(topGridLine / gridSize) * gridSize;
+    i <= Math.ceil(bottomGridLine / gridSize) * gridSize;
+    i += gridSize
   ) {
     const y = originY + i * scaledGridSize;
     ctx.beginPath();
