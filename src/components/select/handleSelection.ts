@@ -1,4 +1,4 @@
-import { Point } from '@/types/';
+import { Point } from '@/types';
 import { canvasToWorld } from '@/utils/canvasToWorld';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 
