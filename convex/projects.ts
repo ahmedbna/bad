@@ -87,7 +87,9 @@ export const getProjects = query({
     );
 
     // Filter out any null projects (shouldn't happen, but just in case)
-    const validCollaboratedProjects = collaboratedProjects.filter(Boolean);
+    const validCollaboratedProjects = collaboratedProjects.filter(
+      (project) => project !== null
+    );
 
     // Return both owned and collaborated projects
     return [...ownedProjects, ...validCollaboratedProjects];
