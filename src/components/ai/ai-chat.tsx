@@ -242,8 +242,7 @@ export const AIChat = ({
           <div className='space-y-4'>
             {messages.length === 0 ? (
               <p className='text-sm text-muted-foreground'>
-                Ask AI to draw shapes or analyze your design. Try "Draw a house"
-                or "Calculate the area of selected shapes".
+                {`Ask AI to draw shapes or analyze your design. Try "Draw a house" or "Calculate the area of selected shapes".`}
               </p>
             ) : (
               messages.map((msg, index) => (
