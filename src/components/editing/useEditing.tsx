@@ -88,6 +88,7 @@ export function useEditing(
           for (const shape of newShapes) {
             await createShape({
               projectId,
+              layerId: shape.layerId,
               type: shape.type,
               points: shape.points,
               properties: shape.properties,
