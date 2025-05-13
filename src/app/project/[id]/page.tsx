@@ -1,13 +1,15 @@
 import { Project } from '@/components/project';
 import { Id } from '@/convex/_generated/dataModel';
 
-type Props = {
+type PageProps = {
   params: {
-    id: Id<'projects'>;
+    id: string;
   };
   searchParams: { [key: string]: string | string[] | undefined };
 };
 
-export default function ProjectPage({ params }: Props) {
-  return <Project projectId={params.id} />;
+export default function ProjectPage({ params }: PageProps) {
+  const projectId = params.id as Id<'projects'>;
+
+  return <Project projectId={projectId} />;
 }
