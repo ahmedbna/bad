@@ -10,6 +10,7 @@ import { ShapeInputPanel } from './shape-input-panel';
 import { EditingState } from '../editing/constants';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 import Link from 'next/link';
+import { ShapeProperties } from './properties';
 
 type Props = {
   selectedTool: DrawingTool;
@@ -59,6 +60,7 @@ type Props = {
   setShowCollabsDialog: React.Dispatch<React.SetStateAction<boolean>>;
   setShowLayersDialog: React.Dispatch<React.SetStateAction<boolean>>;
   currentLayerId: Id<'layers'>;
+  selectedShapeIds: Id<'shapes'>[];
 };
 
 export const SidePanel = ({
@@ -95,6 +97,7 @@ export const SidePanel = ({
   setShowCollabsDialog,
   setShowLayersDialog,
   currentLayerId,
+  selectedShapeIds,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -156,6 +159,11 @@ export const SidePanel = ({
             <h2 className='text-md font-bold text-muted-foreground mb-1'>
               Properties
             </h2>
+
+            {selectedTool === 'select' ? (
+              <ShapeProperties selectedShapeIds={selectedShapeIds} />
+            ) : null}
+
             <ShapeInputPanel
               selectedTool={selectedTool}
               drawingPoints={drawingPoints}

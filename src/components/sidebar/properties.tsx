@@ -1,285 +1,406 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Point } from '@/types';
-import { DrawingTool } from '@/constants';
+import { useState, useEffect, useMemo } from 'react';
+import { Id } from '@/convex/_generated/dataModel';
+import { Doc } from '@/convex/_generated/dataModel';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import { Badge } from '@/components/ui/badge';
 import {
-  angleBetweenPoints,
-  calculateArcFromStartEndDirection,
-  // findArcCentersFromRadius,
-} from '@/utils/calculations';
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 type Props = {
-  selectedTool: DrawingTool;
-  drawingPoints: Point[];
-  propertyInput: any;
-  setPropertyInput: React.Dispatch<React.SetStateAction<any>>;
-  handleCancelDrawing: () => void;
-  completeShape: (points: Point[], properties?: any) => void;
+  selectedShapeIds: Id<'shapes'>[];
 };
 
-export const Properties = ({
-  selectedTool,
-  drawingPoints,
-  propertyInput,
-  setPropertyInput,
-  handleCancelDrawing,
-  completeShape,
-}: Props) => {
-  // Handle property input
-  const handlePropertySubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+export const ShapeProperties = ({ selectedShapeIds }: Props) => {
+  const [groupedShapes, setGroupedShapes] = useState<{
+    byType: Record<string, (Doc<'shapes'> & { layer: Doc<'layers'> })[]>;
+    byLayer: Record<string, (Doc<'shapes'> & { layer: Doc<'layers'> })[]>;
+  }>({
+    byType: {},
+    byLayer: {},
+  });
 
-    if (drawingPoints.length === 0) return;
+  const shapeIds = useMemo(() => [...selectedShapeIds], [selectedShapeIds]);
+  const shapes = useQuery(api.shapes.getShapesByIds, { shapeIds }) ?? [];
 
-    switch (selectedTool) {
-      case 'line':
-        if (propertyInput.length === '') return;
-
-        const length = parseFloat(propertyInput.length);
-        if (isNaN(length)) return;
-
-        // Calculate second point based on first point and length
-        // Assuming horizontal line for simplicity
-        const lineEnd = {
-          x: drawingPoints[0].x + length,
-          y: drawingPoints[0].y,
-        };
-
-        completeShape([drawingPoints[0], lineEnd]);
-        break;
-
-      case 'rectangle':
-        if (propertyInput.width === '' || propertyInput.height === '') return;
-
-        const width = parseFloat(propertyInput.width);
-        const height = parseFloat(propertyInput.height);
-
-        if (isNaN(width) || isNaN(height)) return;
-
-        // Calculate second point based on first point, width, and height
-        const rectEnd = {
-          x: drawingPoints[0].x + width,
-          y: drawingPoints[0].y + height,
-        };
-
-        completeShape([drawingPoints[0], rectEnd]);
-        break;
-
-      case 'circle':
-        let radius = 0;
-
-        if (propertyInput.radius !== '') {
-          radius = parseFloat(propertyInput.radius);
-        } else if (propertyInput.diameter !== '') {
-          radius = parseFloat(propertyInput.diameter) / 2;
-        } else {
-          return;
+  useEffect(() => {
+    if (shapes.length === 0) {
+      setGroupedShapes((prev) => {
+        if (
+          Object.keys(prev.byType).length === 0 &&
+          Object.keys(prev.byLayer).length === 0
+        ) {
+          return prev;
         }
-
-        if (isNaN(radius)) return;
-
-        completeShape([drawingPoints[0]], { radius });
-        break;
-
-      default:
-        break;
+        return { byType: {}, byLayer: {} };
+      });
+      return;
     }
 
-    // switch (arcMode) {
-    //   case 'StartEndRadius':
-    //     if (drawingPoints.length !== 2 || propertyInput.radius === '') return;
+    const byType: Record<string, (Doc<'shapes'> & { layer: Doc<'layers'> })[]> =
+      {};
+    const byLayer: Record<
+      string,
+      (Doc<'shapes'> & { layer: Doc<'layers'> })[]
+    > = {};
 
-    //     const radius = parseFloat(propertyInput.radius);
-    //     if (isNaN(radius)) return;
+    shapes.forEach((shape) => {
+      if (!byType[shape.type]) byType[shape.type] = [];
+      byType[shape.type].push(shape);
 
-    //     const startPoint = drawingPoints[0];
-    //     const endPoint = drawingPoints[1];
+      const layerName = shape.layer.name;
+      if (!byLayer[layerName]) byLayer[layerName] = [];
+      byLayer[layerName].push(shape);
+    });
 
-    //     // Calculate center points (there are two possibilities)
-    //     const centers = findArcCentersFromRadius(startPoint, endPoint, radius);
-    //     if (centers.length === 0) return;
+    setGroupedShapes((prev) => {
+      const sameByType = JSON.stringify(prev.byType) === JSON.stringify(byType);
+      const sameByLayer =
+        JSON.stringify(prev.byLayer) === JSON.stringify(byLayer);
 
-    //     // Use the first center point (typically the one creating the smaller arc)
-    //     const center = centers[0];
-    //     const startAngle = angleBetweenPoints(center, startPoint);
-    //     const endAngle = angleBetweenPoints(center, endPoint);
+      if (sameByType && sameByLayer) return prev;
+      return { byType, byLayer };
+    });
+  }, [shapes]);
 
-    //     completeShape([center], {
-    //       radius,
-    //       startAngle,
-    //       endAngle,
-    //     });
-    //     break;
-
-    //   case 'StartEndDirection':
-    //     if (drawingPoints.length !== 2 || propertyInput.direction === '')
-    //       return;
-
-    //     const direction = parseFloat(propertyInput.direction) * (Math.PI / 180); // Convert to radians
-    //     if (isNaN(direction)) return;
-
-    //     const startPt = drawingPoints[0];
-    //     const endPt = drawingPoints[1];
-
-    //     // Calculate arc parameters
-    //     const arcParams = calculateArcFromStartEndDirection(
-    //       startPt,
-    //       endPt,
-    //       direction
-    //     );
-
-    //     if (arcParams.center) {
-    //       completeShape([arcParams.center], {
-    //         radius: arcParams.radius,
-    //         startAngle: arcParams.startAngle,
-    //         endAngle: arcParams.endAngle,
-    //       });
-    //     }
-    //     break;
-    // }
+  // Format values for display
+  const formatValue = (value: any): string => {
+    if (typeof value === 'number') {
+      return value.toFixed(2);
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (Array.isArray(value)) {
+      return `[${value.length} items]`;
+    }
+    if (value === null || value === undefined) {
+      return '-';
+    }
+    return JSON.stringify(value);
   };
 
-  return (
-    <div>
-      {/* Tool-specific properties */}
-      {selectedTool !== 'select' && drawingPoints.length > 0 && (
-        <Card className='mb-4'>
-          <CardHeader className='py-2'>
-            <CardTitle className='text-sm'>
-              {selectedTool.charAt(0).toUpperCase() + selectedTool.slice(1)}{' '}
-              Properties
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePropertySubmit} className='space-y-2'>
-              {selectedTool === 'line' && (
-                <div className='flex flex-col space-y-1'>
-                  <Label htmlFor='prop-length' className='text-xs'>
-                    Length:
-                  </Label>
-                  <Input
-                    id='prop-length'
-                    value={propertyInput.length}
-                    onChange={(e) =>
-                      setPropertyInput((prev) => ({
-                        ...prev,
-                        length: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              )}
+  // Renders a property row
+  const PropertyRow = ({ label, value }: { label: string; value: any }) => (
+    <div className='flex items-center justify-between py-1'>
+      <span className='text-muted-foreground text-xs'>{label}:</span>
+      <span className='font-medium text-xs'>{formatValue(value)}</span>
+    </div>
+  );
 
-              {selectedTool === 'rectangle' && (
+  // Renders a divider
+  const Divider = () => <div className='w-full h-px bg-border/50 my-1' />;
+
+  if (selectedShapeIds.length === 0) {
+    return (
+      <div className='w-full mt-2 bg-muted/40 rounded-md p-3 text-xs'>
+        <span className='text-muted-foreground'>No shapes selected</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className='h-[calc(100vh-220px)] overflow-y-auto'>
+      <div className='w-full space-y-2'>
+        {/* Selection summary */}
+        <div className='w-full bg-muted/40 rounded-md p-3 text-xs'>
+          <PropertyRow
+            label='Selected'
+            value={`${selectedShapeIds.length} ${selectedShapeIds.length > 1 ? 'shapes' : 'shape'}`}
+          />
+          <Divider />
+          <PropertyRow
+            label='Types'
+            value={
+              Object.keys(groupedShapes.byType).length > 0
+                ? Object.keys(groupedShapes.byType).join(', ')
+                : 'None'
+            }
+          />
+          <Divider />
+          <PropertyRow
+            label='Layers'
+            value={
+              Object.keys(groupedShapes.byLayer).length > 0
+                ? Object.keys(groupedShapes.byLayer).join(', ')
+                : 'None'
+            }
+          />
+        </div>
+
+        {/* Common properties section (when all shapes are the same type) */}
+        {Object.keys(groupedShapes.byType).length === 1 && (
+          <div className='w-full bg-muted/40 rounded-md p-3 text-xs'>
+            <h3 className='font-semibold mb-2 capitalize'>
+              {Object.keys(groupedShapes.byType)[0]} Properties
+            </h3>
+
+            {Object.keys(groupedShapes.byType).map((type) => {
+              const shape = groupedShapes.byType[type][0];
+              return (
+                <div key={type}>
+                  {/* Common properties */}
+                  {shape.properties.strokeColor && (
+                    <>
+                      <PropertyRow
+                        label='Stroke Color'
+                        value={shape.properties.strokeColor}
+                      />
+                      <Divider />
+                    </>
+                  )}
+                  {shape.properties.strokeWidth && (
+                    <>
+                      <PropertyRow
+                        label='Stroke Width'
+                        value={shape.properties.strokeWidth}
+                      />
+                      <Divider />
+                    </>
+                  )}
+                  {shape.properties.fillColor && (
+                    <>
+                      <PropertyRow
+                        label='Fill Color'
+                        value={shape.properties.fillColor}
+                      />
+                      <Divider />
+                    </>
+                  )}
+
+                  {/* Type-specific properties */}
+                  {type === 'rectangle' && (
+                    <>
+                      <PropertyRow
+                        label='Width'
+                        value={shape.properties.width}
+                      />
+                      <Divider />
+                      <PropertyRow
+                        label='Height'
+                        value={shape.properties.height}
+                      />
+                    </>
+                  )}
+                  {type === 'circle' && (
+                    <PropertyRow
+                      label='Radius'
+                      value={shape.properties.radius}
+                    />
+                  )}
+                  {type === 'ellipse' && (
+                    <>
+                      <PropertyRow
+                        label='Radius X'
+                        value={shape.properties.radiusX}
+                      />
+                      <Divider />
+                      <PropertyRow
+                        label='Radius Y'
+                        value={shape.properties.radiusY}
+                      />
+                    </>
+                  )}
+                  {type === 'line' && (
+                    <PropertyRow
+                      label='Length'
+                      value={shape.properties.length}
+                    />
+                  )}
+                  {type === 'polygon' && (
+                    <PropertyRow label='Sides' value={shape.properties.sides} />
+                  )}
+                  {type === 'arc' && (
+                    <>
+                      <PropertyRow
+                        label='Start Angle'
+                        value={shape.properties.startAngle}
+                      />
+                      <Divider />
+                      <PropertyRow
+                        label='End Angle'
+                        value={shape.properties.endAngle}
+                      />
+                      <Divider />
+                      <PropertyRow
+                        label='Radius'
+                        value={shape.properties.radius}
+                      />
+                    </>
+                  )}
+                  {type === 'text' && shape.properties.textParams && (
+                    <>
+                      <PropertyRow
+                        label='Content'
+                        value={shape.properties.textParams.content}
+                      />
+                      <Divider />
+                      <PropertyRow
+                        label='Font Size'
+                        value={shape.properties.textParams.fontSize}
+                      />
+                      <Divider />
+                      <PropertyRow
+                        label='Font Family'
+                        value={shape.properties.textParams.fontFamily}
+                      />
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Advanced shape details when multiple types are selected */}
+        {Object.keys(groupedShapes.byType).length > 1 && (
+          <Accordion type='single' collapsible className='w-full'>
+            <AccordionItem value='types' className='border-0'>
+              <AccordionTrigger className='py-2 px-3 bg-muted/40 rounded-md text-xs font-semibold'>
+                Shape Types
+              </AccordionTrigger>
+              <AccordionContent className='pt-2'>
+                {Object.entries(groupedShapes.byType).map(([type, shapes]) => (
+                  <div key={type} className='mb-2 bg-muted/20 rounded-md p-2'>
+                    <div className='flex items-center justify-between mb-1'>
+                      <span className='font-medium capitalize'>{type}</span>
+                      <Badge variant='outline' className='text-xs'>
+                        {shapes.length}
+                      </Badge>
+                    </div>
+                    <div className='text-xs text-muted-foreground'>
+                      {shapes[0].properties.width &&
+                        `Width: ${formatValue(shapes[0].properties.width)}`}
+                      {shapes[0].properties.height &&
+                        `, Height: ${formatValue(shapes[0].properties.height)}`}
+                      {shapes[0].properties.radius &&
+                        `, Radius: ${formatValue(shapes[0].properties.radius)}`}
+                    </div>
+                  </div>
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value='layers' className='border-0 mt-2'>
+              <AccordionTrigger className='py-2 px-3 bg-muted/40 rounded-md text-xs font-semibold'>
+                Layers
+              </AccordionTrigger>
+              <AccordionContent className='pt-2'>
+                {Object.entries(groupedShapes.byLayer).map(
+                  ([layerName, shapes]) => (
+                    <div
+                      key={layerName}
+                      className='mb-2 bg-muted/20 rounded-md p-2'
+                    >
+                      <div className='flex items-center justify-between mb-1'>
+                        <div className='flex items-center'>
+                          {shapes[0].layer.color && (
+                            <div
+                              className='w-3 h-3 rounded-full mr-2'
+                              style={{ backgroundColor: shapes[0].layer.color }}
+                            />
+                          )}
+                          <span className='font-medium'>{layerName}</span>
+                        </div>
+                        <Badge variant='outline' className='text-xs'>
+                          {shapes.length}
+                        </Badge>
+                      </div>
+                      <div className='text-xs text-muted-foreground'>
+                        Line width: {shapes[0].layer.lineWidth}, Line type:{' '}
+                        {shapes[0].layer.lineType}
+                      </div>
+                    </div>
+                  )
+                )}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        )}
+
+        {/* Position information for single shape selection */}
+        {selectedShapeIds.length === 1 && shapes.length === 1 && (
+          <div className='w-full bg-muted/40 rounded-md p-3 text-xs'>
+            <h3 className='font-semibold mb-2'>Position</h3>
+            {shapes[0].points.length > 0 && (
+              <>
+                <PropertyRow
+                  label='First Point'
+                  value={`(${shapes[0].points[0].x.toFixed(2)}, ${shapes[0].points[0].y.toFixed(2)})`}
+                />
+                {shapes[0].points.length > 1 && (
+                  <>
+                    <Divider />
+                    <PropertyRow
+                      label='Last Point'
+                      value={`(${shapes[0].points[shapes[0].points.length - 1].x.toFixed(2)}, ${shapes[0].points[shapes[0].points.length - 1].y.toFixed(2)})`}
+                    />
+                  </>
+                )}
+              </>
+            )}
+            {shapes[0].properties.center &&
+              shapes[0].properties.center.length > 0 && (
                 <>
-                  <div className='flex flex-col space-y-1'>
-                    <Label htmlFor='prop-width' className='text-xs'>
-                      Width:
-                    </Label>
-                    <Input
-                      id='prop-width'
-                      value={propertyInput.width}
-                      onChange={(e) =>
-                        setPropertyInput((prev) => ({
-                          ...prev,
-                          width: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className='flex flex-col space-y-1'>
-                    <Label htmlFor='prop-height' className='text-xs'>
-                      Height:
-                    </Label>
-                    <Input
-                      id='prop-height'
-                      value={propertyInput.height}
-                      onChange={(e) =>
-                        setPropertyInput((prev) => ({
-                          ...prev,
-                          height: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
+                  <Divider />
+                  <PropertyRow
+                    label='Center'
+                    value={`(${shapes[0].properties.center[0].x.toFixed(2)}, ${shapes[0].properties.center[0].y.toFixed(2)})`}
+                  />
                 </>
               )}
+          </div>
+        )}
 
-              {selectedTool === 'circle' && (
-                <Tabs defaultValue='radius'>
-                  <TabsList className='w-full grid grid-cols-2'>
-                    <TabsTrigger value='radius'>Radius</TabsTrigger>
-                    <TabsTrigger value='diameter'>Diameter</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value='radius'>
-                    <div className='flex flex-col space-y-1'>
-                      <Label htmlFor='prop-radius' className='text-xs'>
-                        Radius:
-                      </Label>
-                      <Input
-                        id='prop-radius'
-                        value={propertyInput.radius}
-                        onChange={(e) =>
-                          setPropertyInput((prev) => ({
-                            ...prev,
-                            radius: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </TabsContent>
-                  <TabsContent value='diameter'>
-                    <div className='flex flex-col space-y-1'>
-                      <Label htmlFor='prop-diameter' className='text-xs'>
-                        Diameter:
-                      </Label>
-                      <Input
-                        id='prop-diameter'
-                        value={propertyInput.diameter}
-                        onChange={(e) =>
-                          setPropertyInput((prev) => ({
-                            ...prev,
-                            diameter: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              )}
-
-              {selectedTool === 'polyline' && (
-                <div className='text-xs'>
-                  Points: {drawingPoints.length}
-                  <p className='mt-1 text-gray-500'>
-                    Double-click to finish polyline
-                  </p>
-                </div>
-              )}
-
-              <div className='flex space-x-2 pt-1'>
-                <Button type='submit' size='sm' className='flex-1'>
-                  Apply
-                </Button>
-                <Button
-                  type='button'
-                  variant='outline'
-                  size='sm'
-                  className='flex-1'
-                  onClick={handleCancelDrawing}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+        {/* Measurements section for single shape */}
+        {selectedShapeIds.length === 1 && shapes.length === 1 && (
+          <div className='w-full bg-muted/40 rounded-md p-3 text-xs'>
+            <h3 className='font-semibold mb-2'>Measurements</h3>
+            {shapes[0].properties.area && (
+              <>
+                <PropertyRow
+                  label='Area'
+                  value={`${shapes[0].properties.area.toFixed(2)} sq units`}
+                />
+                <Divider />
+              </>
+            )}
+            {shapes[0].properties.perimeter && (
+              <>
+                <PropertyRow
+                  label='Perimeter'
+                  value={`${shapes[0].properties.perimeter.toFixed(2)} units`}
+                />
+                <Divider />
+              </>
+            )}
+            {shapes[0].properties.length && (
+              <>
+                <PropertyRow
+                  label='Length'
+                  value={`${shapes[0].properties.length.toFixed(2)} units`}
+                />
+                <Divider />
+              </>
+            )}
+            {shapes[0].properties.diameter && (
+              <PropertyRow
+                label='Diameter'
+                value={`${shapes[0].properties.diameter.toFixed(2)} units`}
+              />
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

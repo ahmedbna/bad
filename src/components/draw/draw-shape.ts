@@ -459,7 +459,7 @@ export const drawText = (
   ctx: CanvasRenderingContext2D,
   scale: number,
   offset: Point,
-  shape: Doc<'shapes'>,
+  shape: Doc<'shapes'> & { layer: Doc<'layers'> },
   isSelected: boolean,
   isTemporary: boolean
 ) => {
@@ -480,10 +480,10 @@ export const drawText = (
     // Apply text styling
     ctx.font = `${textParams.fontStyle} ${textParams.fontWeight} ${textParams.fontSize! * scale}px ${textParams.fontFamily}`;
     ctx.fillStyle = isSelected
-      ? '#0066ff'
+      ? '#2563eb'
       : isTemporary
-        ? '#999999'
-        : '#000000';
+        ? '#9ca3af'
+        : shape.layer.color;
 
     // Apply rotation if needed
     if (textParams.rotation !== 0) {
@@ -537,7 +537,7 @@ export const drawDimension = (
   ctx: CanvasRenderingContext2D,
   scale: number,
   offset: Point,
-  shape: Doc<'shapes'>,
+  shape: Doc<'shapes'> & { layer: Doc<'layers'> },
   isSelected: boolean,
   isTemporary: boolean
 ) => {
@@ -562,10 +562,12 @@ export const drawDimension = (
 
     // Set drawing styles
     ctx.strokeStyle = isSelected
-      ? '#0066ff'
+      ? '#2563eb'
       : isTemporary
-        ? '#999999'
-        : '#000000';
+        ? '#9ca3af'
+        : shape.layer.color;
+
+    ctx.lineWidth = isSelected ? 2 : shape.layer.lineWidth;
     ctx.fillStyle = ctx.strokeStyle;
     ctx.lineWidth = isSelected ? 2 : 1;
 
@@ -667,13 +669,13 @@ const drawLinearDimension = (
   // Calculate the actual distance (unscaled) to display
   const actualDistance = Math.sqrt(dx * dx + dy * dy) / scale;
 
-  // Set the distance value in dimensionParams (unscaled)
-  dimensionParams.value = actualDistance;
+  // Use the provided value if available, otherwise calculate it
+  const measurementValue = dimensionParams.value || actualDistance;
 
   // Convert offset to canvas scale
-  const offset = dimensionParams.offset * scale;
-  const extLineOffset = dimensionParams.extensionLineOffset * scale;
-  const arrowSize = dimensionParams.arrowSize * scale;
+  const offset = (dimensionParams.offset || 25) * scale;
+  const extLineOffset = (dimensionParams.extensionLineOffset || 5) * scale;
+  const arrowSize = (dimensionParams.arrowSize || 8) * scale;
 
   // Calculate offset points for dimension line
   const startOffsetX = Math.cos(perpAngle) * offset;
@@ -704,49 +706,84 @@ const drawLinearDimension = (
   drawArrow(ctx, dimLineEnd, angle + Math.PI, arrowSize);
 
   // Draw measurement text
-  if (dimensionParams.showValue) {
-    const textPosition = dimensionParams.textPosition
-      ? worldToCanvas({
-          point: dimensionParams.textPosition,
-          scale,
-          offset: { x: 0, y: 0 }, // Text position is already in world coordinates
-        })
-      : {
-          x: (dimLineStart.x + dimLineEnd.x) / 2,
-          y: (dimLineStart.y + dimLineEnd.y) / 2,
-        };
+  if (dimensionParams.showValue !== false) {
+    // Default to showing value if not specified
+    // Get text position - either from params or calculate midpoint
+    let textPosition;
+
+    if (dimensionParams.textPosition) {
+      // If textPosition is in world coordinates, convert to canvas coordinates
+      textPosition = worldToCanvas({
+        point: dimensionParams.textPosition,
+        scale,
+        offset: { x: 0, y: 0 }, // offset should be passed from the parent function
+      });
+    } else {
+      // Default to middle of dimension line
+      textPosition = {
+        x: (dimLineStart.x + dimLineEnd.x) / 2,
+        y: (dimLineStart.y + dimLineEnd.y) / 2,
+      };
+    }
 
     // Format the value according to precision
-    const formattedValue = dimensionParams.value.toFixed(
-      dimensionParams.precision
-    );
-    const displayText = `${formattedValue}${dimensionParams.units}`;
+    const precision =
+      dimensionParams.precision !== undefined ? dimensionParams.precision : 2;
+    const formattedValue = measurementValue.toFixed(precision);
+    const units = dimensionParams.units || '';
+    const displayText = `${formattedValue}${units}`;
 
     // Draw text
     ctx.save();
-    ctx.font = `${dimensionParams.textHeight * scale}px Arial`;
+
+    // Set font with explicit size
+    const textHeight = (dimensionParams.textHeight || 12) * scale;
+    ctx.font = `${textHeight}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Rotate text if needed
-    if (dimensionParams.textRotation !== 0) {
+    // Calculate text dimensions for background
+    const textMetrics = ctx.measureText(displayText);
+    const textWidth = textMetrics.width;
+
+    // Apply rotation if specified
+    if (
+      dimensionParams.textRotation !== undefined &&
+      dimensionParams.textRotation !== 0
+    ) {
       ctx.translate(textPosition.x, textPosition.y);
       ctx.rotate((dimensionParams.textRotation * Math.PI) / 180);
       ctx.translate(-textPosition.x, -textPosition.y);
     }
 
     // Create a background for the text
-    const textWidth = ctx.measureText(displayText).width;
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(
-      textPosition.x - textWidth / 2 - 2,
-      textPosition.y - (dimensionParams.textHeight * scale) / 2 - 2,
-      textWidth + 4,
-      dimensionParams.textHeight * scale + 4
+      textPosition.x - textWidth / 2 - 4,
+      textPosition.y - textHeight / 2 - 2,
+      textWidth + 8,
+      textHeight + 4
     );
 
+    // Break dimension line if text is centered on it and no custom position
+    if (!dimensionParams.textPosition) {
+      const padding = 4;
+      const halfTextWidth = textWidth / 2 + padding;
+
+      // Clear the existing dimension line
+      ctx.beginPath();
+      ctx.moveTo(dimLineStart.x, dimLineStart.y);
+      ctx.lineTo(textPosition.x - halfTextWidth, textPosition.y);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(textPosition.x + halfTextWidth, textPosition.y);
+      ctx.lineTo(dimLineEnd.x, dimLineEnd.y);
+      ctx.stroke();
+    }
+
     // Draw the text
-    ctx.fillStyle = isSelected ? '#0066ff' : '#000000';
+    ctx.fillStyle = isSelected ? '#2563eb' : '#000000';
     ctx.fillText(displayText, textPosition.x, textPosition.y);
     ctx.restore();
   }

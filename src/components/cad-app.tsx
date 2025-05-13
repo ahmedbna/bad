@@ -720,6 +720,7 @@ export const CADApp = ({
           setShowCollabsDialog={setShowCollabsDialog}
           setShowLayersDialog={setShowLayersDialog}
           currentLayerId={currentLayerId}
+          selectedShapeIds={selectedShapeIds}
         />
 
         {/* Drawing canvas */}

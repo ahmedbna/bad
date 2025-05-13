@@ -34,6 +34,38 @@ export const getShapesByProject = query({
   },
 });
 
+export const getShapesByIds = query({
+  args: {
+    shapeIds: v.array(v.id('shapes')),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
+    return await asyncMap(args.shapeIds, async (shapeId) => {
+      const shape = await ctx.db.get(shapeId);
+
+      if (!shape) {
+        throw new Error(`Shape not found`);
+      }
+
+      const layer = await ctx.db.get(shape.layerId);
+
+      if (!layer) {
+        throw new Error('Layer not found');
+      }
+
+      return {
+        ...shape,
+        layer,
+      };
+    });
+  },
+});
+
 export const create = mutation({
   args: {
     projectId: v.id('projects'),

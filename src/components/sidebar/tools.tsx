@@ -145,7 +145,7 @@ export const Tools = ({
       <Button
         size='sm'
         variant='outline'
-        className='w-full flex items-center mt-2'
+        className='w-full flex items-center my-2'
         onClick={() => setShowLayersDialog(true)}
       >
         <span
@@ -156,8 +156,7 @@ export const Tools = ({
         <span className='ml-1'>{layer?.name || 'Layer'} Layer</span>
       </Button>
 
-      <h2 className='text-sm font-medium my-2'>Draw</h2>
-      <div className='grid grid-cols-4 gap-2'>
+      <div className='grid grid-cols-4 gap-2 mt-3'>
         <Button
           title='Select'
           onClick={() => {
