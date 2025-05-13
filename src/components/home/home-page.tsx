@@ -11,6 +11,9 @@ import {
   List,
   MoreHorizontal,
   X,
+  CheckCircle,
+  XCircle,
+  BellRing,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,6 +51,7 @@ import { Spinner } from '../ui/spinner';
 import { Id } from '@/convex/_generated/dataModel';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export const HomePage = () => {
   const router = useRouter();
@@ -59,11 +63,17 @@ export const HomePage = () => {
 
   const user = useQuery(api.users.get);
   const projects = useQuery(api.projects.getProjects);
+  const pendingInvitations = useQuery(api.projects.getPendingInvitations);
   const createProject = useMutation(api.projects.create);
   const updateProject = useMutation(api.projects.update);
   const deleteProject = useMutation(api.projects.deleteProject);
+  const respondToInvitation = useMutation(api.projects.respondToInvitation);
 
-  if (user === undefined || projects === undefined) {
+  if (
+    user === undefined ||
+    projects === undefined ||
+    pendingInvitations === undefined
+  ) {
     return (
       <div className='w-screen h-screen flex items-center justify-center'>
         <Spinner />
@@ -79,16 +89,42 @@ export const HomePage = () => {
     );
   }
 
-  // Filter projects based on current tab and search term
-  const filteredProjects = projects.filter((project) => {
-    const matchesSearch = project.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    if (!matchesSearch) return false;
+  // Separate owned and collaborative projects
+  const ownedProjects = projects.filter(
+    (project: any) =>
+      // @ts-ignore
+      !project.collaborationRole || project.collaborationRole === 'owner'
+  );
 
-    if (activeTab === 'starred') return project.starred;
-    return true; // 'all' filter
-  });
+  const collaborativeProjects = projects.filter(
+    (project: any) =>
+      project.collaborationRole && project.collaborationRole !== 'owner'
+  );
+
+  // Filter projects based on current tab and search term
+  const getFilteredProjects = () => {
+    let filteredList = [];
+
+    switch (activeTab) {
+      case 'owned':
+        filteredList = ownedProjects;
+        break;
+      case 'collaborating':
+        filteredList = collaborativeProjects;
+        break;
+      case 'starred':
+        filteredList = projects.filter((project) => project.starred);
+        break;
+      case 'all':
+      default:
+        filteredList = projects;
+        break;
+    }
+
+    return filteredList.filter((project) =>
+      project.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
 
   const toggleProjectStar = async (projectId: Id<'projects'>) => {
     const project = projects.find((p) => p._id === projectId);
@@ -105,6 +141,18 @@ export const HomePage = () => {
 
     router.push(`/project/${projectId}`);
   };
+
+  const handleInvitationResponse = async (
+    invitationId: Id<'pendingInvitations'>,
+    accept: boolean
+  ) => {
+    await respondToInvitation({
+      invitationId,
+      accept,
+    });
+  };
+
+  const filteredProjects = getFilteredProjects();
 
   return (
     <div className='w-full flex flex-col min-h-screen'>
@@ -145,6 +193,61 @@ export const HomePage = () => {
       {/* Main Content */}
       <main className='w-full py-20 px-46 flex-1'>
         <div>
+          {/* Pending Invitations Section */}
+          {pendingInvitations && pendingInvitations.length > 0 && (
+            <div className='mb-8'>
+              <h3 className='text-xl font-semibold mb-4 flex items-center'>
+                <BellRing className='h-5 w-5 mr-2' />
+                Pending Invitations
+              </h3>
+              <div className='space-y-3'>
+                {pendingInvitations.map((invitation) => (
+                  <Alert
+                    key={invitation._id}
+                    className='flex justify-between items-center'
+                  >
+                    <div>
+                      <AlertTitle className='flex items-center gap-2'>
+                        {invitation.project?.name || 'Unknown Project'}
+                      </AlertTitle>
+                      <AlertDescription>
+                        Invited by{' '}
+                        {invitation.invitedBy?.name ||
+                          invitation.invitedBy?.email ||
+                          'Unknown'}
+                        as a {invitation.role}.
+                      </AlertDescription>
+                    </div>
+                    <div className='flex gap-2'>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        className='flex items-center gap-1'
+                        onClick={() =>
+                          handleInvitationResponse(invitation._id, false)
+                        }
+                      >
+                        <XCircle className='h-4 w-4' />
+                        Decline
+                      </Button>
+                      <Button
+                        size='sm'
+                        className='flex items-center gap-1'
+                        onClick={() =>
+                          handleInvitationResponse(invitation._id, true)
+                        }
+                      >
+                        <CheckCircle className='h-4 w-4' />
+                        Accept
+                      </Button>
+                    </div>
+                  </Alert>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Projects Header */}
           <div className='flex items-center justify-between mb-8'>
             <h2 className='text-3xl font-bold tracking-tight'>Projects</h2>
             <Dialog
@@ -190,15 +293,6 @@ export const HomePage = () => {
 
           <div className='flex flex-col gap-6'>
             <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
-                <Input
-                  placeholder='Search projects...'
-                  className='pl-10 w-full sm:w-[300px]'
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
               <div className='flex gap-2 items-center'>
                 <Tabs
                   value={activeTab}
@@ -207,13 +301,27 @@ export const HomePage = () => {
                 >
                   <TabsList>
                     <TabsTrigger value='all'>All</TabsTrigger>
+                    <TabsTrigger value='owned'>Owned</TabsTrigger>
+                    <TabsTrigger value='collaborating'>
+                      Collaborating
+                    </TabsTrigger>
                     <TabsTrigger value='starred'>
                       <Star className='h-4 w-4 mr-1' />
                       Starred
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
-
+              </div>
+              <div className='flex items-center gap-2'>
+                <div className='relative'>
+                  <Search className='absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground' />
+                  <Input
+                    placeholder='Search projects...'
+                    className='pl-10 w-full sm:w-[300px]'
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
                 <ToggleGroup
                   type='single'
                   value={viewMode}
@@ -238,16 +346,24 @@ export const HomePage = () => {
                     : 'space-y-3'
                 }
               >
-                {filteredProjects.map((project) =>
+                {filteredProjects.map((project: any) =>
                   viewMode === 'grid' ? (
                     <Link href={`/project/${project._id}`} key={project._id}>
                       <Card key={project._id} className='overflow-hidden'>
                         <div className='relative aspect-video'>
-                          {/* <img
-                          src={project.thumbnail}
-                          alt={project.name}
-                          className='w-full h-full object-cover'
-                        /> */}
+                          {/* Project thumbnail placeholder */}
+                          <div className='w-full h-full bg-muted flex items-center justify-center'>
+                            <Folder className='h-8 w-8 text-muted-foreground' />
+                          </div>
+
+                          {/* Role badge if collaborating */}
+                          {project.collaborationRole &&
+                            project.collaborationRole !== 'owner' && (
+                              <div className='absolute top-2 left-2 bg-primary/80 text-primary-foreground text-xs px-2 py-1 rounded-md'>
+                                {project.collaborationRole}
+                              </div>
+                            )}
+
                           <Button
                             variant='ghost'
                             size='icon'
@@ -285,25 +401,33 @@ export const HomePage = () => {
                               <DropdownMenuContent align='end'>
                                 <DropdownMenuItem>Edit</DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className='text-destructive'
-                                  onClick={async (e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    await deleteProject({
-                                      projectId: project._id,
-                                    });
-                                  }}
-                                >
-                                  Delete
-                                </DropdownMenuItem>
+                                {(!project.collaborationRole ||
+                                  project.collaborationRole === 'owner') && (
+                                  <DropdownMenuItem
+                                    className='text-destructive'
+                                    onClick={async (e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      await deleteProject({
+                                        projectId: project._id,
+                                      });
+                                    }}
+                                  >
+                                    Delete
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
                         </CardHeader>
                         <CardFooter className='p-4 pt-0'>
                           <p className='text-xs text-muted-foreground'>
-                            Edited {project.lastEdited}
+                            Edited{' '}
+                            {project.lastEdited
+                              ? new Date(
+                                  project.lastEdited
+                                ).toLocaleDateString()
+                              : 'Never'}
                           </p>
                         </CardFooter>
                       </Card>
@@ -314,18 +438,27 @@ export const HomePage = () => {
                         key={project._id}
                         className='flex flex-row overflow-hidden'
                       >
-                        {/* <div className='w-16 h-16'>
-                        <img
-                          src={project.thumbnail}
-                          alt={project.name}
-                          className='w-full h-full object-cover'
-                        />
-                      </div> */}
+                        <div className='w-16 h-16 bg-muted flex items-center justify-center'>
+                          <Folder className='h-6 w-6 text-muted-foreground' />
+                        </div>
                         <div className='flex flex-1 items-center p-4'>
                           <div className='flex-1'>
-                            <h3 className='font-medium'>{project.name}</h3>
+                            <div className='flex items-center gap-2'>
+                              <h3 className='font-medium'>{project.name}</h3>
+                              {project.collaborationRole &&
+                                project.collaborationRole !== 'owner' && (
+                                  <span className='bg-primary/80 text-primary-foreground text-xs px-2 py-0.5 rounded-md'>
+                                    {project.collaborationRole}
+                                  </span>
+                                )}
+                            </div>
                             <p className='text-xs text-muted-foreground'>
-                              Edited {project.lastEdited}
+                              Edited{' '}
+                              {project.lastEdited
+                                ? new Date(
+                                    project.lastEdited
+                                  ).toLocaleDateString()
+                                : 'Never'}
                             </p>
                           </div>
                           <div className='flex items-center gap-1'>
@@ -360,18 +493,21 @@ export const HomePage = () => {
                               <DropdownMenuContent align='end'>
                                 <DropdownMenuItem>Edit</DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className='text-destructive'
-                                  onClick={async (e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    await deleteProject({
-                                      projectId: project._id,
-                                    });
-                                  }}
-                                >
-                                  Delete
-                                </DropdownMenuItem>
+                                {(!project.collaborationRole ||
+                                  project.collaborationRole === 'owner') && (
+                                  <DropdownMenuItem
+                                    className='text-destructive'
+                                    onClick={async (e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      await deleteProject({
+                                        projectId: project._id,
+                                      });
+                                    }}
+                                  >
+                                    Delete
+                                  </DropdownMenuItem>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -388,7 +524,14 @@ export const HomePage = () => {
                 </div>
                 <h3 className='text-lg font-medium'>No projects found</h3>
                 <p className='text-muted-foreground'>
-                  Create a new project or try a different search.
+                  {activeTab === 'all' &&
+                    'Create a new project or try a different search.'}
+                  {activeTab === 'owned' &&
+                    "You don't have any owned projects. Create one to get started."}
+                  {activeTab === 'collaborating' &&
+                    "You're not collaborating on any projects yet."}
+                  {activeTab === 'starred' &&
+                    'Star your favorite projects to see them here.'}
                 </p>
               </div>
             )}
