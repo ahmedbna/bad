@@ -7,12 +7,14 @@ import { Tools } from './tools';
 import { ModeToggle } from '@/components/ui/mode-toggle';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShapeInputPanel } from './shape-input-panel';
-import { EditingState } from '../editing/constants';
+import { createInitialEditingState, EditingState } from '../editing/constants';
 import { Doc, Id } from '@/convex/_generated/dataModel';
 import Link from 'next/link';
 import { ShapeProperties } from './properties';
+import { AIChat } from '../ai/ai-chat';
 
 type Props = {
+  project: Doc<'projects'> & { layers: Doc<'layers'>[] };
   selectedTool: DrawingTool;
   drawingPoints: Point[];
   mousePosition: Point | null;
@@ -61,9 +63,13 @@ type Props = {
   setShowLayersDialog: React.Dispatch<React.SetStateAction<boolean>>;
   currentLayerId: Id<'layers'>;
   selectedShapeIds: Id<'shapes'>[];
+  selectedShapes: Doc<'shapes'>[];
+  setPendingAiShapes: React.Dispatch<React.SetStateAction<any>[]>;
+  pendingAiShapes: any[];
 };
 
 export const SidePanel = ({
+  project,
   selectedTool,
   drawingPoints,
   mousePosition,
@@ -98,6 +104,9 @@ export const SidePanel = ({
   setShowLayersDialog,
   currentLayerId,
   selectedShapeIds,
+  selectedShapes,
+  pendingAiShapes,
+  setPendingAiShapes,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -120,8 +129,26 @@ export const SidePanel = ({
         >
           <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='tools'>Tools</TabsTrigger>
-            <TabsTrigger value='props'>Props</TabsTrigger>
-            <TabsTrigger value='ai'>AI</TabsTrigger>
+            <TabsTrigger
+              value='props'
+              onClick={() => {
+                handleCancelDrawing();
+                setSelectedTool('select');
+                setEditingState(createInitialEditingState());
+              }}
+            >
+              Props
+            </TabsTrigger>
+            <TabsTrigger
+              value='ai'
+              onClick={() => {
+                handleCancelDrawing();
+                setSelectedTool('select');
+                setEditingState(createInitialEditingState());
+              }}
+            >
+              AI
+            </TabsTrigger>
           </TabsList>
           <TabsContent value='tools'>
             <Tools
@@ -174,7 +201,13 @@ export const SidePanel = ({
             />
           </TabsContent>
           <TabsContent value='ai'>
-            <div>AI</div>
+            <AIChat
+              project={project}
+              completeShape={completeShape}
+              selectedShapes={selectedShapes}
+              pendingAiShapes={pendingAiShapes}
+              setPendingAiShapes={setPendingAiShapes}
+            />
           </TabsContent>
         </Tabs>
       </div>

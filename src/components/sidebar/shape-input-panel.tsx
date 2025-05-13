@@ -519,7 +519,7 @@ export const ShapeInputPanel = ({
   const isPropertyInputValid = () => {
     switch (selectedTool) {
       case 'rectangle':
-        return propertyInput.width && propertyInput.height;
+        return propertyInput.width && propertyInput.length;
       case 'circle':
         return propertyInput.radius || propertyInput.diameter;
       case 'polygon':
@@ -891,14 +891,14 @@ export const ShapeInputPanel = ({
         break;
 
       case 'rectangle':
-        if (propertyInput.width && propertyInput.height && step === 1) {
+        if (propertyInput.width && propertyInput.length && step === 1) {
           const width = parseFloat(propertyInput.width);
-          const height = parseFloat(propertyInput.height);
+          const length = parseFloat(propertyInput.length);
 
-          if (!isNaN(width) && !isNaN(height)) {
+          if (!isNaN(width) && !isNaN(length)) {
             const secondPoint = {
               x: basePoint.x + width,
-              y: basePoint.y + height,
+              y: basePoint.y + length,
             };
 
             // Update coordinate input to reflect property changes
@@ -1204,13 +1204,13 @@ export const ShapeInputPanel = ({
               />
             </div>
             <div>
-              <Label htmlFor='height'>Height:</Label>
+              <Label htmlFor='length'>Length:</Label>
               <Input
-                id='height'
-                value={propertyInput.height}
-                onChange={(e) => handleInputChange(e, 'height')}
-                onKeyDown={(e) => handleKeyDown(e, 'height')}
-                placeholder='Enter height'
+                id='length'
+                value={propertyInput.length}
+                onChange={(e) => handleInputChange(e, 'length')}
+                onKeyDown={(e) => handleKeyDown(e, 'length')}
+                placeholder='Enter length'
               />
             </div>
           </div>

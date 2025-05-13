@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { drawGrid } from './draw/draw-grid';
 import { Point } from '@/types';
 import { DrawingTool, ArcMode } from '@/constants';
@@ -225,6 +225,9 @@ export const CADApp = ({
   });
   const [showPolarDialog, setShowPolarDialog] = useState(false);
 
+  // AI integration state
+  const [pendingAiShapes, setPendingAiShapes] = useState<any[]>([]);
+
   // Refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -283,6 +286,28 @@ export const CADApp = ({
     theme,
   ]);
 
+  // // Get viewport dimensions
+  // const [viewport, setViewport] = useState({ width: 800, height: 600 });
+
+  // // Update viewport dimensions when container size changes
+  // useEffect(() => {
+  //   const updateViewportDimensions = () => {
+  //     if (containerRef.current) {
+  //       setViewport({
+  //         width: containerRef.current.clientWidth,
+  //         height: containerRef.current.clientHeight,
+  //       });
+  //     }
+  //   };
+
+  //   updateViewportDimensions();
+  //   window.addEventListener('resize', updateViewportDimensions);
+
+  //   return () => {
+  //     window.removeEventListener('resize', updateViewportDimensions);
+  //   };
+  // }, []);
+
   // Draw the canvas
   const drawCanvas = () => {
     const canvas = canvasRef.current;
@@ -320,6 +345,33 @@ export const CADApp = ({
         offset,
         shape,
         isSelected,
+        isTemporary: false,
+        editingState,
+      });
+    });
+
+    const defaultlayer = project.layers.find((layer) => layer.isDefault);
+
+    // Draw all ai shapes
+    pendingAiShapes.forEach((shape) => {
+      const newShape = {
+        _id: `shape-${Math.random().toString(36).substring(2, 9)}` as Id<'shapes'>,
+        userId: `user` as Id<'users'>,
+        projectId: projectId,
+        layerId: defaultlayer?._id!,
+        type: shape.type,
+        points: shape.points,
+        layer: defaultlayer!,
+        properties: shape.properties,
+        _creationTime: new Date().getTime(),
+      };
+
+      drawShape({
+        ctx,
+        scale,
+        offset,
+        shape: newShape,
+        isSelected: false,
         isTemporary: false,
         editingState,
       });
@@ -490,32 +542,6 @@ export const CADApp = ({
     }));
   };
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setEditingState(createInitialEditingState());
-        handleCancelDrawing();
-        setSelectedTool('select');
-        setSelectedTab('tools');
-      }
-
-      if (event.key === 'Delete' || event.key === 'Backspace') {
-        if (selectedShapeIds.length > 0) {
-          handleDeleteShape();
-          handleCancelDrawing();
-          setSelectedTool('select');
-          setSelectedTab('tools');
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [selectedShapeIds]);
-
   // Add this before the return statement in AutoCADClone component
   const togglePolarTracking = () => {
     setPolarSettings((prev) => ({
@@ -573,7 +599,7 @@ export const CADApp = ({
       }
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedShapeIds.length > 0) {
+        if (selectedShapeIds.length > 0 && selectedTab !== 'ai') {
           handleDeleteShape();
           handleCancelDrawing();
           setSelectedTool('select');
@@ -683,6 +709,11 @@ export const CADApp = ({
     setCurrentLayerId(layerId);
   };
 
+  // Get selected shapes objects
+  const selectedShapes = shapes.filter((shape) =>
+    selectedShapeIds.includes(shape._id)
+  );
+
   return (
     <div className='flex flex-col h-screen'>
       <div className='flex flex-1 overflow-hidden'>
@@ -721,6 +752,10 @@ export const CADApp = ({
           setShowLayersDialog={setShowLayersDialog}
           currentLayerId={currentLayerId}
           selectedShapeIds={selectedShapeIds}
+          selectedShapes={selectedShapes}
+          pendingAiShapes={pendingAiShapes}
+          setPendingAiShapes={setPendingAiShapes}
+          project={project}
         />
 
         {/* Drawing canvas */}

@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import { ConvexClientProvider } from '@/providers/convex-client-provider';
 import { ThemeProvider } from '@/providers/theme-provider';
-
-import './globals.css';
+import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ConvexAuthenticationProvider } from '@/providers/convex-auth-provider';
+
+import './globals.css';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     default: 'BNA AI CAD',
     template: 'BNA | %s',
   },
-  description: 'BNA AI CAD',
+  description: 'AI CAD, Design Smarter, Faster, Together',
   metadataBase: new URL('https://ahmedbna.com'),
   openGraph: {
     title: 'BNA',
@@ -87,6 +87,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <TooltipProvider>{children}</TooltipProvider>
+            <Toaster />
           </ThemeProvider>
         </body>
       </ConvexAuthenticationProvider>
