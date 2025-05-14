@@ -43,6 +43,19 @@ export const LandingPage = () => {
           Login with Google
         </Button>
 
+        <a
+          href='https://www.producthunt.com/posts/ai-cad?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-ai&#0045;cad'
+          target='_blank'
+        >
+          <img
+            src='https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=965110&theme=light&t=1747189820030'
+            alt='AI&#0032;CAD - AI&#0032;CAD&#0032;in&#0032;the&#0032;Cloud&#0032;with&#0032;Realtime&#0032;Collaboration | Product Hunt'
+            className='w-[250px] h-[54px] mt-6'
+            width='250'
+            height='54'
+          />
+        </a>
+
         <Particles
           className='absolute inset-0 -z-10'
           quantity={80}
