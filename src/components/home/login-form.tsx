@@ -14,7 +14,7 @@ import { Label } from '@/components/ui/label';
 import { ConvexError } from 'convex/values';
 import { useAuthActions } from '@convex-dev/auth/react';
 import { useToast } from '@/hooks/useToast';
-import { AlertCircle, CheckCircle, Mail } from 'lucide-react';
+import { AlertCircle, Mail } from 'lucide-react';
 import { z } from 'zod';
 
 export const LoginForm = () => {
@@ -118,7 +118,7 @@ export const LoginForm = () => {
               <div className='text-center'>
                 <h3 className='font-medium'>Check your email</h3>
                 <p className='text-sm text-muted-foreground mt-1'>
-                  We've sent a magic link to{' '}
+                  {`We've sent a magic link to `}
                   <span className='font-medium'>{email}</span>
                 </p>
               </div>
@@ -215,8 +215,8 @@ export const LoginForm = () => {
       </Card>
 
       <div className='mt-4 text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 [&_a:hover]:text-primary'>
-        By clicking continue, you agree to our <a href='#'>Terms of Service</a>{' '}
-        and <a href='#'>Privacy Policy</a>.
+        {`By clicking continue, you agree to our `}
+        <a href='#'>Terms of Service</a> and <a href='#'>Privacy Policy</a>
       </div>
     </div>
   );
