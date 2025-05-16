@@ -13,14 +13,13 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         const appName = 'BNA, AI CAD';
 
         const colors = {
-          background: ' #0A0B11', // Dark background (similar to slate-950)
-          primary: '#EBF0FA', // Primary color (similar to slate-50)
-          card: '#11141D', // Card background (similar to slate-800)
-          cardForeground: '#FBFBFB', // Card foreground (similar to slate-50)
-          mutedForeground: '#B4BBCB', // Muted foreground (similar to slate-400)
+          background: ' #0A0B11',
+          primary: '#EBF0FA',
+          card: '#11141D',
+          cardForeground: '#FBFBFB',
+          mutedForeground: '#B4BBCB',
         };
 
-        // Create email HTML content with dark theme styling
         const emailHtml = `
 <!DOCTYPE html>
 <html lang="en">

@@ -90,7 +90,7 @@ export const LoginForm = () => {
   const handleGoogleSignIn = () => {
     setLoading(true);
     try {
-      signIn('google');
+      void signIn('google');
     } catch (error) {
       console.error(error);
       toast({
