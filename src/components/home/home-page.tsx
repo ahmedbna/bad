@@ -256,60 +256,45 @@ export const HomePage = () => {
           {/* Projects Header */}
           <div className='flex items-center justify-between mb-8'>
             <h2 className='text-3xl font-bold tracking-tight'>Projects</h2>
-            <div className='flex items-center gap-2'>
-              <Dialog
-                open={showNewProjectModal}
-                onOpenChange={setShowNewProjectModal}
-              >
-                <DialogTrigger asChild>
-                  <Button>
-                    <Plus className='mr-2 h-4 w-4' />
-                    New Project
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className='sm:max-w-[425px]'>
-                  <DialogHeader>
-                    <DialogTitle>Create New Project</DialogTitle>
-                    <DialogDescription>
-                      Enter project details and select a template to begin.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className='grid gap-4 py-4'>
-                    <div className='grid gap-2'>
-                      <Label htmlFor='project-name'>Project Name</Label>
-                      <Input
-                        id='project-name'
-                        placeholder='Enter project name'
-                        value={projectName}
-                        onChange={(e) => setProjectName(e.target.value)}
-                      />
-                    </div>
+            <Dialog
+              open={showNewProjectModal}
+              onOpenChange={setShowNewProjectModal}
+            >
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className='mr-2 h-4 w-4' />
+                  New Project
+                </Button>
+              </DialogTrigger>
+              <DialogContent className='sm:max-w-[425px]'>
+                <DialogHeader>
+                  <DialogTitle>Create New Project</DialogTitle>
+                  <DialogDescription>
+                    Enter project details and select a template to begin.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className='grid gap-4 py-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='project-name'>Project Name</Label>
+                    <Input
+                      id='project-name'
+                      placeholder='Enter project name'
+                      value={projectName}
+                      onChange={(e) => setProjectName(e.target.value)}
+                    />
                   </div>
-                  <DialogFooter>
-                    <Button
-                      variant='outline'
-                      onClick={() => setShowNewProjectModal(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button onClick={createNewProject}>Create</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-
-              <a
-                href='https://www.producthunt.com/posts/ai-cad?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-ai&#0045;cad'
-                target='_blank'
-              >
-                <img
-                  src='https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=965110&theme=light&t=1747189820030'
-                  alt='AI&#0032;CAD - AI&#0032;CAD&#0032;in&#0032;the&#0032;Cloud&#0032;with&#0032;Realtime&#0032;Collaboration | Product Hunt'
-                  className='w-[180px] h-9'
-                  width='180'
-                  height='36'
-                />
-              </a>
-            </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant='outline'
+                    onClick={() => setShowNewProjectModal(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={createNewProject}>Create</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className='flex flex-col gap-6'>
