@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { drawGrid } from './draw/draw-grid';
-import { Point } from '@/types';
+import { Point, ShapeProperties } from '@/types';
 import { DrawingTool, ArcMode } from '@/constants';
 import { drawShape } from './draw/draw-shape';
 import { SidePanel } from './sidebar/side-panel';
@@ -44,6 +44,9 @@ import {
 } from './collaboration/collaborators';
 import { LayersDialog } from './dialogs/layers-dialog';
 import { useTheme } from 'next-themes';
+import { getTempShape } from '@/lib/get-temp-shape';
+import { updateTempShapeFromCoordinates } from '@/lib/temp-shape-coordinates';
+import { updateTempShapeWithNewProperties } from '@/lib/temp-shape-properties';
 
 type Props = {
   project: Doc<'projects'> & { layers: Doc<'layers'>[] };
@@ -102,6 +105,24 @@ export const CADApp = ({
   // Collaboration-specific mutations and queries
   const updatePresence = useMutation(api.presence.updatePresence);
   const leaveProject = useMutation(api.presence.leaveProject);
+
+  const lineLengthRef = useRef<HTMLInputElement>(null);
+  const lineAngleRef = useRef<HTMLInputElement>(null);
+  const rectangleWidthRef = useRef<HTMLInputElement>(null);
+  const rectangleLengthRef = useRef<HTMLInputElement>(null);
+  const circleRadiusRef = useRef<HTMLInputElement>(null);
+  const circleDiameterRef = useRef<HTMLInputElement>(null);
+  const arcRadiusRef = useRef<HTMLInputElement>(null);
+  const arcStartAngleRef = useRef<HTMLInputElement>(null);
+  const arcEndAngleRef = useRef<HTMLInputElement>(null);
+  const polygonRadiusRef = useRef<HTMLInputElement>(null);
+  const polygonSidesRef = useRef<HTMLInputElement>(null);
+  const ellipseRadiusXRef = useRef<HTMLInputElement>(null);
+  const ellipseRadiusYRef = useRef<HTMLInputElement>(null);
+  const ellipseRotationRef = useRef<HTMLInputElement>(null);
+  const splineTensionRef = useRef<HTMLInputElement>(null);
+  const xCoordinatenRef = useRef<HTMLInputElement>(null);
+  const yCoordinatenRef = useRef<HTMLInputElement>(null);
 
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
@@ -419,24 +440,6 @@ export const CADApp = ({
     }
   };
 
-  // Complete shape and add to shapes list
-  const completeShape = async (points: Point[], properties: {}) => {
-    if (points.length < 1) return;
-
-    createShape({
-      projectId,
-      type: selectedTool,
-      points,
-      properties,
-      layerId: currentLayerId,
-    });
-
-    setDrawingPoints([]);
-    setTempShape(null);
-
-    clearSnap();
-  };
-
   // Tracking our view position for collaboration
   const debouncedMousePosition = useDebounce(mousePosition, 20);
   const debouncedViewport = useDebounce(
@@ -577,7 +580,107 @@ export const CADApp = ({
     setEditingTool(tool);
   };
 
-  // Inside your component
+  // Complete shape and add to shapes list
+  const completeShape = async (points: Point[], properties: {}) => {
+    if (points.length < 1) return;
+
+    createShape({
+      projectId,
+      type: selectedTool,
+      points,
+      properties,
+      layerId: currentLayerId,
+    });
+
+    setDrawingPoints([]);
+    setTempShape(null);
+
+    clearSnap();
+  };
+
+  const [step, setStep] = useState(0);
+  const [propertyInput, setPropertyInput] = useState<ShapeProperties>({});
+  const [coordinateInput, setCoordinateInput] = useState<Point>({ x: 0, y: 0 });
+
+  // Replace the existing handleInputChange function
+  const handleInputChange = (
+    event: React.ChangeEvent<HTMLInputElement> | KeyboardEvent | string,
+    field: string
+  ) => {
+    let value: string | number;
+
+    if (typeof event === 'string') {
+      // Direct value passed (from keyboard shortcut)
+      value = event;
+    } else if ('target' in event && event.target instanceof HTMLInputElement) {
+      // Regular form input change
+      value = event.target.value;
+    } else {
+      // Unsupported event type
+      return;
+    }
+
+    // Process the value based on field type
+    if (field === 'x' || field === 'y') {
+      const numericValue = parseFloat(value.toString());
+      if (!isNaN(numericValue)) {
+        setCoordinateInput((prev) => ({
+          ...prev,
+          [field]: numericValue,
+        }));
+
+        // Update temp shape with new coordinates if we have drawing points
+        if (drawingPoints.length > 0) {
+          const updatedPoint = {
+            x: field === 'x' ? numericValue : coordinateInput.x || 0,
+            y: field === 'y' ? numericValue : coordinateInput.y || 0,
+          };
+          updateTempShapeFromCoordinates({
+            step,
+            point: updatedPoint,
+            drawingPoints,
+            selectedTool,
+            propertyInput,
+            setTempShape,
+          });
+        }
+      }
+    } else {
+      const numericValue = parseFloat(value.toString());
+      if (!isNaN(numericValue)) {
+        // For property inputs, create a new updated object
+        const updatedPropertyInput = {
+          ...propertyInput,
+          [field]: numericValue,
+        };
+
+        // Handle special cases where one input should update another
+        if (field === 'radius' && numericValue) {
+          updatedPropertyInput.diameter = numericValue * 2;
+        } else if (field === 'diameter' && numericValue) {
+          updatedPropertyInput.radius = numericValue / 2;
+        }
+
+        // Update state with the complete new object
+        setPropertyInput(updatedPropertyInput);
+
+        // Immediately update the temp shape preview with the new properties
+        if (drawingPoints.length > 0) {
+          updateTempShapeWithNewProperties({
+            step,
+            selectedTool,
+            drawingPoints,
+            updatedPropertyInput,
+            field,
+            setTempShape,
+            setCoordinateInput,
+          });
+        }
+      }
+    }
+  };
+
+  // Replace the existing useEffect for keyboard handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Skip if user is typing in an input field
@@ -605,6 +708,7 @@ export const CADApp = ({
           setSelectedTool('select');
           setSelectedTab('tools');
         }
+        return;
       }
 
       // Handle common shortcuts
@@ -618,6 +722,182 @@ export const CADApp = ({
           handleRedo();
           return;
         }
+      }
+
+      // Handle numeric input when a drawing tool is selected
+      if (/^[0-9.-]$/.test(e.key) && selectedTool !== 'select') {
+        e.preventDefault();
+
+        // Step 0: Always focus on X coordinate first
+        if (step === 0 && drawingPoints.length === 0) {
+          xCoordinatenRef.current?.focus();
+          if (xCoordinatenRef.current) {
+            xCoordinatenRef.current.value = e.key;
+            handleInputChange(e.key, 'x');
+          }
+          return;
+        }
+
+        // After first point is placed, focus on appropriate property input
+        if (drawingPoints.length > 0) {
+          switch (selectedTool) {
+            case 'line':
+            case 'polyline':
+              lineLengthRef.current?.focus();
+              if (lineLengthRef.current) {
+                lineLengthRef.current.value = e.key;
+                handleInputChange(e.key, 'length');
+              }
+              break;
+
+            case 'rectangle':
+              if (step === 1) {
+                rectangleWidthRef.current?.focus();
+                if (rectangleWidthRef.current) {
+                  rectangleWidthRef.current.value = e.key;
+                  handleInputChange(e.key, 'width');
+                }
+              } else if (step === 2) {
+                rectangleLengthRef.current?.focus();
+                if (rectangleLengthRef.current) {
+                  rectangleLengthRef.current.value = e.key;
+                  handleInputChange(e.key, 'length');
+                }
+              }
+              break;
+
+            case 'circle':
+              circleRadiusRef.current?.focus();
+              if (circleRadiusRef.current) {
+                circleRadiusRef.current.value = e.key;
+                handleInputChange(e.key, 'radius');
+              }
+              break;
+
+            case 'arc':
+              if (step === 1) {
+                arcRadiusRef.current?.focus();
+                if (arcRadiusRef.current) {
+                  arcRadiusRef.current.value = e.key;
+                  handleInputChange(e.key, 'radius');
+                }
+              } else if (step === 2) {
+                arcStartAngleRef.current?.focus();
+                if (arcStartAngleRef.current) {
+                  arcStartAngleRef.current.value = e.key;
+                  handleInputChange(e.key, 'startAngle');
+                }
+              }
+              break;
+
+            case 'polygon':
+              polygonRadiusRef.current?.focus();
+              if (polygonRadiusRef.current) {
+                polygonRadiusRef.current.value = e.key;
+                handleInputChange(e.key, 'radius');
+              }
+              break;
+
+            case 'ellipse':
+              if (step === 1) {
+                ellipseRadiusXRef.current?.focus();
+                if (ellipseRadiusXRef.current) {
+                  ellipseRadiusXRef.current.value = e.key;
+                  handleInputChange(e.key, 'radiusX');
+                }
+              } else if (step === 2) {
+                ellipseRadiusYRef.current?.focus();
+                if (ellipseRadiusYRef.current) {
+                  ellipseRadiusYRef.current.value = e.key;
+                  handleInputChange(e.key, 'radiusY');
+                }
+              }
+              break;
+
+            case 'spline':
+              splineTensionRef.current?.focus();
+              if (splineTensionRef.current) {
+                splineTensionRef.current.value = e.key;
+                handleInputChange(e.key, 'tension');
+              }
+              break;
+          }
+        }
+        return;
+      }
+
+      // Handle Tab key to move between coordinate inputs
+      if (e.key === 'Tab' && (step === 0 || selectedTool === 'select')) {
+        e.preventDefault();
+        if (document.activeElement === xCoordinatenRef.current) {
+          yCoordinatenRef.current?.focus();
+        } else if (document.activeElement === yCoordinatenRef.current) {
+          xCoordinatenRef.current?.focus();
+        }
+        return;
+      }
+
+      // Handle Enter key to confirm input and move to next step
+      if (e.key === 'Enter') {
+        if (
+          document.activeElement === xCoordinatenRef.current ||
+          document.activeElement === yCoordinatenRef.current
+        ) {
+          // If coordinates are being entered, place the first point
+          if (coordinateInput.x !== 0 || coordinateInput.y !== 0) {
+            const newPoint = { x: coordinateInput.x, y: coordinateInput.y };
+            setDrawingPoints([newPoint]);
+            setStep(1);
+
+            // Clear coordinate inputs
+            setCoordinateInput({ x: 0, y: 0 });
+            if (xCoordinatenRef.current) xCoordinatenRef.current.value = '';
+            if (yCoordinatenRef.current) yCoordinatenRef.current.value = '';
+
+            // Focus on appropriate property input based on tool
+            setTimeout(() => {
+              switch (selectedTool) {
+                case 'line':
+                case 'polyline':
+                  lineLengthRef.current?.focus();
+                  break;
+                case 'rectangle':
+                  rectangleWidthRef.current?.focus();
+                  break;
+                case 'circle':
+                  circleRadiusRef.current?.focus();
+                  break;
+                case 'arc':
+                  arcRadiusRef.current?.focus();
+                  break;
+                case 'polygon':
+                  polygonRadiusRef.current?.focus();
+                  break;
+                case 'ellipse':
+                  ellipseRadiusXRef.current?.focus();
+                  break;
+                case 'spline':
+                  splineTensionRef.current?.focus();
+                  break;
+              }
+            }, 0);
+          }
+        } else {
+          // If property input is active, complete the shape or move to next step
+          const activeElement = document.activeElement as HTMLInputElement;
+          if (activeElement && activeElement.value) {
+            // For single-step shapes, complete immediately
+            if (['line', 'circle', 'polygon'].includes(selectedTool)) {
+              const properties = { ...propertyInput };
+              completeShape(drawingPoints, properties);
+              setStep(0);
+            } else {
+              // For multi-step shapes, move to next step
+              setStep(step + 1);
+            }
+          }
+        }
+        return;
       }
 
       // Only process shortcut commands when not in active operation
@@ -642,6 +922,8 @@ export const CADApp = ({
           p: 'polygon',
           t: 'text',
           sp: 'spline',
+          e: 'ellipse',
+          pl: 'polyline',
         };
 
         // Check editing tool shortcuts from the editing Tools Data
@@ -660,7 +942,13 @@ export const CADApp = ({
             setEditingState(createInitialEditingState());
           }
           setSelectedTool(drawingShortcuts[keyBuffer.current] as DrawingTool);
+          setStep(0);
           keyBuffer.current = '';
+
+          // Auto-focus on X coordinate input after tool selection
+          setTimeout(() => {
+            xCoordinatenRef.current?.focus();
+          }, 100);
         }
         // Check for editing tool match
         else if (editingShortcuts[keyBuffer.current]) {
@@ -673,14 +961,6 @@ export const CADApp = ({
             keyBuffer.current = '';
           }, 1000);
         }
-      } else if (e.key === 'Enter' && keyBuffer.current) {
-        // Enter key should execute the current command if any
-        if (keyBuffer.current === 'undo') {
-          handleUndo();
-        } else if (keyBuffer.current === 'redo') {
-          handleRedo();
-        }
-        keyBuffer.current = '';
       }
     };
 
@@ -703,7 +983,38 @@ export const CADApp = ({
     shapes,
     handleUndo,
     handleRedo,
+    selectedTool,
+    step,
+    coordinateInput,
+    propertyInput,
   ]);
+
+  // Add this function to reset inputs when tool changes
+  useEffect(() => {
+    // Reset step and inputs when tool changes
+    setStep(0);
+    setCoordinateInput({ x: 0, y: 0 });
+    setPropertyInput({});
+    setDrawingPoints([]);
+    setTempShape(null);
+
+    // Clear all input fields
+    if (xCoordinatenRef.current) xCoordinatenRef.current.value = '';
+    if (yCoordinatenRef.current) yCoordinatenRef.current.value = '';
+    if (lineLengthRef.current) lineLengthRef.current.value = '';
+    if (lineAngleRef.current) lineAngleRef.current.value = '';
+    if (rectangleWidthRef.current) rectangleWidthRef.current.value = '';
+    if (rectangleLengthRef.current) rectangleLengthRef.current.value = '';
+    if (circleRadiusRef.current) circleRadiusRef.current.value = '';
+    if (circleDiameterRef.current) circleDiameterRef.current.value = '';
+    if (arcRadiusRef.current) arcRadiusRef.current.value = '';
+    if (arcStartAngleRef.current) arcStartAngleRef.current.value = '';
+    if (arcEndAngleRef.current) arcEndAngleRef.current.value = '';
+    if (polygonRadiusRef.current) polygonRadiusRef.current.value = '';
+    if (ellipseRadiusXRef.current) ellipseRadiusXRef.current.value = '';
+    if (ellipseRadiusYRef.current) ellipseRadiusYRef.current.value = '';
+    if (splineTensionRef.current) splineTensionRef.current.value = '';
+  }, [selectedTool]);
 
   const onLayerSelect = (layerId: Id<'layers'>) => {
     setCurrentLayerId(layerId);
@@ -756,6 +1067,30 @@ export const CADApp = ({
           pendingAiShapes={pendingAiShapes}
           setPendingAiShapes={setPendingAiShapes}
           project={project}
+          lineLengthRef={lineLengthRef}
+          lineAngleRef={lineAngleRef}
+          rectangleWidthRef={rectangleWidthRef}
+          rectangleLengthRef={rectangleLengthRef}
+          circleRadiusRef={circleRadiusRef}
+          circleDiameterRef={circleDiameterRef}
+          arcRadiusRef={arcRadiusRef}
+          arcStartAngleRef={arcStartAngleRef}
+          arcEndAngleRef={arcEndAngleRef}
+          polygonRadiusRef={polygonRadiusRef}
+          polygonSidesRef={polygonSidesRef}
+          ellipseRadiusXRef={ellipseRadiusXRef}
+          ellipseRadiusYRef={ellipseRadiusYRef}
+          ellipseRotationRef={ellipseRotationRef}
+          splineTensionRef={splineTensionRef}
+          xCoordinatenRef={xCoordinatenRef}
+          yCoordinatenRef={yCoordinatenRef}
+          handleInputChange={handleInputChange}
+          propertyInput={propertyInput}
+          coordinateInput={coordinateInput}
+          setCoordinateInput={setCoordinateInput}
+          setPropertyInput={setPropertyInput}
+          setStep={setStep}
+          step={step}
         />
 
         {/* Drawing canvas */}

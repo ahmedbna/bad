@@ -8,18 +8,18 @@ export default defineSchema({
     name: v.optional(v.string()),
     image: v.optional(v.string()),
     email: v.optional(v.string()),
-    emailVerificationTime: v.optional(v.number()),
+    emailVerificationTime: v.optional(v.float64()),
     phone: v.optional(v.string()),
-    phoneVerificationTime: v.optional(v.number()),
+    phoneVerificationTime: v.optional(v.float64()),
     isAnonymous: v.optional(v.boolean()),
-    heartbeat: v.optional(v.number()),
+    heartbeat: v.optional(v.float64()),
   }).index('email', ['email']),
 
   projects: defineTable({
     userId: v.id('users'),
     name: v.string(),
     starred: v.boolean(),
-    lastEdited: v.optional(v.number()),
+    lastEdited: v.optional(v.float64()),
     description: v.optional(v.string()),
   })
     .index('userId', ['userId'])
@@ -29,7 +29,7 @@ export default defineSchema({
     projectId: v.id('projects'),
     name: v.string(),
     color: v.string(),
-    lineWidth: v.number(),
+    lineWidth: v.float64(),
     lineType: v.string(),
     isVisible: v.boolean(),
     isLocked: v.boolean(),
@@ -46,91 +46,91 @@ export default defineSchema({
     type: v.string(),
     points: v.array(
       v.object({
-        x: v.number(),
-        y: v.number(),
+        x: v.float64(),
+        y: v.float64(),
       })
     ),
     properties: v.object({
       // Common properties
       strokeColor: v.optional(v.string()),
-      strokeWidth: v.optional(v.number()),
+      strokeWidth: v.optional(v.float64()),
       fillColor: v.optional(v.string()),
 
       // Text properties
       textParams: v.optional(
         v.object({
           content: v.optional(v.string()),
-          fontSize: v.optional(v.number()),
+          fontSize: v.optional(v.float64()),
           fontFamily: v.optional(v.string()),
           fontStyle: v.optional(v.string()),
           fontWeight: v.optional(v.string()),
-          rotation: v.optional(v.number()),
+          rotation: v.optional(v.float64()),
           justification: v.optional(v.string()),
         })
       ),
 
       // Arc properties
-      startAngle: v.optional(v.number()),
-      endAngle: v.optional(v.number()),
+      startAngle: v.optional(v.float64()),
+      endAngle: v.optional(v.float64()),
 
       // Ellipse properties
-      radiusX: v.optional(v.number()),
-      radiusY: v.optional(v.number()),
+      radiusX: v.optional(v.float64()),
+      radiusY: v.optional(v.float64()),
       isFullEllipse: v.optional(v.boolean()),
 
       // Spline properties
-      tension: v.optional(v.number()),
+      tension: v.optional(v.float64()),
 
       // Polygon properties
-      sides: v.optional(v.number()),
+      sides: v.optional(v.float64()),
 
       // Dimension properties
       dimensionParams: v.optional(
         v.object({
           dimensionType: v.optional(v.string()),
-          offset: v.optional(v.number()),
-          extensionLineOffset: v.optional(v.number()),
-          arrowSize: v.optional(v.number()),
-          textHeight: v.optional(v.number()),
-          precision: v.optional(v.number()),
+          offset: v.optional(v.float64()),
+          extensionLineOffset: v.optional(v.float64()),
+          arrowSize: v.optional(v.float64()),
+          textHeight: v.optional(v.float64()),
+          precision: v.optional(v.float64()),
           units: v.optional(v.string()),
           showValue: v.optional(v.boolean()),
-          textRotation: v.optional(v.number()),
-          value: v.optional(v.number()),
+          textRotation: v.optional(v.float64()),
+          value: v.optional(v.float64()),
           textPosition: v.optional(
             v.object({
-              x: v.number(),
-              y: v.number(),
+              x: v.float64(),
+              y: v.float64(),
             })
           ),
         })
       ),
-      radius: v.optional(v.number()),
-      angle: v.optional(v.number()),
+      radius: v.optional(v.float64()),
+      angle: v.optional(v.float64()),
       isClockwise: v.optional(v.boolean()),
       isClosed: v.optional(v.boolean()),
       isCompleted: v.optional(v.boolean()),
-      rotation: v.optional(v.number()),
-      width: v.optional(v.number()),
-      height: v.optional(v.number()),
-      length: v.optional(v.number()),
+      rotation: v.optional(v.float64()),
+      width: v.optional(v.float64()),
+      height: v.optional(v.float64()),
+      length: v.optional(v.float64()),
       controlPoints: v.optional(
-        v.array(v.object({ x: v.number(), y: v.number() }))
+        v.array(v.object({ x: v.float64(), y: v.float64() }))
       ),
-      degree: v.optional(v.number()),
-      knots: v.optional(v.array(v.number())),
-      weights: v.optional(v.array(v.number())),
-      perimeter: v.optional(v.number()),
-      area: v.optional(v.number()),
-      diagonal: v.optional(v.number()),
-      diameter: v.optional(v.number()),
-      circumference: v.optional(v.number()),
-      sideLength: v.optional(v.number()),
-      internalAngle: v.optional(v.number()),
-      arcLength: v.optional(v.number()),
-      chordLength: v.optional(v.number()),
-      innerRadius: v.optional(v.number()),
-      center: v.optional(v.array(v.object({ x: v.number(), y: v.number() }))),
+      degree: v.optional(v.float64()),
+      knots: v.optional(v.array(v.float64())),
+      weights: v.optional(v.array(v.float64())),
+      perimeter: v.optional(v.float64()),
+      area: v.optional(v.float64()),
+      diagonal: v.optional(v.float64()),
+      diameter: v.optional(v.float64()),
+      circumference: v.optional(v.float64()),
+      sideLength: v.optional(v.float64()),
+      internalAngle: v.optional(v.float64()),
+      arcLength: v.optional(v.float64()),
+      chordLength: v.optional(v.float64()),
+      innerRadius: v.optional(v.float64()),
+      center: v.optional(v.array(v.object({ x: v.float64(), y: v.float64() }))),
     }),
   })
     .index('projectId', ['projectId'])
@@ -150,8 +150,8 @@ export default defineSchema({
     email: v.string(),
     role: v.union(v.literal('editor'), v.literal('viewer')),
     invitedBy: v.id('users'),
-    createdAt: v.number(),
-    acceptedAt: v.optional(v.number()),
+    createdAt: v.float64(),
+    acceptedAt: v.optional(v.float64()),
   })
     .index('projectId', ['projectId'])
     .index('email', ['email']),
@@ -159,17 +159,17 @@ export default defineSchema({
   presence: defineTable({
     projectId: v.id('projects'),
     userId: v.id('users'),
-    x: v.number(),
-    y: v.number(),
+    x: v.float64(),
+    y: v.float64(),
     tool: v.optional(v.string()),
     viewport: v.optional(
       v.object({
-        x: v.number(),
-        y: v.number(),
-        scale: v.number(),
+        x: v.float64(),
+        y: v.float64(),
+        scale: v.float64(),
       })
     ),
-    lastUpdated: v.number(),
+    lastUpdated: v.float64(),
   })
     .index('projectId', ['projectId'])
     .index('userId', ['userId'])

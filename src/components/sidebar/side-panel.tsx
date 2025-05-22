@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { DrawingTool } from '@/constants';
-import { Point, PolarSettings } from '@/types';
+import { Point, PolarSettings, ShapeProperties } from '@/types';
 import { SnapMode } from '../snap/useSnapping';
 import { Tools } from './tools';
 import { ModeToggle } from '@/components/ui/mode-toggle';
@@ -9,9 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ShapeInputPanel } from './shape-input-panel';
 import { createInitialEditingState, EditingState } from '../editing/constants';
 import { Doc, Id } from '@/convex/_generated/dataModel';
-import Link from 'next/link';
-import { ShapeProperties } from './properties';
+import { Properties } from './properties';
 import { AIChat } from '../ai/ai-chat';
+import { RefObject } from 'react';
 
 type Props = {
   project: Doc<'projects'> & { layers: Doc<'layers'>[] };
@@ -66,6 +67,33 @@ type Props = {
   selectedShapes: Doc<'shapes'>[];
   setPendingAiShapes: React.Dispatch<React.SetStateAction<any>[]>;
   pendingAiShapes: any[];
+  lineLengthRef: RefObject<HTMLInputElement | null>;
+  lineAngleRef: RefObject<HTMLInputElement | null>;
+  rectangleWidthRef: RefObject<HTMLInputElement | null>;
+  rectangleLengthRef: RefObject<HTMLInputElement | null>;
+  circleRadiusRef: RefObject<HTMLInputElement | null>;
+  circleDiameterRef: RefObject<HTMLInputElement | null>;
+  arcRadiusRef: RefObject<HTMLInputElement | null>;
+  arcStartAngleRef: RefObject<HTMLInputElement | null>;
+  arcEndAngleRef: RefObject<HTMLInputElement | null>;
+  polygonRadiusRef: RefObject<HTMLInputElement | null>;
+  polygonSidesRef: RefObject<HTMLInputElement | null>;
+  ellipseRadiusXRef: RefObject<HTMLInputElement | null>;
+  ellipseRadiusYRef: RefObject<HTMLInputElement | null>;
+  ellipseRotationRef: RefObject<HTMLInputElement | null>;
+  splineTensionRef: RefObject<HTMLInputElement | null>;
+  xCoordinatenRef: RefObject<HTMLInputElement | null>;
+  yCoordinatenRef: RefObject<HTMLInputElement | null>;
+  handleInputChange: (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: string
+  ) => void;
+  step: number;
+  propertyInput: ShapeProperties;
+  coordinateInput: Point;
+  setCoordinateInput: React.Dispatch<React.SetStateAction<Point>>;
+  setPropertyInput: React.Dispatch<React.SetStateAction<ShapeProperties>>;
+  setStep: React.Dispatch<React.SetStateAction<number>>;
 };
 
 export const SidePanel = ({
@@ -107,6 +135,30 @@ export const SidePanel = ({
   selectedShapes,
   pendingAiShapes,
   setPendingAiShapes,
+  lineLengthRef,
+  lineAngleRef,
+  rectangleWidthRef,
+  rectangleLengthRef,
+  circleRadiusRef,
+  circleDiameterRef,
+  arcRadiusRef,
+  arcStartAngleRef,
+  arcEndAngleRef,
+  polygonRadiusRef,
+  polygonSidesRef,
+  ellipseRadiusXRef,
+  ellipseRadiusYRef,
+  ellipseRotationRef,
+  splineTensionRef,
+  xCoordinatenRef,
+  yCoordinatenRef,
+  handleInputChange,
+  step,
+  propertyInput,
+  coordinateInput,
+  setCoordinateInput,
+  setPropertyInput,
+  setStep,
 }: Props) => {
   return (
     <div className='w-64 h-full flex flex-col border-r'>
@@ -188,7 +240,7 @@ export const SidePanel = ({
             </h2>
 
             {selectedTool === 'select' ? (
-              <ShapeProperties selectedShapeIds={selectedShapeIds} />
+              <Properties selectedShapeIds={selectedShapeIds} />
             ) : null}
 
             <ShapeInputPanel
@@ -198,6 +250,30 @@ export const SidePanel = ({
               setDrawingPoints={setDrawingPoints}
               handleCancelDrawing={handleCancelDrawing}
               setTempShape={setTempShape}
+              lineLengthRef={lineLengthRef}
+              lineAngleRef={lineAngleRef}
+              rectangleWidthRef={rectangleWidthRef}
+              rectangleLengthRef={rectangleLengthRef}
+              circleRadiusRef={circleRadiusRef}
+              circleDiameterRef={circleDiameterRef}
+              arcRadiusRef={arcRadiusRef}
+              arcStartAngleRef={arcStartAngleRef}
+              arcEndAngleRef={arcEndAngleRef}
+              polygonRadiusRef={polygonRadiusRef}
+              polygonSidesRef={polygonSidesRef}
+              ellipseRadiusXRef={ellipseRadiusXRef}
+              ellipseRadiusYRef={ellipseRadiusYRef}
+              ellipseRotationRef={ellipseRotationRef}
+              splineTensionRef={splineTensionRef}
+              xCoordinatenRef={xCoordinatenRef}
+              yCoordinatenRef={yCoordinatenRef}
+              handleInputChange={handleInputChange}
+              propertyInput={propertyInput}
+              coordinateInput={coordinateInput}
+              setCoordinateInput={setCoordinateInput}
+              setPropertyInput={setPropertyInput}
+              setStep={setStep}
+              step={step}
             />
           </TabsContent>
           <TabsContent value='ai'>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { RefObject, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,8 +22,19 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { InfoIcon } from 'lucide-react';
-import { Doc, Id } from '@/convex/_generated/dataModel';
+import { Doc } from '@/convex/_generated/dataModel';
 import { getTempShape } from '@/lib/get-temp-shape';
+import {
+  calculateCircleProperties,
+  calculateDistance,
+  calculateEllipseProperties,
+  calculateLineProperties,
+  calculatePolygonProperties,
+  calculatePolylineProperties,
+  calculateRectangleProperties,
+  calculateSplineProperties,
+} from '@/utils/calculations';
+import { updateTempShapeFromCoordinates } from '@/lib/temp-shape-coordinates';
 
 interface ShapeInputPanelProps {
   selectedTool: DrawingTool;
@@ -32,6 +43,33 @@ interface ShapeInputPanelProps {
   handleCancelDrawing: () => void;
   setTempShape: (shape: Doc<'shapes'> & { layer: Doc<'layers'> }) => void;
   setDrawingPoints: React.Dispatch<React.SetStateAction<Point[]>>;
+  lineLengthRef: RefObject<HTMLInputElement | null>;
+  lineAngleRef: RefObject<HTMLInputElement | null>;
+  rectangleWidthRef: RefObject<HTMLInputElement | null>;
+  rectangleLengthRef: RefObject<HTMLInputElement | null>;
+  circleRadiusRef: RefObject<HTMLInputElement | null>;
+  circleDiameterRef: RefObject<HTMLInputElement | null>;
+  arcRadiusRef: RefObject<HTMLInputElement | null>;
+  arcStartAngleRef: RefObject<HTMLInputElement | null>;
+  arcEndAngleRef: RefObject<HTMLInputElement | null>;
+  polygonRadiusRef: RefObject<HTMLInputElement | null>;
+  polygonSidesRef: RefObject<HTMLInputElement | null>;
+  ellipseRadiusXRef: RefObject<HTMLInputElement | null>;
+  ellipseRadiusYRef: RefObject<HTMLInputElement | null>;
+  ellipseRotationRef: RefObject<HTMLInputElement | null>;
+  splineTensionRef: RefObject<HTMLInputElement | null>;
+  xCoordinatenRef: RefObject<HTMLInputElement | null>;
+  yCoordinatenRef: RefObject<HTMLInputElement | null>;
+  handleInputChange: (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: string
+  ) => void;
+  step: number;
+  propertyInput: ShapeProperties;
+  coordinateInput: Point;
+  setCoordinateInput: React.Dispatch<React.SetStateAction<Point>>;
+  setPropertyInput: React.Dispatch<React.SetStateAction<ShapeProperties>>;
+  setStep: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export const ShapeInputPanel = ({
@@ -41,54 +79,38 @@ export const ShapeInputPanel = ({
   handleCancelDrawing,
   setTempShape,
   setDrawingPoints,
+  lineLengthRef,
+  lineAngleRef,
+  rectangleWidthRef,
+  rectangleLengthRef,
+  circleRadiusRef,
+  circleDiameterRef,
+  arcRadiusRef,
+  arcStartAngleRef,
+  arcEndAngleRef,
+  polygonRadiusRef,
+  polygonSidesRef,
+  ellipseRadiusXRef,
+  ellipseRadiusYRef,
+  ellipseRotationRef,
+  splineTensionRef,
+  xCoordinatenRef,
+  yCoordinatenRef,
+  handleInputChange,
+  coordinateInput,
+  setCoordinateInput,
+  propertyInput,
+  setPropertyInput,
+  step,
+  setStep,
 }: ShapeInputPanelProps) => {
-  const [step, setStep] = useState(0);
   const [prompt, setPrompt] = useState('');
-
-  // Initialize missing state
-  const [coordinateInput, setCoordinateInput] = useState<{
-    x: string;
-    y: string;
-  }>({
-    x: '',
-    y: '',
-  });
-
-  const [propertyInput, setPropertyInput] = useState({
-    length: '',
-    width: '',
-    height: '',
-    radius: '',
-    diameter: '',
-    direction: '0',
-    radiusX: '',
-    radiusY: '',
-    startAngle: '',
-    endAngle: '',
-    sides: '6',
-    rotation: '',
-    tension: '0.5',
-  });
 
   // Reset step when tool changes
   useEffect(() => {
     setStep(0);
-    setCoordinateInput({ x: '', y: '' });
-    setPropertyInput({
-      length: '',
-      width: '',
-      height: '',
-      radius: '',
-      diameter: '',
-      direction: '0',
-      radiusX: '',
-      radiusY: '',
-      startAngle: '',
-      endAngle: '',
-      sides: '6',
-      rotation: '',
-      tension: '0.5',
-    });
+    setCoordinateInput({ x: 0, y: 0 });
+    setPropertyInput({});
   }, [selectedTool]);
 
   // Update step based on drawing points
@@ -98,10 +120,7 @@ export const ShapeInputPanel = ({
     // If there are drawing points, update the coordinate input for the last point
     if (drawingPoints.length > 0) {
       const lastPoint = drawingPoints[drawingPoints.length - 1];
-      setCoordinateInput({
-        x: lastPoint.x.toString(),
-        y: lastPoint.y.toString(),
-      });
+      setCoordinateInput(lastPoint);
 
       updateTempShapeFromProperties();
     }
@@ -120,177 +139,10 @@ export const ShapeInputPanel = ({
     }
   };
 
-  // Update temp shape with cursor position (for live preview)
-  const updateTempShapeFromCoordinates = (point: Point) => {
-    if (drawingPoints.length === 0) return;
-
-    const basePoint = drawingPoints[0];
-
-    switch (selectedTool) {
-      case 'line':
-        setTempShape(
-          getTempShape({ type: 'line', points: [basePoint, point] })
-        );
-        break;
-
-      case 'rectangle':
-        setTempShape(
-          getTempShape({
-            type: 'rectangle',
-            points: [basePoint, point],
-          })
-        );
-
-        break;
-
-      case 'circle':
-        const radius = Math.hypot(point.x - basePoint.x, point.y - basePoint.y);
-
-        setTempShape(
-          getTempShape({
-            type: 'circle',
-            points: [basePoint],
-            properties: { radius },
-          })
-        );
-
-        break;
-
-      case 'ellipse':
-        if (step === 1) {
-          // First axis endpoint
-          const radiusX = Math.hypot(
-            point.x - basePoint.x,
-            point.y - basePoint.y
-          );
-
-          setTempShape(
-            getTempShape({
-              type: 'ellipse',
-              points: [basePoint],
-              properties: {
-                radiusX,
-                radiusY: radiusX / 2,
-                isFullEllipse: true,
-              },
-            })
-          );
-        } else if (step === 2 && drawingPoints.length >= 2) {
-          // Second axis endpoint
-          const dx = drawingPoints[1].x - basePoint.x;
-          const dy = drawingPoints[1].y - basePoint.y;
-          const angle = Math.atan2(dy, dx);
-
-          // Calculate perpendicular vector
-          const perpX = -Math.sin(angle);
-          const perpY = Math.cos(angle);
-
-          // Calculate projection of point onto perpendicular vector
-          const dotProduct =
-            (point.x - basePoint.x) * perpX + (point.y - basePoint.y) * perpY;
-
-          const radiusX = Math.hypot(dx, dy);
-          const radiusY = Math.abs(dotProduct);
-
-          setTempShape(
-            getTempShape({
-              type: 'ellipse',
-              points: [basePoint],
-              properties: {
-                radiusX,
-                radiusY,
-                rotation: angle,
-                isFullEllipse: true,
-              },
-            })
-          );
-        }
-        break;
-
-      case 'polygon':
-        const polygonRadius = Math.hypot(
-          point.x - basePoint.x,
-          point.y - basePoint.y
-        );
-
-        setTempShape(
-          getTempShape({
-            type: 'polygon',
-            points: [basePoint],
-            properties: {
-              radius: polygonRadius,
-              sides: parseInt(propertyInput.sides || '6'),
-            },
-          })
-        );
-
-        break;
-
-      case 'arc':
-        if (step === 1) {
-          // 3-point arc (storing second point)
-          setTempShape(
-            getTempShape({
-              type: 'arc',
-              points: [basePoint, point],
-            })
-          );
-        } else if (step === 2 && drawingPoints.length >= 2) {
-          // 3-point arc (complete with third point)
-          setTempShape(
-            getTempShape({
-              type: 'arc',
-              points: [basePoint, drawingPoints[1], point],
-            })
-          );
-        }
-        break;
-
-      case 'spline':
-        const splinePoints = [...drawingPoints, point];
-
-        setTempShape(
-          getTempShape({
-            type: 'spline',
-            points: splinePoints,
-            properties: {
-              tension: parseFloat(propertyInput.tension || '0.5'),
-            },
-          })
-        );
-
-        break;
-
-      case 'dimension':
-        if (step === 1) {
-          setTempShape(
-            getTempShape({
-              type: 'dimension',
-              points: [basePoint, point],
-            })
-          );
-        } else if (step === 2 && drawingPoints.length >= 2) {
-          setTempShape(
-            getTempShape({
-              type: 'dimension',
-              points: [basePoint, drawingPoints[1], point],
-            })
-          );
-        }
-        break;
-
-      default:
-        break;
-    }
-  };
-
   // Process coordinate-based input
   const processCoordinateInput = () => {
     if (coordinateInput.x && coordinateInput.y) {
-      const point: Point = {
-        x: parseFloat(coordinateInput.x),
-        y: parseFloat(coordinateInput.y),
-      };
+      const point = coordinateInput;
 
       if (!isNaN(point.x) && !isNaN(point.y)) {
         if (step === 0) {
@@ -299,15 +151,21 @@ export const ShapeInputPanel = ({
 
           if (selectedTool === 'text') {
             // Complete text with a single point
-            completeShape(newPoints);
+            completeShape(newPoints, propertyInput);
             setStep(0);
           } else {
             // Continue with additional points for other shapes
             setDrawingPoints(newPoints);
             setStep(1);
 
-            // Update temp shape for preview
-            updateTempShapeFromCoordinates(point);
+            updateTempShapeFromCoordinates({
+              step,
+              point,
+              drawingPoints,
+              selectedTool,
+              propertyInput,
+              setTempShape,
+            });
           }
         } else {
           // Process based on shape type
@@ -315,7 +173,7 @@ export const ShapeInputPanel = ({
         }
 
         // Clear coordinate input after processing
-        setCoordinateInput({ x: '', y: '' });
+        setCoordinateInput({ x: 0, y: 0 });
       }
     }
   };
@@ -326,11 +184,11 @@ export const ShapeInputPanel = ({
     processCoordinateInput();
 
     // If no coordinates, check for property input
-    if (!coordinateInput.x || !coordinateInput.y) {
-      if (isPropertyInputValid()) {
-        processPropertyInput();
-      }
-    }
+    // if (!coordinateInput.x || !coordinateInput.y) {
+    //   if (isPropertyInputValid()) {
+    //     processPropertyInput();
+    //   }
+    // }
   };
 
   // Check if property input is valid
@@ -345,7 +203,7 @@ export const ShapeInputPanel = ({
       case 'ellipse':
         return propertyInput.radiusX && propertyInput.radiusY;
       case 'line':
-        return propertyInput.length && propertyInput.direction && step === 1;
+        return propertyInput.length && propertyInput.angle && step === 1;
       case 'arc':
         return (
           propertyInput.radius &&
@@ -362,7 +220,9 @@ export const ShapeInputPanel = ({
   const processShapeCompletion = (point: Point) => {
     switch (selectedTool) {
       case 'line':
-        completeShape([drawingPoints[0], point]);
+        const lineProps = calculateLineProperties(drawingPoints[0], point);
+
+        completeShape([drawingPoints[0], point], lineProps);
         setStep(0);
         break;
 
@@ -380,7 +240,8 @@ export const ShapeInputPanel = ({
         const isClosing = distanceToStart < 5 && drawingPoints.length > 2;
 
         if (isClosing) {
-          completeShape(updatedPoints);
+          const polylineProps = calculatePolylineProperties(updatedPoints);
+          completeShape(updatedPoints, polylineProps);
           setStep(0);
         } else {
           // Continue adding points
@@ -388,23 +249,31 @@ export const ShapeInputPanel = ({
           setStep(step + 1);
 
           // Update temp shape for preview
-          updateTempShapeFromCoordinates(point);
+          updateTempShapeFromCoordinates({
+            step,
+            point,
+            drawingPoints,
+            selectedTool,
+            propertyInput,
+            setTempShape,
+          });
         }
         break;
 
       case 'rectangle':
-        completeShape([drawingPoints[0], point]);
+        const rectProps = calculateRectangleProperties(drawingPoints[0], point);
+
+        completeShape([drawingPoints[0], point], rectProps);
         setStep(0);
         break;
 
       case 'circle':
+        const center = drawingPoints[0];
+        const radius = calculateDistance(center, point);
+        const circleProps = calculateCircleProperties(radius);
+
         // For circle, second point determines radius
-        completeShape([drawingPoints[0]], {
-          radius: Math.hypot(
-            point.x - drawingPoints[0].x,
-            point.y - drawingPoints[0].y
-          ),
-        });
+        completeShape([drawingPoints[0]], circleProps);
         setStep(0);
         break;
 
@@ -414,7 +283,7 @@ export const ShapeInputPanel = ({
           setDrawingPoints([...drawingPoints, point]);
           setStep(2);
         } else if (step === 2) {
-          completeShape([drawingPoints[0], drawingPoints[1], point]);
+          completeShape([drawingPoints[0], drawingPoints[1], point], {});
           setStep(0);
         }
         break;
@@ -446,34 +315,45 @@ export const ShapeInputPanel = ({
 
           const radiusY = Math.abs(dotProduct);
 
-          completeShape([drawingPoints[0]], {
+          // Calculate ellipse properties
+          const ellipseProps = calculateEllipseProperties(
             radiusX,
             radiusY,
+            true
+          );
+
+          completeShape([drawingPoints[0]], {
+            ...ellipseProps,
             rotation: angle,
-            isFullEllipse: true,
           });
           setStep(0);
         }
         break;
 
       case 'polygon':
+        const polygonCenter = drawingPoints[0];
+        const polygonRadius = calculateDistance(polygonCenter, point);
+        const polygonSides = propertyInput.sides || 6;
+
+        const polygonProps = calculatePolygonProperties(
+          polygonRadius,
+          polygonSides
+        );
+
         // For polygon, second point determines radius
-        completeShape([drawingPoints[0]], {
-          radius: Math.hypot(
-            point.x - drawingPoints[0].x,
-            point.y - drawingPoints[0].y
-          ),
-          sides: parseInt(propertyInput.sides || '6'),
-        });
+        completeShape([drawingPoints[0]], polygonProps);
         setStep(0);
         break;
 
       case 'spline':
         const splinePoints = [...drawingPoints, point];
         if (splinePoints.length >= 3) {
-          completeShape(splinePoints, {
-            tension: parseFloat(propertyInput.tension || '0.5'),
-          });
+          const splineProps = calculateSplineProperties(
+            splinePoints,
+            propertyInput.tension || 0.5
+          );
+
+          completeShape(splinePoints, splineProps);
           setStep(0);
         } else {
           setDrawingPoints(splinePoints);
@@ -481,15 +361,15 @@ export const ShapeInputPanel = ({
         }
         break;
 
-      case 'dimension':
-        if (step === 1) {
-          setDrawingPoints([...drawingPoints, point]);
-          setStep(2);
-        } else if (step === 2) {
-          completeShape([drawingPoints[0], drawingPoints[1], point]);
-          setStep(0);
-        }
-        break;
+      // case 'dimension':
+      //   if (step === 1) {
+      //     setDrawingPoints([...drawingPoints, point]);
+      //     setStep(2);
+      //   } else if (step === 2) {
+      //     completeShape([drawingPoints[0], drawingPoints[1], point]);
+      //     setStep(0);
+      //   }
+      //   break;
 
       default:
         break;
@@ -508,7 +388,7 @@ export const ShapeInputPanel = ({
         setPrompt(
           step === 0
             ? 'Specify first point:'
-            : 'Specify second point or [Length/Direction]:'
+            : 'Specify second point or [Length/Angle]:'
         );
         break;
 
@@ -578,38 +458,6 @@ export const ShapeInputPanel = ({
     }
   };
 
-  // Get available options (shown in brackets in the prompt)
-  // const getOptionsForPrompt = () => {
-  //   switch (selectedTool) {
-  //     case 'line':
-  //       if (step === 1) return ['Length', 'Direction'];
-  //       return [];
-  //     case 'polyline':
-  //       if (step >= 1) return ['Close', 'Undo'];
-  //       return [];
-  //     case 'rectangle':
-  //       if (step === 1) return ['Width', 'Height'];
-  //       return [];
-  //     case 'circle':
-  //       if (step === 1) return ['Diameter'];
-  //       return [];
-  //     case 'arc':
-  //       if (step === 1) return ['Radius', 'StartAngle', 'EndAngle'];
-  //       return [];
-  //     case 'ellipse':
-  //       if (step === 1) return ['RadiusX', 'RadiusY', 'Rotation'];
-  //       return [];
-  //     case 'polygon':
-  //       if (step === 1) return ['Sides'];
-  //       return [];
-  //     case 'spline':
-  //       if (step >= 2) return ['Close', 'Undo', 'Tension'];
-  //       return [];
-  //     default:
-  //       return [];
-  //   }
-  // };
-
   // Fix the updateTempShapeFromProperties function
   const updateTempShapeFromProperties = () => {
     if (drawingPoints.length === 0) return;
@@ -618,21 +466,20 @@ export const ShapeInputPanel = ({
 
     switch (selectedTool) {
       case 'line':
-        if (propertyInput.length && propertyInput.direction && step === 1) {
-          const length = parseFloat(propertyInput.length);
-          const direction =
-            parseFloat(propertyInput.direction) * (Math.PI / 180);
+        if (propertyInput.length && propertyInput.angle && step === 1) {
+          const length = propertyInput.length;
+          const angle = propertyInput.angle * (Math.PI / 180);
 
-          if (!isNaN(length) && !isNaN(direction)) {
+          if (!isNaN(length) && !isNaN(angle)) {
             const secondPoint = {
-              x: basePoint.x + length * Math.cos(direction),
-              y: basePoint.y + length * Math.sin(direction),
+              x: basePoint.x + length * Math.cos(angle),
+              y: basePoint.y + length * Math.sin(angle),
             };
 
             // Update coordinate input to reflect property changes
             setCoordinateInput({
-              x: secondPoint.x.toFixed(2),
-              y: secondPoint.y.toFixed(2),
+              x: secondPoint.x,
+              y: secondPoint.y,
             });
 
             setTempShape(
@@ -644,8 +491,8 @@ export const ShapeInputPanel = ({
 
       case 'rectangle':
         if (propertyInput.width && propertyInput.length && step === 1) {
-          const width = parseFloat(propertyInput.width);
-          const length = parseFloat(propertyInput.length);
+          const width = propertyInput.width;
+          const length = propertyInput.length;
 
           if (!isNaN(width) && !isNaN(length)) {
             const secondPoint = {
@@ -655,8 +502,8 @@ export const ShapeInputPanel = ({
 
             // Update coordinate input to reflect property changes
             setCoordinateInput({
-              x: secondPoint.x.toFixed(2),
-              y: secondPoint.y.toFixed(2),
+              x: secondPoint.x,
+              y: secondPoint.y,
             });
 
             setTempShape(
@@ -673,9 +520,9 @@ export const ShapeInputPanel = ({
         if ((propertyInput.radius || propertyInput.diameter) && step === 1) {
           let radius;
           if (propertyInput.radius) {
-            radius = parseFloat(propertyInput.radius);
+            radius = propertyInput.radius;
           } else {
-            radius = parseFloat(propertyInput.diameter) / 2;
+            radius = (propertyInput.diameter || 0) / 2;
           }
 
           if (!isNaN(radius)) {
@@ -688,8 +535,8 @@ export const ShapeInputPanel = ({
 
             // Update coordinate input to reflect property changes
             setCoordinateInput({
-              x: circlePoint.x.toFixed(2),
-              y: circlePoint.y.toFixed(2),
+              x: circlePoint.x,
+              y: circlePoint.y,
             });
 
             setTempShape(
@@ -705,10 +552,9 @@ export const ShapeInputPanel = ({
 
       case 'ellipse':
         if (propertyInput.radiusX && propertyInput.radiusY && step >= 1) {
-          const radiusX = parseFloat(propertyInput.radiusX);
-          const radiusY = parseFloat(propertyInput.radiusY);
-          const rotation =
-            parseFloat(propertyInput.rotation || '0') * (Math.PI / 180);
+          const radiusX = propertyInput.radiusX;
+          const radiusY = propertyInput.radiusY;
+          const rotation = (propertyInput.rotation || 0) * (Math.PI / 180);
 
           if (!isNaN(radiusX) && !isNaN(radiusY)) {
             // Generate a point on the ellipse perimeter for coordinate display
@@ -720,8 +566,8 @@ export const ShapeInputPanel = ({
 
             // Update coordinate input to reflect property changes
             setCoordinateInput({
-              x: ellipsePoint.x.toFixed(2),
-              y: ellipsePoint.y.toFixed(2),
+              x: ellipsePoint.x,
+              y: ellipsePoint.y,
             });
 
             setTempShape(
@@ -742,8 +588,8 @@ export const ShapeInputPanel = ({
 
       case 'polygon':
         if (propertyInput.radius && propertyInput.sides && step === 1) {
-          const radius = parseFloat(propertyInput.radius);
-          const sides = parseInt(propertyInput.sides);
+          const radius = propertyInput.radius;
+          const sides = propertyInput.sides;
 
           if (!isNaN(radius) && !isNaN(sides)) {
             // Generate a point on the polygon perimeter for coordinate display
@@ -755,8 +601,8 @@ export const ShapeInputPanel = ({
 
             // Update coordinate input to reflect property changes
             setCoordinateInput({
-              x: polygonPoint.x.toFixed(2),
-              y: polygonPoint.y.toFixed(2),
+              x: polygonPoint.x,
+              y: polygonPoint.y,
             });
 
             setTempShape(
@@ -780,10 +626,9 @@ export const ShapeInputPanel = ({
           propertyInput.endAngle &&
           step === 1
         ) {
-          const radius = parseFloat(propertyInput.radius);
-          const startAngle =
-            parseFloat(propertyInput.startAngle) * (Math.PI / 180);
-          const endAngle = parseFloat(propertyInput.endAngle) * (Math.PI / 180);
+          const radius = propertyInput.radius;
+          const startAngle = propertyInput.startAngle * (Math.PI / 180);
+          const endAngle = propertyInput.endAngle * (Math.PI / 180);
 
           if (!isNaN(radius) && !isNaN(startAngle) && !isNaN(endAngle)) {
             // Generate a point on the arc for coordinate display (use end angle)
@@ -794,8 +639,8 @@ export const ShapeInputPanel = ({
 
             // Update coordinate input to reflect property changes
             setCoordinateInput({
-              x: arcPoint.x.toFixed(2),
-              y: arcPoint.y.toFixed(2),
+              x: arcPoint.x,
+              y: arcPoint.y,
             });
 
             setTempShape(
@@ -818,337 +663,9 @@ export const ShapeInputPanel = ({
     }
   };
 
-  // Replace the handleInputChange function with this improved version
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    field: string
-  ) => {
-    const value = e.target.value;
-
-    if (field === 'x' || field === 'y') {
-      setCoordinateInput((prev) => ({
-        ...prev,
-        [field]: value,
-      }));
-
-      // Try to update temp shape with new coordinates if value is numeric
-      const parsedValue = parseFloat(value);
-      if (!isNaN(parsedValue) && drawingPoints.length > 0) {
-        const updatedPoint = {
-          x: field === 'x' ? parsedValue : parseFloat(coordinateInput.x) || 0,
-          y: field === 'y' ? parsedValue : parseFloat(coordinateInput.y) || 0,
-        };
-        updateTempShapeFromCoordinates(updatedPoint);
-      }
-    } else {
-      // For property inputs, use the full value from the event
-      const updatedPropertyInput = {
-        ...propertyInput,
-        [field]: value,
-      };
-
-      // Handle special cases where one input should update another
-      if (field === 'radius' && value) {
-        const radiusValue = parseFloat(value);
-        if (!isNaN(radiusValue)) {
-          updatedPropertyInput.diameter = (radiusValue * 2).toFixed(2);
-        }
-      } else if (field === 'diameter' && value) {
-        const diameterValue = parseFloat(value);
-        if (!isNaN(diameterValue)) {
-          updatedPropertyInput.radius = (diameterValue / 2).toFixed(2);
-        }
-      }
-
-      // Update state with the complete new object
-      setPropertyInput(updatedPropertyInput);
-
-      // Immediately update the temp shape preview with the new properties
-      if (drawingPoints.length > 0) {
-        updateTempShapeWithNewProperties(updatedPropertyInput, field);
-      }
-    }
-  };
-
-  // Add this new function to handle property updates immediately without useEffect
-  const updateTempShapeWithNewProperties = (
-    updatedProperties: typeof propertyInput,
-    changedField: string
-  ) => {
-    if (drawingPoints.length === 0) return;
-
-    const basePoint = drawingPoints[0];
-
-    switch (selectedTool) {
-      case 'line':
-        if (step === 1) {
-          // Get values directly from the updated properties
-          const length = parseFloat(updatedProperties.length);
-          const direction =
-            parseFloat(updatedProperties.direction) * (Math.PI / 180);
-
-          if (!isNaN(length) && !isNaN(direction)) {
-            const secondPoint = {
-              x: basePoint.x + length * Math.cos(direction),
-              y: basePoint.y + length * Math.sin(direction),
-            };
-
-            setTempShape(
-              getTempShape({ type: 'line', points: [basePoint, secondPoint] })
-            );
-
-            // Update coordinate display
-            setCoordinateInput({
-              x: secondPoint.x.toFixed(2),
-              y: secondPoint.y.toFixed(2),
-            });
-          }
-        }
-        break;
-
-      case 'rectangle':
-        if (step === 1) {
-          const width = parseFloat(updatedProperties.width);
-          const height = parseFloat(updatedProperties.height);
-
-          if (!isNaN(width) && !isNaN(height)) {
-            const secondPoint = {
-              x: basePoint.x + width,
-              y: basePoint.y + height,
-            };
-
-            setTempShape(
-              getTempShape({
-                type: 'rectangle',
-                points: [basePoint, secondPoint],
-              })
-            );
-
-            setCoordinateInput({
-              x: secondPoint.x.toFixed(2),
-              y: secondPoint.y.toFixed(2),
-            });
-          }
-        }
-        break;
-
-      case 'circle':
-        if (step === 1) {
-          let radius;
-          if (changedField === 'radius' && updatedProperties.radius) {
-            radius = parseFloat(updatedProperties.radius);
-          } else if (
-            changedField === 'diameter' &&
-            updatedProperties.diameter
-          ) {
-            radius = parseFloat(updatedProperties.diameter) / 2;
-          } else {
-            radius =
-              parseFloat(updatedProperties.radius) ||
-              parseFloat(updatedProperties.diameter) / 2 ||
-              0;
-          }
-
-          if (!isNaN(radius) && radius > 0) {
-            // Generate a point on the circle perimeter for coordinate display
-            const angle = 0; // Default to right side of circle
-            const circlePoint = {
-              x: basePoint.x + radius * Math.cos(angle),
-              y: basePoint.y + radius * Math.sin(angle),
-            };
-
-            setTempShape(
-              getTempShape({
-                type: 'circle',
-                points: [basePoint],
-                properties: { radius },
-              })
-            );
-
-            setCoordinateInput({
-              x: circlePoint.x.toFixed(2),
-              y: circlePoint.y.toFixed(2),
-            });
-          }
-        }
-        break;
-
-      case 'ellipse':
-        if (step >= 1) {
-          const radiusX = parseFloat(updatedProperties.radiusX);
-          const radiusY = parseFloat(updatedProperties.radiusY);
-          const rotation =
-            parseFloat(updatedProperties.rotation || '0') * (Math.PI / 180);
-
-          if (!isNaN(radiusX) && !isNaN(radiusY)) {
-            // Generate a point on the ellipse perimeter
-            const angle = rotation;
-            const ellipsePoint = {
-              x: basePoint.x + radiusX * Math.cos(angle),
-              y: basePoint.y + radiusY * Math.sin(angle),
-            };
-
-            setTempShape(
-              getTempShape({
-                type: 'ellipse',
-                points: [basePoint],
-                properties: {
-                  radiusX,
-                  radiusY,
-                  rotation,
-                  isFullEllipse: true,
-                },
-              })
-            );
-
-            setCoordinateInput({
-              x: ellipsePoint.x.toFixed(2),
-              y: ellipsePoint.y.toFixed(2),
-            });
-          }
-        }
-        break;
-
-      case 'polygon':
-        if (step === 1) {
-          const radius = parseFloat(updatedProperties.radius);
-          const sides = parseInt(updatedProperties.sides || '6');
-
-          if (!isNaN(radius) && !isNaN(sides)) {
-            // Generate a point on the polygon perimeter
-            const angle = 0;
-            const polygonPoint = {
-              x: basePoint.x + radius * Math.cos(angle),
-              y: basePoint.y + radius * Math.sin(angle),
-            };
-
-            setTempShape(
-              getTempShape({
-                type: 'polygon',
-                points: [basePoint],
-                properties: {
-                  radius,
-                  sides,
-                },
-              })
-            );
-
-            setCoordinateInput({
-              x: polygonPoint.x.toFixed(2),
-              y: polygonPoint.y.toFixed(2),
-            });
-          }
-        }
-        break;
-
-      case 'arc':
-        if (step === 1) {
-          const radius = parseFloat(updatedProperties.radius);
-          const startAngle =
-            parseFloat(updatedProperties.startAngle || '0') * (Math.PI / 180);
-          const endAngle =
-            parseFloat(updatedProperties.endAngle || '0') * (Math.PI / 180);
-
-          if (!isNaN(radius) && !isNaN(startAngle) && !isNaN(endAngle)) {
-            // Generate a point on the arc
-            const arcPoint = {
-              x: basePoint.x + radius * Math.cos(endAngle),
-              y: basePoint.y + radius * Math.sin(endAngle),
-            };
-
-            setTempShape(
-              getTempShape({
-                type: 'arc',
-                points: [basePoint],
-                properties: {
-                  radius,
-                  startAngle,
-                  endAngle,
-                },
-              })
-            );
-
-            setCoordinateInput({
-              x: arcPoint.x.toFixed(2),
-              y: arcPoint.y.toFixed(2),
-            });
-          }
-        }
-        break;
-
-      case 'spline':
-        if (step >= 2) {
-          const tension = parseFloat(updatedProperties.tension || '0.5');
-          if (!isNaN(tension)) {
-            setTempShape(
-              getTempShape({
-                type: 'spline',
-                points: drawingPoints,
-                properties: { tension },
-              })
-            );
-          }
-        }
-        break;
-
-      default:
-        break;
-    }
-  };
-
-  // Update processPropertyInput to use the complete values from propertyInput
-  const processPropertyInput = () => {
-    if (drawingPoints.length === 0 && selectedTool !== 'text') return;
-
-    const basePoint = drawingPoints[0] || { x: 0, y: 0 };
-
-    switch (selectedTool) {
-      case 'line':
-        if (propertyInput.length && step === 1) {
-          const length = parseFloat(propertyInput.length);
-          const directionDeg = parseFloat(propertyInput.direction || '0');
-          const directionRad = directionDeg * (Math.PI / 180);
-
-          if (!isNaN(length) && !isNaN(directionRad)) {
-            const secondPoint = {
-              x: basePoint.x + length * Math.cos(directionRad),
-              y: basePoint.y + length * Math.sin(directionRad),
-            };
-
-            // Update preview/coordinate UI
-            setCoordinateInput({
-              x: secondPoint.x.toFixed(2),
-              y: secondPoint.y.toFixed(2),
-            });
-
-            // Complete the line
-            completeShape([basePoint, secondPoint]);
-            setStep(0);
-          }
-        }
-        break;
-
-      // The rest of the cases remain the same...
-      // (I'm not including all cases to keep the response concise,
-      // but the same pattern applies to all other shape types)
-    }
-
-    // Reset property inputs
-    setPropertyInput({
-      length: '',
-      width: '',
-      height: '',
-      radius: '',
-      diameter: '',
-      direction: '0',
-      radiusX: '',
-      radiusY: '',
-      startAngle: '',
-      endAngle: '',
-      sides: propertyInput.sides || '6',
-      rotation: '',
-      tension: propertyInput.tension || '0.5',
-    });
+  const getInputValue = (value: number | undefined): string => {
+    if (value === 0) return '';
+    return value?.toString() || '';
   };
 
   // Get applicable property inputs for current shape and step
@@ -1162,17 +679,19 @@ export const ShapeInputPanel = ({
             <Label htmlFor='length'>Length:</Label>
             <Input
               id='length'
-              value={propertyInput.length}
+              ref={lineLengthRef}
+              value={getInputValue(propertyInput.length)}
               onChange={(e) => handleInputChange(e, 'length')}
               onKeyDown={(e) => handleKeyDown(e, 'length')}
               placeholder='Enter length'
             />
-            <Label htmlFor='direction'>Direction (degrees):</Label>
+            <Label htmlFor='angle'>Angle (degrees):</Label>
             <Input
-              id='direction'
-              value={propertyInput.direction}
-              onChange={(e) => handleInputChange(e, 'direction')}
-              onKeyDown={(e) => handleKeyDown(e, 'direction')}
+              id='angle'
+              ref={lineAngleRef}
+              value={getInputValue(propertyInput.angle)}
+              onChange={(e) => handleInputChange(e, 'angle')}
+              onKeyDown={(e) => handleKeyDown(e, 'angle')}
               placeholder='Enter angle (0-360)'
             />
           </div>
@@ -1185,7 +704,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='width'>Width:</Label>
               <Input
                 id='width'
-                value={propertyInput.width}
+                ref={rectangleWidthRef}
+                value={getInputValue(propertyInput.width)}
                 onChange={(e) => handleInputChange(e, 'width')}
                 onKeyDown={(e) => handleKeyDown(e, 'width')}
                 placeholder='Enter width'
@@ -1195,7 +715,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='length'>Length:</Label>
               <Input
                 id='length'
-                value={propertyInput.length}
+                ref={rectangleLengthRef}
+                value={getInputValue(propertyInput.length)}
                 onChange={(e) => handleInputChange(e, 'length')}
                 onKeyDown={(e) => handleKeyDown(e, 'length')}
                 placeholder='Enter length'
@@ -1211,7 +732,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='radius'>Radius:</Label>
               <Input
                 id='radius'
-                value={propertyInput.radius}
+                ref={circleRadiusRef}
+                value={getInputValue(propertyInput.radius)}
                 onChange={(e) => handleInputChange(e, 'radius')}
                 onKeyDown={(e) => handleKeyDown(e, 'radius')}
                 placeholder='Enter radius'
@@ -1221,7 +743,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='diameter'>Diameter:</Label>
               <Input
                 id='diameter'
-                value={propertyInput.diameter}
+                ref={circleDiameterRef}
+                value={getInputValue(propertyInput.diameter)}
                 onChange={(e) => handleInputChange(e, 'diameter')}
                 onKeyDown={(e) => handleKeyDown(e, 'diameter')}
                 placeholder='Enter diameter'
@@ -1238,7 +761,8 @@ export const ShapeInputPanel = ({
                 <Label htmlFor='radius'>Radius:</Label>
                 <Input
                   id='radius'
-                  value={propertyInput.radius}
+                  ref={arcRadiusRef}
+                  value={getInputValue(propertyInput.radius)}
                   onChange={(e) => handleInputChange(e, 'radius')}
                   onKeyDown={(e) => handleKeyDown(e, 'radius')}
                   placeholder='Enter radius'
@@ -1248,7 +772,8 @@ export const ShapeInputPanel = ({
                 <Label htmlFor='startAngle'>Start Angle (degrees):</Label>
                 <Input
                   id='startAngle'
-                  value={propertyInput.startAngle}
+                  ref={arcStartAngleRef}
+                  value={getInputValue(propertyInput.startAngle)}
                   onChange={(e) => handleInputChange(e, 'startAngle')}
                   onKeyDown={(e) => handleKeyDown(e, 'startAngle')}
                   placeholder='Enter start angle'
@@ -1258,7 +783,8 @@ export const ShapeInputPanel = ({
                 <Label htmlFor='endAngle'>End Angle (degrees):</Label>
                 <Input
                   id='endAngle'
-                  value={propertyInput.endAngle}
+                  ref={arcEndAngleRef}
+                  value={getInputValue(propertyInput.endAngle)}
                   onChange={(e) => handleInputChange(e, 'endAngle')}
                   onKeyDown={(e) => handleKeyDown(e, 'endAngle')}
                   placeholder='Enter end angle'
@@ -1276,7 +802,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='radius'>Radius:</Label>
               <Input
                 id='radius'
-                value={propertyInput.radius}
+                ref={polygonRadiusRef}
+                value={getInputValue(propertyInput.radius)}
                 onChange={(e) => handleInputChange(e, 'radius')}
                 onKeyDown={(e) => handleKeyDown(e, 'radius')}
                 placeholder='Enter radius'
@@ -1286,7 +813,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='sides'>Sides:</Label>
               <Input
                 id='sides'
-                value={propertyInput.sides}
+                ref={polygonSidesRef}
+                value={getInputValue(propertyInput.sides)}
                 onChange={(e) => handleInputChange(e, 'sides')}
                 onKeyDown={(e) => handleKeyDown(e, 'sides')}
                 placeholder='Enter number of sides'
@@ -1302,7 +830,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='radiusX'>Radius X:</Label>
               <Input
                 id='radiusX'
-                value={propertyInput.radiusX}
+                ref={ellipseRadiusXRef}
+                value={getInputValue(propertyInput.radiusX)}
                 onChange={(e) => handleInputChange(e, 'radiusX')}
                 onKeyDown={(e) => handleKeyDown(e, 'radiusX')}
                 placeholder='Enter X radius'
@@ -1312,7 +841,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='radiusY'>Radius Y:</Label>
               <Input
                 id='radiusY'
-                value={propertyInput.radiusY}
+                ref={ellipseRadiusYRef}
+                value={getInputValue(propertyInput.radiusY)}
                 onChange={(e) => handleInputChange(e, 'radiusY')}
                 onKeyDown={(e) => handleKeyDown(e, 'radiusY')}
                 placeholder='Enter Y radius'
@@ -1322,7 +852,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='rotation'>Rotation (degrees):</Label>
               <Input
                 id='rotation'
-                value={propertyInput.rotation}
+                ref={ellipseRotationRef}
+                value={getInputValue(propertyInput.rotation)}
                 onChange={(e) => handleInputChange(e, 'rotation')}
                 onKeyDown={(e) => handleKeyDown(e, 'rotation')}
                 placeholder='Enter rotation'
@@ -1338,7 +869,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='tension'>Tension:</Label>
               <Input
                 id='tension'
-                value={propertyInput.tension}
+                ref={splineTensionRef}
+                value={getInputValue(propertyInput.tension)}
                 onChange={(e) => handleInputChange(e, 'tension')}
                 onKeyDown={(e) => handleKeyDown(e, 'tension')}
                 placeholder='Enter tension (0-1)'
@@ -1391,7 +923,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='x'>X:</Label>
               <Input
                 id='x'
-                value={coordinateInput.x}
+                ref={xCoordinatenRef}
+                value={getInputValue(coordinateInput.x)}
                 onChange={(e) => handleInputChange(e, 'x')}
                 onKeyDown={(e) => handleKeyDown(e, 'x')}
                 placeholder='X coordinate'
@@ -1401,7 +934,8 @@ export const ShapeInputPanel = ({
               <Label htmlFor='y'>Y:</Label>
               <Input
                 id='y'
-                value={coordinateInput.y}
+                ref={yCoordinatenRef}
+                value={getInputValue(coordinateInput.y)}
                 onChange={(e) => handleInputChange(e, 'y')}
                 onKeyDown={(e) => handleKeyDown(e, 'y')}
                 placeholder='Y coordinate'

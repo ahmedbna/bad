@@ -17,7 +17,7 @@ type Props = {
   selectedShapeIds: Id<'shapes'>[];
 };
 
-export const ShapeProperties = ({ selectedShapeIds }: Props) => {
+export const Properties = ({ selectedShapeIds }: Props) => {
   const [groupedShapes, setGroupedShapes] = useState<{
     byType: Record<string, (Doc<'shapes'> & { layer: Doc<'layers'> })[]>;
     byLayer: Record<string, (Doc<'shapes'> & { layer: Doc<'layers'> })[]>;
@@ -186,8 +186,8 @@ export const ShapeProperties = ({ selectedShapeIds }: Props) => {
                       />
                       <Divider />
                       <PropertyRow
-                        label='Height'
-                        value={shape.properties.height}
+                        label='Length'
+                        value={shape.properties.length}
                       />
                     </>
                   )}
@@ -280,8 +280,8 @@ export const ShapeProperties = ({ selectedShapeIds }: Props) => {
                     <div className='text-xs text-muted-foreground'>
                       {shapes[0].properties.width &&
                         `Width: ${formatValue(shapes[0].properties.width)}`}
-                      {shapes[0].properties.height &&
-                        `, Height: ${formatValue(shapes[0].properties.height)}`}
+                      {shapes[0].properties.length &&
+                        `, Length: ${formatValue(shapes[0].properties.length)}`}
                       {shapes[0].properties.radius &&
                         `, Radius: ${formatValue(shapes[0].properties.radius)}`}
                     </div>
