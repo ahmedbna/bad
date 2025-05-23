@@ -2,6 +2,12 @@ import { Point } from '@/types';
 import { worldToCanvas } from '@/utils/worldToCanvas';
 import { EditingState } from '@/components/editing/constants';
 import { Doc } from '@/convex/_generated/dataModel';
+import {
+  ControlPoint,
+  ControlPointsResult,
+  getControlPoints,
+  renderControlPoints,
+} from '../editing/control-points';
 
 type Props = {
   ctx: CanvasRenderingContext2D;
@@ -12,9 +18,9 @@ type Props = {
   isTemporary: boolean;
   editingState: EditingState;
   theme?: string;
+  currentControlPoints: ControlPointsResult;
 };
 
-// Draw shape
 export const drawShape = ({
   ctx,
   shape,
@@ -24,6 +30,7 @@ export const drawShape = ({
   isTemporary = false,
   editingState,
   theme = 'dark',
+  currentControlPoints,
 }: Props) => {
   // Set styles based on selection and editing state
   const isEditingSelected =
@@ -77,11 +84,6 @@ export const drawShape = ({
         ctx.moveTo(start.x, start.y);
         ctx.lineTo(end.x, end.y);
         ctx.stroke();
-
-        // Draw control points when selected
-        if (isSelected) {
-          drawControlPoints(ctx, [start, end]);
-        }
       }
       break;
 
@@ -97,17 +99,6 @@ export const drawShape = ({
         ctx.rect(start.x, start.y, width, height);
         ctx.fill();
         ctx.stroke();
-
-        // Draw control points when selected
-        if (isSelected) {
-          const controlPoints = [
-            start,
-            { x: start.x + width, y: start.y },
-            end,
-            { x: start.x, y: start.y + height },
-          ];
-          drawControlPoints(ctx, controlPoints);
-        }
       }
       break;
 
@@ -120,27 +111,6 @@ export const drawShape = ({
         ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-
-        // Draw control points when selected
-        if (isSelected) {
-          // Draw center point
-          drawControlPoint(ctx, center);
-
-          // Draw radius control point
-          const radiusPoint = {
-            x: center.x + radius,
-            y: center.y,
-          };
-          drawControlPoint(ctx, radiusPoint);
-
-          // Draw a line connecting center to radius point
-          ctx.beginPath();
-          ctx.moveTo(center.x, center.y);
-          ctx.lineTo(radiusPoint.x, radiusPoint.y);
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
       }
       break;
 
@@ -152,85 +122,9 @@ export const drawShape = ({
         const endAngle = shape.properties?.endAngle || Math.PI * 2;
         const isClockwise = shape.properties?.isClockwise || false;
 
-        // If it's a temporary shape and has the isDashed property, use dashed lines
-        // if (isTemporary && shape.properties?.isDashed) {
-        //   ctx.setLineDash([5, 5]);
-        // }
-
         ctx.beginPath();
-
-        // In HTML5 Canvas, true = counterclockwise, false = clockwise
-        // But in our internal logic, isClockwise has the opposite meaning
-        // So we need to invert the flag here
         ctx.arc(center.x, center.y, radius, startAngle, endAngle, !isClockwise);
-
         ctx.stroke();
-
-        // Reset dashed line setting
-        // if (isTemporary && shape.properties?.isDashed) {
-        //   ctx.setLineDash([]);
-        // }
-
-        // Draw control points when selected
-        if (isSelected) {
-          // Draw center point
-          drawControlPoint(ctx, center);
-
-          // Draw start and end points of the arc
-          const startPoint = {
-            x: center.x + radius * Math.cos(startAngle),
-            y: center.y + radius * Math.sin(startAngle),
-          };
-
-          const endPoint = {
-            x: center.x + radius * Math.cos(endAngle),
-            y: center.y + radius * Math.sin(endAngle),
-          };
-
-          drawControlPoint(ctx, startPoint);
-          drawControlPoint(ctx, endPoint);
-
-          // Draw radial lines
-          ctx.beginPath();
-          ctx.moveTo(center.x, center.y);
-          ctx.lineTo(startPoint.x, startPoint.y);
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.moveTo(center.x, center.y);
-          ctx.lineTo(endPoint.x, endPoint.y);
-          ctx.stroke();
-          ctx.setLineDash([]);
-
-          // Draw a small indicator showing the arc direction
-          const midAngle = isClockwise
-            ? (startAngle + endAngle) / 2 + Math.PI
-            : (startAngle + endAngle) / 2;
-
-          const midRadius = radius * 0.9;
-          const arrowSize = 8;
-
-          const arrowPoint = {
-            x: center.x + midRadius * Math.cos(midAngle),
-            y: center.y + midRadius * Math.sin(midAngle),
-          };
-
-          const tangentAngle = midAngle + Math.PI / 2;
-
-          ctx.beginPath();
-          ctx.moveTo(arrowPoint.x, arrowPoint.y);
-          ctx.lineTo(
-            arrowPoint.x + arrowSize * Math.cos(tangentAngle - Math.PI / 6),
-            arrowPoint.y + arrowSize * Math.sin(tangentAngle - Math.PI / 6)
-          );
-          ctx.moveTo(arrowPoint.x, arrowPoint.y);
-          ctx.lineTo(
-            arrowPoint.x + arrowSize * Math.cos(tangentAngle + Math.PI / 6),
-            arrowPoint.y + arrowSize * Math.sin(tangentAngle + Math.PI / 6)
-          );
-          ctx.stroke();
-        }
       }
       break;
 
@@ -261,51 +155,6 @@ export const drawShape = ({
         );
         ctx.fill();
         ctx.stroke();
-
-        // Draw control points when selected
-        if (isSelected) {
-          // Draw center point
-          drawControlPoint(ctx, center);
-
-          // Draw x-radius and y-radius control points
-          const radiusXPoint = {
-            x: center.x + radiusX * Math.cos(rotation),
-            y: center.y + radiusX * Math.sin(rotation),
-          };
-
-          const radiusYPoint = {
-            x: center.x + radiusY * Math.cos(rotation + Math.PI / 2),
-            y: center.y + radiusY * Math.sin(rotation + Math.PI / 2),
-          };
-
-          drawControlPoint(ctx, radiusXPoint);
-          drawControlPoint(ctx, radiusYPoint);
-
-          // Draw axis lines
-          ctx.beginPath();
-          ctx.moveTo(
-            center.x - radiusX * Math.cos(rotation),
-            center.y - radiusX * Math.sin(rotation)
-          );
-          ctx.lineTo(
-            center.x + radiusX * Math.cos(rotation),
-            center.y + radiusX * Math.sin(rotation)
-          );
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
-
-          ctx.beginPath();
-          ctx.moveTo(
-            center.x - radiusY * Math.cos(rotation + Math.PI / 2),
-            center.y - radiusY * Math.sin(rotation + Math.PI / 2)
-          );
-          ctx.lineTo(
-            center.x + radiusY * Math.cos(rotation + Math.PI / 2),
-            center.y + radiusY * Math.sin(rotation + Math.PI / 2)
-          );
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
       }
       break;
 
@@ -334,23 +183,6 @@ export const drawShape = ({
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
-
-        // Draw control points when selected
-        if (isSelected) {
-          // Draw center point
-          drawControlPoint(ctx, center);
-
-          // Draw all vertices
-          drawControlPoints(ctx, points);
-
-          // Draw a radius line
-          ctx.beginPath();
-          ctx.moveTo(center.x, center.y);
-          ctx.lineTo(points[0].x, points[0].y);
-          ctx.setLineDash([4, 4]);
-          ctx.stroke();
-          ctx.setLineDash([]);
-        }
       }
       break;
 
@@ -373,11 +205,6 @@ export const drawShape = ({
         }
 
         ctx.stroke();
-
-        // Draw control points when selected
-        if (isSelected) {
-          drawControlPoints(ctx, points);
-        }
       }
       break;
 
@@ -391,11 +218,9 @@ export const drawShape = ({
         drawSpline(ctx, points, shape.properties?.tension || 0.5);
 
         if (shape.properties?.isClosed) {
-          // Connect back to start for closed splines
           const lastPoint = points[points.length - 1];
           const firstPoint = points[0];
 
-          // Calculate control points for closing segment
           const tensionFactor = (shape.properties?.tension || 0.5) / 6;
           const secondLastPoint = points[points.length - 2];
           const secondPoint = points[1];
@@ -414,11 +239,6 @@ export const drawShape = ({
         }
 
         ctx.stroke();
-
-        // Draw control points when selected
-        if (isSelected) {
-          drawControlPoints(ctx, points);
-        }
       }
       break;
 
@@ -431,6 +251,11 @@ export const drawShape = ({
 
     default:
       break;
+  }
+
+  // Render control points when shape is selected and not in editing mode
+  if (isSelected && !editingState.isActive && !isTemporary) {
+    renderControlPoints(ctx, currentControlPoints.controlPoints, scale, offset);
   }
 };
 

@@ -44,9 +44,20 @@ import {
 } from './collaboration/collaborators';
 import { LayersDialog } from './dialogs/layers-dialog';
 import { useTheme } from 'next-themes';
-import { getTempShape } from '@/lib/get-temp-shape';
 import { updateTempShapeFromCoordinates } from '@/lib/temp-shape-coordinates';
 import { updateTempShapeWithNewProperties } from '@/lib/temp-shape-properties';
+import {
+  renderControlPoints,
+  getControlPointAtPosition,
+  ControlPoint,
+  getControlPoints,
+} from './editing/control-points';
+import {
+  createInitialControlPointEditingState,
+  calculateNewShapeFromControlPoint,
+  isValidControlPointEdit,
+  ControlPointEditingState,
+} from './editing/control-point-editing';
 
 type Props = {
   project: Doc<'projects'> & { layers: Doc<'layers'>[] };
@@ -100,6 +111,7 @@ export const CADApp = ({
   const { resolvedTheme: theme } = useTheme();
 
   const createShape = useMutation(api.shapes.create);
+  const updateShape = useMutation(api.shapes.update);
   const deleteShapes = useMutation(api.shapes.deleteShapes);
 
   // Collaboration-specific mutations and queries
@@ -123,6 +135,15 @@ export const CADApp = ({
   const splineTensionRef = useRef<HTMLInputElement>(null);
   const xCoordinatenRef = useRef<HTMLInputElement>(null);
   const yCoordinatenRef = useRef<HTMLInputElement>(null);
+
+  const [gridSize, setGridSize] = useState(10);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<Point>({ x: 0, y: 0 });
+  const [areaSelection, setAreaSelection] = useState(
+    createInitialAreaSelectionState()
+  );
 
   const [selectedTool, setSelectedTool] = useState<DrawingTool>('select');
   const [drawingPoints, setDrawingPoints] = useState<Point[]>([]);
@@ -159,14 +180,12 @@ export const CADApp = ({
     value: 0,
   });
 
-  const [gridSize, setGridSize] = useState(10);
-  const [scale, setScale] = useState(1);
-  const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState<Point>({ x: 0, y: 0 });
-  const [areaSelection, setAreaSelection] = useState(
-    createInitialAreaSelectionState()
-  );
+  const [step, setStep] = useState(0);
+  const [propertyInput, setPropertyInput] = useState<ShapeProperties>({});
+  const [coordinateInput, setCoordinateInput] = useState<Point>({ x: 0, y: 0 });
+
+  const [controlPointEditing, setControlPointEditing] =
+    useState<ControlPointEditingState>(createInitialControlPointEditingState());
 
   // Snapping configuration
   const [snapSettings, setSnapSettings] = useState({
@@ -180,25 +199,6 @@ export const CADApp = ({
     threshold: 25,
     gridSize: 10,
   });
-
-  // Initialize snapping hook
-  const { activeSnapResult, handleCursorMove, clearSnap } = useSnapping({
-    shapes,
-    snapSettings,
-    scale,
-    offset,
-  });
-
-  const {
-    editingState,
-    setEditingState,
-    setEditingTool,
-    handleEditingClick,
-    statusMessage,
-    commandBuffer,
-    handleUndo,
-    handleRedo,
-  } = useEditing(scale, offset, shapes, selectedShapeIds);
 
   // Dialog states
   const [showPolygonDialog, setShowPolygonDialog] = useState(false);
@@ -248,6 +248,25 @@ export const CADApp = ({
 
   // AI integration state
   const [pendingAiShapes, setPendingAiShapes] = useState<any[]>([]);
+
+  // Initialize snapping hook
+  const { activeSnapResult, handleCursorMove, clearSnap } = useSnapping({
+    shapes,
+    snapSettings,
+    scale,
+    offset,
+  });
+
+  const {
+    editingState,
+    setEditingState,
+    setEditingTool,
+    handleEditingClick,
+    statusMessage,
+    commandBuffer,
+    handleUndo,
+    handleRedo,
+  } = useEditing(scale, offset, shapes, selectedShapeIds);
 
   // Refs for canvas and container
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -329,6 +348,29 @@ export const CADApp = ({
   //   };
   // }, []);
 
+  // Add this helper function to get currently selected shape for control points
+  const selectedShapeForControlPoints = useMemo(() => {
+    if (selectedShapeIds.length === 1) {
+      return shapes.find((shape) => shape._id === selectedShapeIds[0]) || null;
+    }
+    return null;
+  }, [selectedShapeIds, shapes]);
+
+  // Add control points calculation
+  const currentControlPoints = useMemo(() => {
+    if (
+      !selectedShapeForControlPoints ||
+      selectedTool !== 'select' ||
+      editingState.isActive
+    ) {
+      return {
+        controlPoints: [],
+        bounds: { minX: 0, minY: 0, maxX: 0, maxY: 0, centerX: 0, centerY: 0 },
+      };
+    }
+    return getControlPoints(selectedShapeForControlPoints);
+  }, [selectedShapeForControlPoints, selectedTool, editingState.isActive]);
+
   // Draw the canvas
   const drawCanvas = () => {
     const canvas = canvasRef.current;
@@ -368,6 +410,7 @@ export const CADApp = ({
         isSelected,
         isTemporary: false,
         editingState,
+        currentControlPoints,
       });
     });
 
@@ -395,6 +438,7 @@ export const CADApp = ({
         isSelected: false,
         isTemporary: false,
         editingState,
+        currentControlPoints,
       });
     });
 
@@ -408,6 +452,7 @@ export const CADApp = ({
         isSelected: false,
         isTemporary: true,
         editingState,
+        currentControlPoints,
       });
     }
 
@@ -597,10 +642,6 @@ export const CADApp = ({
 
     clearSnap();
   };
-
-  const [step, setStep] = useState(0);
-  const [propertyInput, setPropertyInput] = useState<ShapeProperties>({});
-  const [coordinateInput, setCoordinateInput] = useState<Point>({ x: 0, y: 0 });
 
   // Replace the existing handleInputChange function
   const handleInputChange = (
@@ -1025,6 +1066,160 @@ export const CADApp = ({
     selectedShapeIds.includes(shape._id)
   );
 
+  // Update the handleMouseDown function to handle control point dragging
+  const handleControlPointMouseDown = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ) => {
+    if (
+      selectedTool !== 'select' ||
+      editingState.isActive ||
+      !selectedShapeForControlPoints
+    ) {
+      return false; // Not handled
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return false;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / dpr;
+    const y = (e.clientY - rect.top) / dpr;
+
+    // Convert to world coordinates
+    const worldX = (x - offset.x) / scale;
+    const worldY = (y - offset.y) / scale;
+
+    // Check if mouse is over a control point
+    const controlPoint = getControlPointAtPosition(
+      currentControlPoints.controlPoints,
+      worldX,
+      worldY,
+      scale,
+      offset,
+      12 // threshold in pixels
+    );
+
+    if (controlPoint) {
+      setControlPointEditing({
+        isEditing: true,
+        shapeId: selectedShapeForControlPoints._id,
+        activeControlPoint: controlPoint,
+        startPosition: { x: worldX, y: worldY },
+        originalShape: selectedShapeForControlPoints,
+      });
+      return true; // Handled
+    }
+
+    return false; // Not handled
+  };
+
+  const handleControlPointMouseMove = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ) => {
+    if (
+      !controlPointEditing.isEditing ||
+      !controlPointEditing.activeControlPoint ||
+      !controlPointEditing.originalShape
+    ) {
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / dpr;
+    const y = (e.clientY - rect.top) / dpr;
+
+    // Convert to world coordinates
+    const worldX = (x - offset.x) / scale;
+    const worldY = (y - offset.y) / scale;
+    const newPosition = { x: worldX, y: worldY };
+
+    // Validate the edit
+    if (
+      !isValidControlPointEdit(
+        controlPointEditing.originalShape,
+        controlPointEditing.activeControlPoint,
+        newPosition
+      )
+    ) {
+      return;
+    }
+
+    // Calculate new shape properties
+    const updates = calculateNewShapeFromControlPoint(
+      controlPointEditing.originalShape,
+      controlPointEditing.activeControlPoint,
+      newPosition,
+      controlPointEditing.startPosition
+    );
+
+    // Update the temporary shape for preview
+    if (updates.points || updates.properties) {
+      const updatedShape = {
+        ...controlPointEditing.originalShape,
+        ...updates,
+      };
+
+      // Update the shape in the shapes array for immediate visual feedback
+      setTempShape(updatedShape);
+    }
+  };
+
+  // Update the handleMouseUp function to complete control point editing
+  const handleControlPointMouseUp = async () => {
+    if (
+      !controlPointEditing.isEditing ||
+      !controlPointEditing.shapeId ||
+      !tempShape
+    ) {
+      return;
+    }
+
+    try {
+      // Update the shape in the database
+      const updates: any = {};
+      if (tempShape.points) {
+        updates.points = tempShape.points;
+      }
+      if (tempShape.properties) {
+        updates.properties = tempShape.properties;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateShape({
+          shapeId: controlPointEditing.shapeId,
+          ...updates,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to update shape:', error);
+    } finally {
+      // Reset control point editing state
+      setControlPointEditing(createInitialControlPointEditingState());
+      setTempShape(null);
+    }
+  };
+
+  // Update the cursor style based on control points
+  const getCanvasCursor = () => {
+    if (controlPointEditing.isEditing) {
+      return controlPointEditing.activeControlPoint?.cursor || 'crosshair';
+    }
+
+    if (
+      selectedTool === 'select' &&
+      selectedShapeForControlPoints &&
+      !editingState.isActive
+    ) {
+      // Check if mouse is over a control point to show appropriate cursor
+      return 'default';
+    }
+
+    return 'crosshair';
+  };
+
   return (
     <div className='flex flex-col h-screen'>
       <div className='flex flex-1 overflow-hidden'>
@@ -1158,6 +1353,12 @@ export const CADApp = ({
               }
             }}
             onMouseDown={(e) => {
+              // First try to handle control point interaction
+              if (handleControlPointMouseDown(e)) {
+                return; // Control point interaction handled
+              }
+
+              // Existing mouse down logic
               if (editingState.isActive && editingState.phase === 'select') {
                 // In editing mode and selection phase, start area selection
                 startAreaSelection(e, scale, offset, setAreaSelection);
@@ -1179,7 +1380,14 @@ export const CADApp = ({
                 });
               }
             }}
-            onMouseMove={(e) =>
+            onMouseMove={(e) => {
+              // Handle control point dragging first
+              if (controlPointEditing.isEditing) {
+                handleControlPointMouseMove(e);
+                return;
+              }
+
+              // Existing mouse move logic
               handleMouseMove({
                 e,
                 selectedTool,
@@ -1206,9 +1414,16 @@ export const CADApp = ({
                 textParams,
                 dimensionParams,
                 polarSettings,
-              })
-            }
+              });
+            }}
             onMouseUp={(e) => {
+              // Handle control point editing completion
+              if (controlPointEditing.isEditing) {
+                handleControlPointMouseUp();
+                return;
+              }
+
+              // Existing mouse up logic
               handleMouseUp({
                 e,
                 areaSelection,
