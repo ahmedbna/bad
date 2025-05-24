@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { drawGrid } from './draw/draw-grid';
 import { Point, ShapeProperties } from '@/types';
 import { DrawingTool, ArcMode } from '@/constants';
@@ -47,16 +47,14 @@ import { useTheme } from 'next-themes';
 import { updateTempShapeFromCoordinates } from '@/lib/temp-shape-coordinates';
 import { updateTempShapeWithNewProperties } from '@/lib/temp-shape-properties';
 import {
-  renderControlPoints,
-  getControlPointAtPosition,
   ControlPoint,
+  getControlPointAtPosition,
   getControlPoints,
 } from './editing/control-points';
 import {
   createInitialControlPointEditingState,
-  calculateNewShapeFromControlPoint,
-  isValidControlPointEdit,
   ControlPointEditingState,
+  startControlPointEdit,
 } from './editing/control-point-editing';
 
 type Props = {
@@ -324,29 +322,8 @@ export const CADApp = ({
     activeSnapResult,
     textParams,
     theme,
+    controlPointEditing, // Add this to trigger redraw during control point editing
   ]);
-
-  // // Get viewport dimensions
-  // const [viewport, setViewport] = useState({ width: 800, height: 600 });
-
-  // // Update viewport dimensions when container size changes
-  // useEffect(() => {
-  //   const updateViewportDimensions = () => {
-  //     if (containerRef.current) {
-  //       setViewport({
-  //         width: containerRef.current.clientWidth,
-  //         height: containerRef.current.clientHeight,
-  //       });
-  //     }
-  //   };
-
-  //   updateViewportDimensions();
-  //   window.addEventListener('resize', updateViewportDimensions);
-
-  //   return () => {
-  //     window.removeEventListener('resize', updateViewportDimensions);
-  //   };
-  // }, []);
 
   // Add this helper function to get currently selected shape for control points
   const selectedShapeForControlPoints = useMemo(() => {
@@ -399,19 +376,27 @@ export const CADApp = ({
       theme,
     });
 
-    // Draw all shapes
+    // Draw all shapes (except the one being edited)
     shapes.forEach((shape) => {
       const isSelected = selectedShapeIds.includes(shape._id);
-      drawShape({
-        ctx,
-        scale,
-        offset,
-        shape,
-        isSelected,
-        isTemporary: false,
-        editingState,
-        currentControlPoints,
-      });
+      // Don't draw the original shape if we're editing its control points
+      const isBeingEdited =
+        controlPointEditing.isEditing &&
+        controlPointEditing.originalShape?._id === shape._id;
+
+      if (!isBeingEdited) {
+        drawShape({
+          ctx,
+          scale,
+          offset,
+          shape,
+          isSelected,
+          isTemporary: false,
+          editingState,
+          currentControlPoints,
+          controlPointEditing,
+        });
+      }
     });
 
     const defaultlayer = project.layers.find((layer) => layer.isDefault);
@@ -439,20 +424,24 @@ export const CADApp = ({
         isTemporary: false,
         editingState,
         currentControlPoints,
+        controlPointEditing,
       });
     });
 
-    // Draw temporary shape while drawing
+    // Draw temporary shape while drawing OR during control point editing
     if (tempShape) {
       drawShape({
         ctx,
         scale,
         offset,
         shape: tempShape,
-        isSelected: false,
+        isSelected: controlPointEditing.isEditing ? true : false, // Show as selected during control point editing
         isTemporary: true,
         editingState,
-        currentControlPoints,
+        currentControlPoints: controlPointEditing.isEditing
+          ? getControlPoints(tempShape)
+          : currentControlPoints,
+        controlPointEditing,
       });
     }
 
@@ -553,6 +542,8 @@ export const CADApp = ({
     setSelectedShapeIds([]);
     setEditingTextId(null);
     setTempShape(null);
+    // Also clear control point editing
+    setControlPointEditing(createInitialControlPointEditingState());
 
     clearSnap();
   };
@@ -732,6 +723,12 @@ export const CADApp = ({
         return;
       }
 
+      if (e.key === 'Escape' && controlPointEditing.isEditing) {
+        setControlPointEditing(createInitialControlPointEditingState());
+        setTempShape(null);
+        return;
+      }
+
       // Handle Escape to cancel current operation
       if (e.key === 'Escape') {
         setEditingState(createInitialEditingState());
@@ -868,7 +865,114 @@ export const CADApp = ({
       }
 
       // Handle Tab key to move between coordinate inputs
-      if (e.key === 'Tab' && (step === 0 || selectedTool === 'select')) {
+      if (/^[0-9.-]$/.test(e.key) && selectedTool !== 'select') {
+        e.preventDefault();
+
+        // Step 0: Always focus on X coordinate first
+        if (step === 0 && drawingPoints.length === 0) {
+          xCoordinatenRef.current?.focus();
+          if (xCoordinatenRef.current) {
+            xCoordinatenRef.current.value = e.key;
+            handleInputChange(e.key, 'x');
+          }
+          return;
+        }
+
+        // After first point is placed, focus on appropriate property input
+        if (drawingPoints.length > 0) {
+          switch (selectedTool) {
+            case 'line':
+            case 'polyline':
+              lineLengthRef.current?.focus();
+              if (lineLengthRef.current) {
+                lineLengthRef.current.value = e.key;
+                handleInputChange(e.key, 'length');
+              }
+              break;
+
+            case 'rectangle':
+              if (step === 1) {
+                rectangleWidthRef.current?.focus();
+                if (rectangleWidthRef.current) {
+                  rectangleWidthRef.current.value = e.key;
+                  handleInputChange(e.key, 'width');
+                }
+              } else if (step === 2) {
+                rectangleLengthRef.current?.focus();
+                if (rectangleLengthRef.current) {
+                  rectangleLengthRef.current.value = e.key;
+                  handleInputChange(e.key, 'length');
+                }
+              }
+              break;
+
+            case 'circle':
+              circleRadiusRef.current?.focus();
+              if (circleRadiusRef.current) {
+                circleRadiusRef.current.value = e.key;
+                handleInputChange(e.key, 'radius');
+              }
+              break;
+
+            case 'arc':
+              if (step === 1) {
+                arcRadiusRef.current?.focus();
+                if (arcRadiusRef.current) {
+                  arcRadiusRef.current.value = e.key;
+                  handleInputChange(e.key, 'radius');
+                }
+              } else if (step === 2) {
+                arcStartAngleRef.current?.focus();
+                if (arcStartAngleRef.current) {
+                  arcStartAngleRef.current.value = e.key;
+                  handleInputChange(e.key, 'startAngle');
+                }
+              }
+              break;
+
+            case 'polygon':
+              polygonRadiusRef.current?.focus();
+              if (polygonRadiusRef.current) {
+                polygonRadiusRef.current.value = e.key;
+                handleInputChange(e.key, 'radius');
+              }
+              break;
+
+            case 'ellipse':
+              if (step === 1) {
+                ellipseRadiusXRef.current?.focus();
+                if (ellipseRadiusXRef.current) {
+                  ellipseRadiusXRef.current.value = e.key;
+                  handleInputChange(e.key, 'radiusX');
+                }
+              } else if (step === 2) {
+                ellipseRadiusYRef.current?.focus();
+                if (ellipseRadiusYRef.current) {
+                  ellipseRadiusYRef.current.value = e.key;
+                  handleInputChange(e.key, 'radiusY');
+                }
+              }
+              break;
+
+            case 'spline':
+              splineTensionRef.current?.focus();
+              if (splineTensionRef.current) {
+                splineTensionRef.current.value = e.key;
+                handleInputChange(e.key, 'tension');
+              }
+              break;
+          }
+        }
+        return;
+      }
+
+      // Handle Tab key to move between coordinate inputs
+      if (
+        e.key === 'Tab' &&
+        (step === 0 ||
+          selectedTool === 'select' ||
+          controlPointEditing.isEditing)
+      ) {
         e.preventDefault();
         if (document.activeElement === xCoordinatenRef.current) {
           yCoordinatenRef.current?.focus();
@@ -942,7 +1046,12 @@ export const CADApp = ({
       }
 
       // Only process shortcut commands when not in active operation
-      if (editingState.isActive || drawingPoints.length > 0) return;
+      if (
+        editingState.isActive ||
+        drawingPoints.length > 0 ||
+        controlPointEditing.isEditing
+      )
+        return;
 
       // Track typed keys for AutoCAD-like command input
       if (e.key.length === 1 && e.key.match(/[a-z0-9]/i)) {
@@ -1028,6 +1137,8 @@ export const CADApp = ({
     step,
     coordinateInput,
     propertyInput,
+    controlPointEditing.isEditing,
+    selectedShapeForControlPoints,
   ]);
 
   // Add this function to reset inputs when tool changes
@@ -1039,23 +1150,26 @@ export const CADApp = ({
     setDrawingPoints([]);
     setTempShape(null);
 
-    // Clear all input fields
-    if (xCoordinatenRef.current) xCoordinatenRef.current.value = '';
-    if (yCoordinatenRef.current) yCoordinatenRef.current.value = '';
-    if (lineLengthRef.current) lineLengthRef.current.value = '';
-    if (lineAngleRef.current) lineAngleRef.current.value = '';
-    if (rectangleWidthRef.current) rectangleWidthRef.current.value = '';
-    if (rectangleLengthRef.current) rectangleLengthRef.current.value = '';
-    if (circleRadiusRef.current) circleRadiusRef.current.value = '';
-    if (circleDiameterRef.current) circleDiameterRef.current.value = '';
-    if (arcRadiusRef.current) arcRadiusRef.current.value = '';
-    if (arcStartAngleRef.current) arcStartAngleRef.current.value = '';
-    if (arcEndAngleRef.current) arcEndAngleRef.current.value = '';
-    if (polygonRadiusRef.current) polygonRadiusRef.current.value = '';
-    if (ellipseRadiusXRef.current) ellipseRadiusXRef.current.value = '';
-    if (ellipseRadiusYRef.current) ellipseRadiusYRef.current.value = '';
-    if (splineTensionRef.current) splineTensionRef.current.value = '';
-  }, [selectedTool]);
+    // Don't clear control point editing when switching tools
+    if (!controlPointEditing.isEditing) {
+      // Clear all input fields
+      if (xCoordinatenRef.current) xCoordinatenRef.current.value = '';
+      if (yCoordinatenRef.current) yCoordinatenRef.current.value = '';
+      if (lineLengthRef.current) lineLengthRef.current.value = '';
+      if (lineAngleRef.current) lineAngleRef.current.value = '';
+      if (rectangleWidthRef.current) rectangleWidthRef.current.value = '';
+      if (rectangleLengthRef.current) rectangleLengthRef.current.value = '';
+      if (circleRadiusRef.current) circleRadiusRef.current.value = '';
+      if (circleDiameterRef.current) circleDiameterRef.current.value = '';
+      if (arcRadiusRef.current) arcRadiusRef.current.value = '';
+      if (arcStartAngleRef.current) arcStartAngleRef.current.value = '';
+      if (arcEndAngleRef.current) arcEndAngleRef.current.value = '';
+      if (polygonRadiusRef.current) polygonRadiusRef.current.value = '';
+      if (ellipseRadiusXRef.current) ellipseRadiusXRef.current.value = '';
+      if (ellipseRadiusYRef.current) ellipseRadiusYRef.current.value = '';
+      if (splineTensionRef.current) splineTensionRef.current.value = '';
+    }
+  }, [selectedTool, controlPointEditing.isEditing]);
 
   const onLayerSelect = (layerId: Id<'layers'>) => {
     setCurrentLayerId(layerId);
@@ -1066,143 +1180,38 @@ export const CADApp = ({
     selectedShapeIds.includes(shape._id)
   );
 
-  // Update the handleMouseDown function to handle control point dragging
+  // Enhanced handleControlPointMouseDown function
+  // Mouse event handlers for control point editing
   const handleControlPointMouseDown = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ) => {
-    if (
-      selectedTool !== 'select' ||
-      editingState.isActive ||
-      !selectedShapeForControlPoints
-    ) {
-      return false; // Not handled
-    }
+    e: MouseEvent,
+    controlPoints: ControlPoint[],
+    scale: number,
+    offset: Point,
+    selectedShape: Doc<'shapes'> | null
+  ): ControlPointEditingState | null => {
+    const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return false;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / dpr;
-    const y = (e.clientY - rect.top) / dpr;
-
-    // Convert to world coordinates
-    const worldX = (x - offset.x) / scale;
-    const worldY = (y - offset.y) / scale;
-
-    // Check if mouse is over a control point
-    const controlPoint = getControlPointAtPosition(
-      currentControlPoints.controlPoints,
-      worldX,
-      worldY,
+    const clickedControlPoint = getControlPointAtPosition(
+      controlPoints,
+      mouseX,
+      mouseY,
       scale,
-      offset,
-      12 // threshold in pixels
+      offset
     );
 
-    if (controlPoint) {
-      setControlPointEditing({
-        isEditing: true,
-        shapeId: selectedShapeForControlPoints._id,
-        activeControlPoint: controlPoint,
-        startPosition: { x: worldX, y: worldY },
-        originalShape: selectedShapeForControlPoints,
+    if (clickedControlPoint && selectedShape) {
+      return startControlPointEdit(clickedControlPoint, selectedShape, {
+        x: mouseX,
+        y: mouseY,
       });
-      return true; // Handled
     }
 
-    return false; // Not handled
+    return null;
   };
 
-  const handleControlPointMouseMove = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ) => {
-    if (
-      !controlPointEditing.isEditing ||
-      !controlPointEditing.activeControlPoint ||
-      !controlPointEditing.originalShape
-    ) {
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / dpr;
-    const y = (e.clientY - rect.top) / dpr;
-
-    // Convert to world coordinates
-    const worldX = (x - offset.x) / scale;
-    const worldY = (y - offset.y) / scale;
-    const newPosition = { x: worldX, y: worldY };
-
-    // Validate the edit
-    if (
-      !isValidControlPointEdit(
-        controlPointEditing.originalShape,
-        controlPointEditing.activeControlPoint,
-        newPosition
-      )
-    ) {
-      return;
-    }
-
-    // Calculate new shape properties
-    const updates = calculateNewShapeFromControlPoint(
-      controlPointEditing.originalShape,
-      controlPointEditing.activeControlPoint,
-      newPosition,
-      controlPointEditing.startPosition
-    );
-
-    // Update the temporary shape for preview
-    if (updates.points || updates.properties) {
-      const updatedShape = {
-        ...controlPointEditing.originalShape,
-        ...updates,
-      };
-
-      // Update the shape in the shapes array for immediate visual feedback
-      setTempShape(updatedShape);
-    }
-  };
-
-  // Update the handleMouseUp function to complete control point editing
-  const handleControlPointMouseUp = async () => {
-    if (
-      !controlPointEditing.isEditing ||
-      !controlPointEditing.shapeId ||
-      !tempShape
-    ) {
-      return;
-    }
-
-    try {
-      // Update the shape in the database
-      const updates: any = {};
-      if (tempShape.points) {
-        updates.points = tempShape.points;
-      }
-      if (tempShape.properties) {
-        updates.properties = tempShape.properties;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await updateShape({
-          shapeId: controlPointEditing.shapeId,
-          ...updates,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to update shape:', error);
-    } finally {
-      // Reset control point editing state
-      setControlPointEditing(createInitialControlPointEditingState());
-      setTempShape(null);
-    }
-  };
-
-  // Update the cursor style based on control points
+  // Enhanced cursor management
   const getCanvasCursor = () => {
     if (controlPointEditing.isEditing) {
       return controlPointEditing.activeControlPoint?.cursor || 'crosshair';
@@ -1214,7 +1223,21 @@ export const CADApp = ({
       !editingState.isActive
     ) {
       // Check if mouse is over a control point to show appropriate cursor
-      return 'default';
+      const canvas = canvasRef.current;
+      if (canvas && mousePosition) {
+        const controlPoint = getControlPointAtPosition(
+          currentControlPoints.controlPoints,
+          mousePosition.x,
+          mousePosition.y,
+          scale,
+          offset,
+          12
+        );
+        if (controlPoint) {
+          return controlPoint.cursor;
+        }
+      }
+      return 'default'; // Default cursor for select tool
     }
 
     return 'crosshair';
@@ -1302,7 +1325,6 @@ export const CADApp = ({
               // Handle editing clicks if editing mode is active
               if (editingState.isActive) {
                 handleEditingClick(e);
-
                 handleSelection({
                   e,
                   scale,
@@ -1353,11 +1375,6 @@ export const CADApp = ({
               }
             }}
             onMouseDown={(e) => {
-              // First try to handle control point interaction
-              if (handleControlPointMouseDown(e)) {
-                return; // Control point interaction handled
-              }
-
               // Existing mouse down logic
               if (editingState.isActive && editingState.phase === 'select') {
                 // In editing mode and selection phase, start area selection
@@ -1381,12 +1398,6 @@ export const CADApp = ({
               }
             }}
             onMouseMove={(e) => {
-              // Handle control point dragging first
-              if (controlPointEditing.isEditing) {
-                handleControlPointMouseMove(e);
-                return;
-              }
-
               // Existing mouse move logic
               handleMouseMove({
                 e,
@@ -1417,12 +1428,6 @@ export const CADApp = ({
               });
             }}
             onMouseUp={(e) => {
-              // Handle control point editing completion
-              if (controlPointEditing.isEditing) {
-                handleControlPointMouseUp();
-                return;
-              }
-
               // Existing mouse up logic
               handleMouseUp({
                 e,
@@ -1437,7 +1442,7 @@ export const CADApp = ({
               setIsDragging(false);
               clearSnap();
             }}
-            className='bg-muted cursor-crosshair'
+            className={`bg-muted cursor-${getCanvasCursor()}`}
           />
 
           {/* Render collaborator cursors */}

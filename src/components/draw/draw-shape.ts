@@ -3,11 +3,10 @@ import { worldToCanvas } from '@/utils/worldToCanvas';
 import { EditingState } from '@/components/editing/constants';
 import { Doc } from '@/convex/_generated/dataModel';
 import {
-  ControlPoint,
   ControlPointsResult,
-  getControlPoints,
   renderControlPoints,
 } from '../editing/control-points';
+import { ControlPointEditingState } from '../editing/control-point-editing';
 
 type Props = {
   ctx: CanvasRenderingContext2D;
@@ -19,6 +18,7 @@ type Props = {
   editingState: EditingState;
   theme?: string;
   currentControlPoints: ControlPointsResult;
+  controlPointEditing: ControlPointEditingState;
 };
 
 export const drawShape = ({
@@ -31,6 +31,7 @@ export const drawShape = ({
   editingState,
   theme = 'dark',
   currentControlPoints,
+  controlPointEditing,
 }: Props) => {
   // Set styles based on selection and editing state
   const isEditingSelected =
@@ -255,7 +256,13 @@ export const drawShape = ({
 
   // Render control points when shape is selected and not in editing mode
   if (isSelected && !editingState.isActive && !isTemporary) {
-    renderControlPoints(ctx, currentControlPoints.controlPoints, scale, offset);
+    renderControlPoints(
+      ctx,
+      currentControlPoints.controlPoints,
+      scale,
+      offset,
+      controlPointEditing.activeControlPoint?.id
+    );
   }
 };
 

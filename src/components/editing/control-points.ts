@@ -6,9 +6,22 @@ export interface ControlPoint {
   id: string;
   x: number;
   y: number;
-  type: 'resize' | 'move' | 'rotate';
+  type:
+    | 'endpoint'
+    | 'midpoint'
+    | 'center'
+    | 'quadrant'
+    | 'corner'
+    | 'edge'
+    | 'radius'
+    | 'angle';
   cursor: string;
   property?: string;
+  metadata?: {
+    index?: number; // For polyline vertices
+    edge?: 'horizontal' | 'vertical'; // For rectangle edges
+    angle?: 'start' | 'end'; // For arc angles
+  };
 }
 
 export interface ControlPointsResult {
@@ -50,35 +63,44 @@ export const getControlPoints = (
 
   switch (shape.type) {
     case 'line':
-      // Start and end points
       controlPoints.push(
         {
           id: 'start',
           x: points[0].x,
           y: points[0].y,
-          type: 'resize',
+          type: 'endpoint',
           cursor: 'crosshair',
           property: 'startPoint',
+          metadata: { index: 0 },
         },
         {
           id: 'end',
           x: points[1].x,
           y: points[1].y,
-          type: 'resize',
+          type: 'endpoint',
           cursor: 'crosshair',
           property: 'endPoint',
+          metadata: { index: 1 },
+        },
+        {
+          id: 'midpoint',
+          x: centerX,
+          y: centerY,
+          type: 'midpoint',
+          cursor: 'move',
+          property: 'midpoint',
         }
       );
       break;
 
     case 'rectangle':
-      // Corner points for resizing
+      // Corner points
       controlPoints.push(
         {
           id: 'top-left',
           x: minX,
           y: minY,
-          type: 'resize',
+          type: 'corner',
           cursor: 'nw-resize',
           property: 'topLeft',
         },
@@ -86,7 +108,7 @@ export const getControlPoints = (
           id: 'top-right',
           x: maxX,
           y: minY,
-          type: 'resize',
+          type: 'corner',
           cursor: 'ne-resize',
           property: 'topRight',
         },
@@ -94,7 +116,7 @@ export const getControlPoints = (
           id: 'bottom-left',
           x: minX,
           y: maxY,
-          type: 'resize',
+          type: 'corner',
           cursor: 'sw-resize',
           property: 'bottomLeft',
         },
@@ -102,42 +124,54 @@ export const getControlPoints = (
           id: 'bottom-right',
           x: maxX,
           y: maxY,
-          type: 'resize',
+          type: 'corner',
           cursor: 'se-resize',
           property: 'bottomRight',
         },
-        // Mid-edge points
+        // Edge midpoints
         {
           id: 'top-mid',
           x: centerX,
           y: minY,
-          type: 'resize',
+          type: 'edge',
           cursor: 'n-resize',
           property: 'height',
+          metadata: { edge: 'horizontal' },
         },
         {
           id: 'bottom-mid',
           x: centerX,
           y: maxY,
-          type: 'resize',
+          type: 'edge',
           cursor: 's-resize',
           property: 'height',
+          metadata: { edge: 'horizontal' },
         },
         {
           id: 'left-mid',
           x: minX,
           y: centerY,
-          type: 'resize',
+          type: 'edge',
           cursor: 'w-resize',
           property: 'width',
+          metadata: { edge: 'vertical' },
         },
         {
           id: 'right-mid',
           x: maxX,
           y: centerY,
-          type: 'resize',
+          type: 'edge',
           cursor: 'e-resize',
           property: 'width',
+          metadata: { edge: 'vertical' },
+        },
+        // Center point
+        {
+          id: 'center',
+          x: centerX,
+          y: centerY,
+          type: 'center',
+          cursor: 'move',
         }
       );
       break;
@@ -146,85 +180,46 @@ export const getControlPoints = (
       const center = points[0];
       const radius = shape.properties?.radius || 50;
 
-      // Radius control points
       controlPoints.push(
         {
-          id: 'radius-right',
+          id: 'center',
+          x: center.x,
+          y: center.y,
+          type: 'center',
+          cursor: 'move',
+        },
+        // Quadrant points
+        {
+          id: 'quadrant-right',
           x: center.x + radius,
           y: center.y,
-          type: 'resize',
+          type: 'quadrant',
           cursor: 'ew-resize',
           property: 'radius',
         },
         {
-          id: 'radius-top',
+          id: 'quadrant-top',
           x: center.x,
           y: center.y - radius,
-          type: 'resize',
+          type: 'quadrant',
           cursor: 'ns-resize',
           property: 'radius',
         },
         {
-          id: 'radius-left',
+          id: 'quadrant-left',
           x: center.x - radius,
           y: center.y,
-          type: 'resize',
+          type: 'quadrant',
           cursor: 'ew-resize',
           property: 'radius',
         },
         {
-          id: 'radius-bottom',
+          id: 'quadrant-bottom',
           x: center.x,
           y: center.y + radius,
-          type: 'resize',
+          type: 'quadrant',
           cursor: 'ns-resize',
           property: 'radius',
-        }
-      );
-      break;
-
-    case 'ellipse':
-      const ellipseCenter = points[0];
-      const radiusX = shape.properties?.radiusX || 100;
-      const radiusY = shape.properties?.radiusY || 60;
-      const rotation = shape.properties?.rotation || 0;
-
-      // Calculate rotated control points
-      const cos = Math.cos(rotation);
-      const sin = Math.sin(rotation);
-
-      controlPoints.push(
-        {
-          id: 'radiusX-right',
-          x: ellipseCenter.x + radiusX * cos,
-          y: ellipseCenter.y + radiusX * sin,
-          type: 'resize',
-          cursor: 'ew-resize',
-          property: 'radiusX',
-        },
-        {
-          id: 'radiusX-left',
-          x: ellipseCenter.x - radiusX * cos,
-          y: ellipseCenter.y - radiusX * sin,
-          type: 'resize',
-          cursor: 'ew-resize',
-          property: 'radiusX',
-        },
-        {
-          id: 'radiusY-top',
-          x: ellipseCenter.x - radiusY * sin,
-          y: ellipseCenter.y + radiusY * cos,
-          type: 'resize',
-          cursor: 'ns-resize',
-          property: 'radiusY',
-        },
-        {
-          id: 'radiusY-bottom',
-          x: ellipseCenter.x + radiusY * sin,
-          y: ellipseCenter.y - radiusY * cos,
-          type: 'resize',
-          cursor: 'ns-resize',
-          property: 'radiusY',
         }
       );
       break;
@@ -236,101 +231,81 @@ export const getControlPoints = (
       const endAngle = shape.properties?.endAngle || Math.PI;
 
       controlPoints.push(
-        // Radius control point
         {
-          id: 'radius',
+          id: 'center',
+          x: arcCenter.x,
+          y: arcCenter.y,
+          type: 'center',
+          cursor: 'move',
+        },
+        {
+          id: 'radius-point',
           x: arcCenter.x + arcRadius,
           y: arcCenter.y,
-          type: 'resize',
+          type: 'radius',
           cursor: 'ew-resize',
           property: 'radius',
         },
-        // Start angle control point
         {
           id: 'start-angle',
           x: arcCenter.x + arcRadius * Math.cos(startAngle),
           y: arcCenter.y + arcRadius * Math.sin(startAngle),
-          type: 'resize',
+          type: 'angle',
           cursor: 'crosshair',
           property: 'startAngle',
+          metadata: { angle: 'start' },
         },
-        // End angle control point
         {
           id: 'end-angle',
           x: arcCenter.x + arcRadius * Math.cos(endAngle),
           y: arcCenter.y + arcRadius * Math.sin(endAngle),
-          type: 'resize',
+          type: 'angle',
           cursor: 'crosshair',
           property: 'endAngle',
+          metadata: { angle: 'end' },
         }
       );
       break;
 
-    case 'polygon':
-      const polygonCenter = points[0];
-      const polygonRadius = shape.properties?.radius || 50;
-      const sides = shape.properties?.sides || 6;
-
-      // Create control points for each vertex
-      for (let i = 0; i < sides; i++) {
-        const angle = (i * 2 * Math.PI) / sides - Math.PI / 2;
-        controlPoints.push({
-          id: `vertex-${i}`,
-          x: polygonCenter.x + polygonRadius * Math.cos(angle),
-          y: polygonCenter.y + polygonRadius * Math.sin(angle),
-          type: 'resize',
-          cursor: 'crosshair',
-          property: 'radius',
-        });
-      }
-      break;
-
     case 'polyline':
     case 'spline':
+      // Add center point
+      controlPoints.push({
+        id: 'center',
+        x: centerX,
+        y: centerY,
+        type: 'center',
+        cursor: 'move',
+      });
+
       // Control points for each vertex
       points.forEach((point, index) => {
         controlPoints.push({
           id: `vertex-${index}`,
           x: point.x,
           y: point.y,
-          type: 'resize',
+          type: 'endpoint',
           cursor: 'crosshair',
           property: 'vertex',
+          metadata: { index },
         });
       });
       break;
   }
 
-  // Add center move point for all shapes (except line which moves by endpoints)
-  if (
-    shape.type !== 'line' &&
-    shape.type !== 'polyline' &&
-    shape.type !== 'spline'
-  ) {
-    controlPoints.push({
-      id: 'center',
-      x: centerX,
-      y: centerY,
-      type: 'move',
-      cursor: 'move',
-    });
-  }
-
   return { controlPoints, bounds };
 };
 
-// Updated renderControlPoints function - fix coordinate transformation
 export const renderControlPoints = (
   ctx: CanvasRenderingContext2D,
   controlPoints: ControlPoint[],
   scale: number,
-  offset: Point
+  offset: Point,
+  activeControlPointId?: string
 ) => {
-  // Control point size - keep consistent regardless of zoom level
   const size = 7;
 
   controlPoints.forEach((point) => {
-    // Convert world coordinates to canvas coordinates using your coordinate system
     const canvasPos = worldToCanvas({
       point: { x: point.x, y: point.y },
       scale,
@@ -341,40 +316,26 @@ export const renderControlPoints = (
 
     ctx.save();
 
-    // Set styles based on control point type
-    switch (point.type) {
-      case 'resize':
-        ctx.strokeStyle = '#3b82f6'; // Blue for resize handles
-        ctx.fillStyle = 'transparent';
-        break;
-      case 'move':
-        ctx.strokeStyle = '#32CD32'; // Green for move handles
-        ctx.fillStyle = 'transparent';
-        break;
-      case 'rotate':
-        ctx.strokeStyle = '#f59e0b'; // Orange for rotate handles
-        ctx.fillStyle = 'transparent';
+    // Highlight active control point
+    const isActive = activeControlPointId === point.id;
 
-        break;
-      default:
-        ctx.strokeStyle = '#6b7280'; // Gray for other handles
-        ctx.fillStyle = 'transparent';
-    }
+    ctx.strokeStyle = isActive ? '#ef4444' : '#3b82f6'; // Red when active
+    ctx.fillStyle = isActive ? 'rgba(239, 68, 68, 0.2)' : 'transparent';
 
-    ctx.lineWidth = 1;
+    ctx.lineWidth = isActive ? 2 : 1;
 
     ctx.beginPath();
-    if (point.type === 'rotate') {
-      // Draw circle for rotation handles
-      ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
-    } else {
-      // Draw square for resize/move handles (centered like old function)
-      ctx.rect(screenX - size / 2, screenY - size / 2, size, size);
-    }
+    const drawSize = isActive ? size + 1 : size;
+
+    ctx.rect(
+      screenX - drawSize / 2,
+      screenY - drawSize / 2,
+      drawSize,
+      drawSize
+    );
 
     ctx.fill();
     ctx.stroke();
-
     ctx.restore();
   });
 };
@@ -382,14 +343,14 @@ export const renderControlPoints = (
 // Updated getControlPointAtPosition function - fix coordinate comparison
 export const getControlPointAtPosition = (
   controlPoints: ControlPoint[],
-  mouseX: number,
-  mouseY: number,
+  mouseX: number, // Canvas coordinates
+  mouseY: number, // Canvas coordinates
   scale: number,
   offset: Point,
   threshold: number = 12
 ): ControlPoint | null => {
   for (const point of controlPoints) {
-    // Convert control point world coordinates to canvas coordinates using your coordinate system
+    // Convert control point world coordinates to canvas coordinates
     const canvasPos = worldToCanvas({
       point: { x: point.x, y: point.y },
       scale,
